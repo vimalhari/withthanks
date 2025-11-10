@@ -17,6 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your entire Django project
 COPY . /app/
 
+RUN python manage.py collectstatic --noinput
+
 # Expose Django default port
 EXPOSE 8000
 

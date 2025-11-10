@@ -19,6 +19,7 @@ def upload_csv_and_process(request):
     append remaining base video, and send via email.
     """
     message = None
+    visible_errors = []  # 👈 store short messages for display
 
     if request.method == "POST":
         form = CSVUploadForm(request.POST, request.FILES)
@@ -27,9 +28,9 @@ def upload_csv_and_process(request):
 
             try:
                 lines = csv_file.read().decode("utf-8").splitlines()
-            except Exception:
+            except Exception as e:
                 message = "Uploaded file must be a UTF-8 encoded CSV."
-                logger.exception("CSV decode failed")
+                logger.exception("CSV decode failed: %s", e)
                 return render(request, "upload_csv.html", {"form": form, "message": message})
 
             reader = csv.DictReader(lines)
@@ -57,12 +58,12 @@ def upload_csv_and_process(request):
 
                     # Step 2: stitch first 5s intro with TTS + overlay, then append remaining video
                     stitched_video_path = stitch_voice_and_overlay(
-                        input_video=settings.BASE_VIDEO_PATH,  # full 60s base video
+                        input_video=settings.BASE_VIDEO_PATH,
                         tts_wav=voiceover_path,
                         overlay_text=f"Hi {name}, thank you for your donation of {amount} euros! We really appreciate your support.",
                         out_filename=f"{file_base}.mp4",
                         output_dir=settings.VIDEO_OUTPUT_DIR,
-                        intro_duration=5  # first 5s for overlay + voice
+                        intro_duration=5
                     )
 
                     # Step 3: send video to donor via email
@@ -72,12 +73,15 @@ def upload_csv_and_process(request):
                 except Exception as exc:
                     logger.error("Row %d failed: %s\n%s", i, exc, traceback.format_exc())
                     errors.append({"row": i, "error": str(exc)})
+                    # 👇 add short visible message for web display
+                    visible_errors.append(f"Row {i}: {exc}")
 
             message = f"Processed {processed_count} donations successfully!"
             if errors:
-                message += f" ({len(errors)} rows failed; check server logs.)"
+                message += f" ({len(errors)} rows failed.)"
 
     else:
         form = CSVUploadForm()
 
-    return render(request, "upload_csv.html", {"form": form, "message": message})
+    # 👇 Pass visible_errors to the template
+    return render(request, "upload_csv.html", {"form": form, "message": message, "errors": visible_errors})

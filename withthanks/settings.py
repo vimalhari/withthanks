@@ -13,9 +13,9 @@ load_dotenv(BASE_DIR / ".env")
 # Core settings
 # ------------------------------------------------------------
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-do-not-use-in-prod")
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["hirefella.com", "www.hirefella.com"]
+ALLOWED_HOSTS = ["hirefella.com", "www.hirefella.com", "localhost", "127.0.0.1"]
 
 # -----------------------------------------------------------
 # Installed apps
@@ -129,5 +129,6 @@ LOGGING = {
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hirefella.com",
-    "https://www.hirefella.com"
+    "https://www.hirefella.com",     "http://127.0.0.1:8000", 
+    "http://localhost:8000", 
 ]
