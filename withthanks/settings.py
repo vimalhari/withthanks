@@ -15,9 +15,9 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-do-not-use-in-prod")
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["hirefella.com", "www.hirefella.com"]
 
-# ------------------------------------------------------------
+# -----------------------------------------------------------
 # Installed apps
 # ------------------------------------------------------------
 INSTALLED_APPS = [
