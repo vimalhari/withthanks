@@ -125,3 +125,8 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://hirefella.com",
+    "https://www.hirefella.com"
+]
