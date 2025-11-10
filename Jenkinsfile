@@ -16,7 +16,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'github-creds',
+                    credentialsId: 'github-creds-1',
                     url: 'https://github.com/Rajachellan/WithThanks.git'
             }
         }
