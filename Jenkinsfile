@@ -6,7 +6,8 @@ pipeline {
         IMAGE_TAG = "1.0.0"
         CONTAINER_NAME = "withthanks-container"
         APP_PORT = "8000"
-        DOCKER_HUB_USER = "rankraze" // your Docker Hub username
+        DOCKER_HUB_USER = "rankraze"
+        PATH = "$HOME/.local/bin:$PATH"  // 👈 Ensure user-level pip binaries are accessible
     }
 
     stages {
@@ -24,22 +25,23 @@ pipeline {
             steps {
                 sh '''
                 echo "🐍 Checking Python & pip setup..."
-
-                # Check if Python exists
-                if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
-                    echo "⚙️ Python not found. Installing..."
-                    apt update -y && apt install python3 python3-pip -y
+                
+                if ! command -v python3 &> /dev/null; then
+                    echo "⚙️ Installing Python..."
+                    apt-get update -y && apt-get install -y python3 python3-pip
                 fi
 
-                # Ensure pip is linked
-                if ! command -v pip &> /dev/null; then
-                    ln -sf /usr/bin/pip3 /usr/bin/pip || true
+                # Try reinstalling pip locally if not found
+                if ! command -v pip3 &> /dev/null; then
+                    echo "⚙️ Installing pip locally for Jenkins user..."
+                    python3 -m ensurepip --user
+                    python3 -m pip install --upgrade pip --user
                 fi
 
                 echo "✅ Python Version:"
-                python3 --version || python --version
+                python3 --version
                 echo "✅ pip Version:"
-                pip --version || pip3 --version
+                python3 -m pip --version
                 '''
             }
         }
@@ -48,8 +50,8 @@ pipeline {
             steps {
                 sh '''
                 echo "📦 Installing project dependencies..."
-                pip install --upgrade pip
-                pip install -r requirements.txt
+                python3 -m pip install --user --upgrade pip
+                python3 -m pip install --user -r requirements.txt
                 '''
             }
         }
