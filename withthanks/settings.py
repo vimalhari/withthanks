@@ -13,7 +13,7 @@ load_dotenv(BASE_DIR / ".env")
 # Core settings
 # ------------------------------------------------------------
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-do-not-use-in-prod")
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["hirefella.com", "www.hirefella.com"]
 
