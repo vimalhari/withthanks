@@ -15,7 +15,7 @@ pipeline {
             steps {
                 echo "📂 Checking out source code..."
                 git branch: 'main',
-                    credentialsId: 'github-creds',
+                    credentialsId: 'github-creds-1',
                     url: 'https://github.com/Rajachellan/WithThanks.git'
             }
         }
