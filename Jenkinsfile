@@ -6,12 +6,10 @@ pipeline {
         IMAGE_TAG = "1.0.0"
         CONTAINER_NAME = "withthanks-container"
         APP_PORT = "8000"
-        DOCKER_HUB_USER = "rankraze"
-        PATH = "$HOME/.local/bin:$PATH"  // 👈 Ensure user-level pip binaries are accessible
+        DOCKER_HUB_USER = "rankraze"  // your Docker Hub username
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
                 echo "📂 Checking out source code..."
@@ -21,46 +19,11 @@ pipeline {
             }
         }
 
-        stage('Setup Python Environment') {
-            steps {
-                sh '''
-                echo "🐍 Checking Python & pip setup..."
-                
-                if ! command -v python3 &> /dev/null; then
-                    echo "⚙️ Installing Python..."
-                    apt-get update -y && apt-get install -y python3 python3-pip
-                fi
-
-                # Try reinstalling pip locally if not found
-                if ! command -v pip3 &> /dev/null; then
-                    echo "⚙️ Installing pip locally for Jenkins user..."
-                    python3 -m ensurepip --user
-                    python3 -m pip install --upgrade pip --user
-                fi
-
-                echo "✅ Python Version:"
-                python3 --version
-                echo "✅ pip Version:"
-                python3 -m pip --version
-                '''
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                echo "📦 Installing project dependencies..."
-                python3 -m pip install --user --upgrade pip
-                python3 -m pip install --user -r requirements.txt
-                '''
-            }
-        }
-
         stage('Docker Login') {
             steps {
+                echo "🔐 Logging in to Docker Hub..."
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                    echo "🔐 Logging in to Docker Hub..."
                     echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                     '''
                 }
@@ -69,15 +32,15 @@ pipeline {
 
         stage('Build & Push Docker Image') {
             steps {
-                sh '''
                 echo "🐳 Building Docker image..."
+                sh '''
                 docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
 
-                echo "🏷️ Tagging image for Docker Hub..."
+                echo "🏷️ Tagging image..."
                 docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
                 docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:latest
 
-                echo "🚀 Pushing image to Docker Hub..."
+                echo "🚀 Pushing to Docker Hub..."
                 docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
                 docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:latest
                 '''
@@ -86,8 +49,8 @@ pipeline {
 
         stage('Stop Old Container') {
             steps {
-                sh '''
                 echo "🛑 Stopping old container if running..."
+                sh '''
                 docker stop $CONTAINER_NAME || true
                 docker rm $CONTAINER_NAME || true
                 '''
@@ -96,8 +59,8 @@ pipeline {
 
         stage('Run New Container') {
             steps {
+                echo "🚀 Starting new Django container..."
                 sh '''
-                echo "🚀 Running new Docker container..."
                 docker run -d --name $CONTAINER_NAME \
                     --restart always \
                     -p $APP_PORT:8000 \
@@ -109,10 +72,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment Successful! Application running on port $APP_PORT"
+            echo "✅ Deployment Successful! App running on port $APP_PORT"
         }
         failure {
-            echo "❌ Deployment Failed! Check Jenkins logs for details."
+            echo "❌ Deployment Failed! Check Jenkins logs."
         }
     }
 }

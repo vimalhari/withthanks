@@ -1,31 +1,24 @@
-# Use official lightweight Python image
-FROM python:3.10-slim
+# Use official Python image
+FROM python:3.10
 
-# Prevent Python writing pyc files and buffering output
+# Set working directory inside the container
+WORKDIR /app
+
+# Prevent Python from writing .pyc files and using stdout buffering
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential libpq-dev && \
-    apt-get clean
+# Copy dependency file
+COPY requirements.txt /app/
 
 # Install dependencies
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# Copy your entire Django project
 COPY . /app/
 
-# Copy entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Expose port
+# Expose Django default port
 EXPOSE 8000
 
-# Run entrypoint script on container start
-ENTRYPOINT ["/entrypoint.sh"]
+# Run migrations and start Django server
+CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
