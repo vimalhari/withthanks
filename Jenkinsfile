@@ -6,10 +6,11 @@ pipeline {
         IMAGE_TAG = "1.0.0"
         CONTAINER_NAME = "withthanks-container"
         APP_PORT = "8000"
-        DOCKER_HUB_USER = "rankraze"   // 🔁 replace with your Docker Hub username
+        DOCKER_HUB_USER = "rankraze" // your Docker Hub username
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 echo "📂 Checking out source code..."
@@ -23,11 +24,16 @@ pipeline {
             steps {
                 sh '''
                 echo "🐍 Checking Python & pip setup..."
-                if ! command -v python3 &> /dev/null; then
-                    echo "⚙️ Installing Python..."
-                    sudo apt update -y
-                    sudo apt install python3 python3-pip -y
-                    sudo ln -s /usr/bin/pip3 /usr/bin/pip || true
+
+                # Check if Python exists
+                if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+                    echo "⚙️ Python not found. Installing..."
+                    apt update -y && apt install python3 python3-pip -y
+                fi
+
+                # Ensure pip is linked
+                if ! command -v pip &> /dev/null; then
+                    ln -sf /usr/bin/pip3 /usr/bin/pip || true
                 fi
 
                 echo "✅ Python Version:"
