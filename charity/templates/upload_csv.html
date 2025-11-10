@@ -1,0 +1,17 @@
+<!-- templates/upload_csv.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Upload CSV</title>
+  </head>
+  <body>
+    <h1>Upload CSV for Voiceovers & Video</h1>
+    {% if message %}
+    <p>{{ message }}</p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %} {{ form.as_p }}
+      <button type="submit">Upload & Process</button>
+    </form>
+  </body>
+</html>

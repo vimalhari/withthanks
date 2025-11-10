@@ -1,0 +1,23 @@
+<!-- templates/charity/stitched_video.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Stitched Video</title>
+  </head>
+  <body>
+    <h1>Stitched Video</h1>
+
+    <video width="640" height="360" controls>
+      <source src="{{ video_url }}" type="video/mp4" />
+      Your browser does not support the video tag.
+    </video>
+
+    <p>
+      <a href="{{ video_url }}" download>Download Video</a>
+    </p>
+
+    <p>
+      <a href="{% url 'list_voiceovers' %}">Back to Voiceovers</a>
+    </p>
+  </body>
+</html>

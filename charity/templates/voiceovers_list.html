@@ -1,0 +1,39 @@
+<!-- templates/charity/voiceovers_list.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Generated Voiceovers</title>
+  </head>
+  <body>
+    <h1>Generated Voiceovers</h1>
+
+    {% if files %}
+    <ul>
+      {% for file in files %}
+      <li>
+        {{ file }}
+
+        <!-- Audio preview -->
+        <audio controls>
+          <source
+            src="{{ MEDIA_URL }}voiceovers/{{ file }}"
+            type="audio/mpeg"
+          />
+          Your browser does not support the audio element.
+        </audio>
+
+        <!-- Download link -->
+        <a href="{{ MEDIA_URL }}voiceovers/{{ file }}" download>Download</a>
+
+        <!-- Stitch link -->
+        <a href="{% url 'stitch_voiceover' voiceover_filename=file %}"
+          >Stitch to Video</a
+        >
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No voiceovers found.</p>
+    {% endif %}
+  </body>
+</html>
