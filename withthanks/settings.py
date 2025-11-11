@@ -114,7 +114,12 @@ VIDEO_OUTPUT_DIR = Path("/home/rankraze/uploads/video-generation/uploads/")  # D
 BASE_VIDEO_PATH = BASE_DIR / "media" / "base_videos" / "newbase3.mp4"
 
 # Directory for temporary or stitched output videos
-VIDEO_OUTPUT_DIR = BASE_DIR / "tmp_videos"
+VIDEO_OUTPUT_DIR = Path(
+    os.environ.get(
+        "VIDEO_OUTPUT_DIR",
+        "/home/rankraze/uploads/video-generation/uploads"  # default host path
+    )
+)
 VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ------------------------------------------------------------
