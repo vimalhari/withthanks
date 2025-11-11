@@ -3,7 +3,7 @@ from elevenlabs.client import ElevenLabs
 from pathlib import Path
 from django.conf import settings
 
-API_KEY = "sk_86e54987f08e24d07f8370efb4f29378e35a5cd07aa115ad"
+API_KEY = "sk_785d9fcecb467873a281f9fcd9fde07794da1d30e15c3be2"
 VOICE_ID = "9rh371MqHF5jaDZ7VPvk"
 
 client = ElevenLabs(api_key=API_KEY)
