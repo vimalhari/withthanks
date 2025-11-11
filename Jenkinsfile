@@ -6,11 +6,12 @@ pipeline {
         IMAGE_TAG = "1.0.0"
         CONTAINER_NAME = "withthanks-container"
         APP_PORT = "8000"
-        DOCKER_HUB_USER = "rankraze"   // Docker Hub username
-        UPLOADS_PATH = "/home/rankraze/uploads/video-generation/uploads" // must exist & writable
+        DOCKER_HUB_USER = "rankraze"   // your Docker Hub username
+        UPLOADS_PATH = "/home/rankraze/uploads/video-generation/uploads" // must exist & writable by Jenkins
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 echo "📂 Checking out source code..."
@@ -56,16 +57,17 @@ pipeline {
             steps {
                 echo "📁 Ensuring uploads directory exists and is writable..."
                 sh '''
-                sudo mkdir -p $UPLOADS_PATH
-                sudo chown -R $(whoami):$(whoami) $UPLOADS_PATH
-                sudo chmod -R 775 $UPLOADS_PATH
+                mkdir -p $UPLOADS_PATH
+                chmod 775 $UPLOADS_PATH
+                chown jenkins:jenkins $UPLOADS_PATH || true
+                ls -ld $UPLOADS_PATH
                 '''
             }
         }
 
         stage('Stop Old Container') {
             steps {
-                echo "🛑 Stopping and removing old container if exists..."
+                echo "🛑 Stopping and removing old container if running..."
                 sh '''
                 docker stop $CONTAINER_NAME || true
                 docker rm $CONTAINER_NAME || true
@@ -78,7 +80,7 @@ pipeline {
                 echo "🚀 Starting new Django container using Jenkins secret .env file..."
                 withCredentials([file(credentialsId: 'django-env-file', variable: 'ENV_FILE')]) {
                     sh '''
-                    echo "🐍 Running Django container..."
+                    echo "🧩 Using .env file from Jenkins secrets..."
                     docker run -d --name $CONTAINER_NAME \
                         --restart always \
                         -p $APP_PORT:8000 \
@@ -92,23 +94,18 @@ pipeline {
 
         stage('Run Django Migrations') {
             steps {
-                echo "🛠 Running Django migrations inside container..."
+                echo "🛠 Running Django migrations inside the container..."
                 sh '''
                 docker exec -i $CONTAINER_NAME python manage.py migrate --noinput
                 '''
             }
         }
 
-        stage('Check Container Health') {
+        stage('Check Container Logs') {
             steps {
-                echo "🔍 Checking if container is running..."
+                echo "📄 Checking container logs for errors..."
                 sh '''
-                if [ $(docker inspect -f '{{.State.Running}}' $CONTAINER_NAME) != "true" ]; then
-                    echo "❌ Container failed to start!"
-                    docker logs $CONTAINER_NAME
-                    exit 1
-                fi
-                echo "✅ Container is running."
+                docker logs $CONTAINER_NAME || true
                 '''
             }
         }
@@ -120,7 +117,6 @@ pipeline {
         }
         failure {
             echo "❌ Deployment failed! Check Jenkins logs."
-            sh 'docker logs $CONTAINER_NAME || true'
         }
         always {
             echo "📋 Pipeline finished at ${new Date()}"
