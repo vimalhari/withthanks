@@ -7,7 +7,7 @@ pipeline {
         CONTAINER_NAME = "withthanks-container"
         APP_PORT = "8000"
         DOCKER_HUB_USER = "rankraze"   // your Docker Hub username
-        UPLOADS_PATH = "/home/rankraze/uploads/video-generation/uploads" // must exist & writable by Jenkins
+        UPLOADS_PATH = "${WORKSPACE}/uploads" // safe directory inside Jenkins workspace
     }
 
     stages {
@@ -21,6 +21,16 @@ pipeline {
             }
         }
 
+        stage('Prepare Uploads Directory') {
+            steps {
+                echo "📁 Ensuring uploads directory exists and is writable..."
+                sh '''
+                    mkdir -p $UPLOADS_PATH
+                    chmod 775 $UPLOADS_PATH
+                '''
+            }
+        }
+
         stage('Docker Login') {
             steps {
                 echo "🔐 Logging in to Docker Hub..."
@@ -29,9 +39,7 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    '''
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
@@ -40,27 +48,11 @@ pipeline {
             steps {
                 echo "🐳 Building Docker image..."
                 sh '''
-                docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
-
-                echo "🏷️ Tagging image..."
-                docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
-                docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:latest
-
-                echo "🚀 Pushing image to Docker Hub..."
-                docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
-                docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:latest
-                '''
-            }
-        }
-
-        stage('Prepare Uploads Directory') {
-            steps {
-                echo "📁 Ensuring uploads directory exists and is writable..."
-                sh '''
-                mkdir -p $UPLOADS_PATH
-                chmod 775 $UPLOADS_PATH
-                chown jenkins:jenkins $UPLOADS_PATH || true
-                ls -ld $UPLOADS_PATH
+                    docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
+                    docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
+                    docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:latest
+                    docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
+                    docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:latest
                 '''
             }
         }
@@ -69,8 +61,8 @@ pipeline {
             steps {
                 echo "🛑 Stopping and removing old container if running..."
                 sh '''
-                docker stop $CONTAINER_NAME || true
-                docker rm $CONTAINER_NAME || true
+                    docker stop $CONTAINER_NAME || true
+                    docker rm $CONTAINER_NAME || true
                 '''
             }
         }
@@ -80,13 +72,12 @@ pipeline {
                 echo "🚀 Starting new Django container using Jenkins secret .env file..."
                 withCredentials([file(credentialsId: 'django-env-file', variable: 'ENV_FILE')]) {
                     sh '''
-                    echo "🧩 Using .env file from Jenkins secrets..."
-                    docker run -d --name $CONTAINER_NAME \
-                        --restart always \
-                        -p $APP_PORT:8000 \
-                        --env-file $ENV_FILE \
-                        -v $UPLOADS_PATH:$UPLOADS_PATH \
-                        $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
+                        docker run -d --name $CONTAINER_NAME \
+                            --restart always \
+                            -p $APP_PORT:8000 \
+                            --env-file $ENV_FILE \
+                            -v $UPLOADS_PATH:$UPLOADS_PATH \
+                            $DOCKER_HUB_USER/$DOCKER_IMAGE:$IMAGE_TAG
                     '''
                 }
             }
@@ -95,18 +86,14 @@ pipeline {
         stage('Run Django Migrations') {
             steps {
                 echo "🛠 Running Django migrations inside the container..."
-                sh '''
-                docker exec -i $CONTAINER_NAME python manage.py migrate --noinput
-                '''
+                sh 'docker exec -i $CONTAINER_NAME python manage.py migrate --noinput'
             }
         }
 
         stage('Check Container Logs') {
             steps {
-                echo "📄 Checking container logs for errors..."
-                sh '''
-                docker logs $CONTAINER_NAME || true
-                '''
+                echo "📋 Checking container logs..."
+                sh 'docker logs $CONTAINER_NAME || true'
             }
         }
     }
