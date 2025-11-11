@@ -115,15 +115,14 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            echo "✅ Deployment successful! Django is running on port $APP_PORT."
-        }
-        failure {
-            echo "❌ Deployment failed! Please check Jenkins logs."
-        }
-        always {
-            echo "📋 Pipeline finished at $(date)"
-        }
+post {
+    success {
+        echo "✅ Deployment successful! Django is running on port $APP_PORT."
+    }
+    failure {
+        echo "❌ Deployment failed! Please check Jenkins logs."
+    }
+    always {
+        echo "📋 Pipeline finished at ${new Date()}"
     }
 }
