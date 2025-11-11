@@ -7,9 +7,9 @@ pipeline {
         CONTAINER_NAME    = "withthanks-container"
         APP_PORT          = "8000"
         DOCKER_HUB_USER   = "rankraze"
-        # Host folder for media uploads — persistent storage
+        // Host folder for media uploads — persistent storage
         HOST_UPLOADS_PATH = "/home/rankraze/uploads/video-generation/uploads"
-        # Inside-container folder (used by Django as MEDIA_ROOT)
+        // Inside-container folder (used by Django as MEDIA_ROOT)
         CONTAINER_MEDIA_PATH = "/app/media"
     }
 
