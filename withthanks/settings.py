@@ -1,4 +1,3 @@
-# withthanks/settings.py — minimal dev settings (safe to run locally)
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,9 +14,14 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-do-not-use-in-prod")
 DEBUG = False
 
-ALLOWED_HOSTS = ["hirefella.com", "www.hirefella.com", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [
+    "hirefella.com",
+    "www.hirefella.com",
+    "localhost",
+    "127.0.0.1",
+]
 
-# -----------------------------------------------------------
+# ------------------------------------------------------------
 # Installed apps
 # ------------------------------------------------------------
 INSTALLED_APPS = [
@@ -50,7 +54,6 @@ ROOT_URLCONF = "withthanks.urls"
 # ------------------------------------------------------------
 # Templates
 # ------------------------------------------------------------
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -87,12 +90,24 @@ DATABASES = {
 # Static and media
 # ------------------------------------------------------------
 STATIC_URL = "/static/"
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# 🧩 Inside Docker container
+MEDIA_URL = "/media/"
+MEDIA_ROOT = Path("/app/media")  # volume-mounted from Jenkins host path
+
 # ------------------------------------------------------------
-# Email defaults (for resend utils or local fallback)
+# Video processing paths
+# ------------------------------------------------------------
+# ✅ Base video path inside container
+BASE_VIDEO_PATH = MEDIA_ROOT / "base_videos" / "newbase3.mp4"
+
+# ✅ Directory for generated or stitched videos
+VIDEO_OUTPUT_DIR = MEDIA_ROOT / "videos"
+VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# ------------------------------------------------------------
+# Email defaults
 # ------------------------------------------------------------
 DEFAULT_FROM_EMAIL = "No Reply <no-reply@tanjavoorathefe.in>"
 
@@ -106,24 +121,7 @@ USE_L10N = True
 USE_TZ = True
 
 # ------------------------------------------------------------
-# Video processing paths
-# ------------------------------------------------------------
-VIDEO_OUTPUT_DIR = Path("/home/rankraze/uploads/video-generation/uploads/")  # Directory for temporary or stitched output videos
-
-# ✅ Correct base video file path
-BASE_VIDEO_PATH = BASE_DIR / "media" / "base_videos" / "newbase3.mp4"
-
-# Directory for temporary or stitched output videos
-VIDEO_OUTPUT_DIR = Path(
-    os.environ.get(
-        "VIDEO_OUTPUT_DIR",
-        "/home/rankraze/uploads/video-generation/uploads"  # default host path
-    )
-)
-VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# ------------------------------------------------------------
-# Optional: logging for ffmpeg and CSV processing
+# Logging for debugging video and ffmpeg operations
 # ------------------------------------------------------------
 LOGGING = {
     "version": 1,
@@ -131,11 +129,27 @@ LOGGING = {
     "handlers": {
         "console": {"class": "logging.StreamHandler"},
     },
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO"},
+        "charity": {"handlers": ["console"], "level": "DEBUG"},
+    },
 }
 
+# ------------------------------------------------------------
+# CSRF Trusted Origins
+# ------------------------------------------------------------
 CSRF_TRUSTED_ORIGINS = [
     "https://hirefella.com",
-    "https://www.hirefella.com",     "http://127.0.0.1:8000", 
-    "http://localhost:8000", 
+    "https://www.hirefella.com",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
 ]
+
+# ------------------------------------------------------------
+# Optional: ensure upload folder exists for video generation
+# ------------------------------------------------------------
+try:
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+    (MEDIA_ROOT / "videos").mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"⚠️ Could not ensure media folders exist: {e}")
