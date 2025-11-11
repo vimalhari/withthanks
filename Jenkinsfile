@@ -7,7 +7,7 @@ pipeline {
         CONTAINER_NAME = "withthanks-container"
         APP_PORT = "8000"
         DOCKER_HUB_USER = "rankraze"   // your Docker Hub username
-        UPLOADS_PATH = "/home/rankraze/uploads/video-generation/uploads"
+        UPLOADS_PATH = "/home/rankraze/uploads/video-generation/uploads" // must exist & writable by Jenkins
     }
 
     stages {
@@ -69,8 +69,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'django-env-file', variable: 'ENV_FILE')]) {
                     sh '''
                     echo "🧩 Using .env file from Jenkins secrets..."
-                    mkdir -p $UPLOADS_PATH
-
+                    # Folder must already exist and be writable by Jenkins
                     echo "🐍 Running Django container..."
                     docker run -d --name $CONTAINER_NAME \
                         --restart always \
@@ -101,7 +100,6 @@ pipeline {
             echo "❌ Deployment failed! Check Jenkins logs."
         }
         always {
-            // Proper Groovy date logging
             echo "📋 Pipeline finished at ${new Date()}"
         }
     }
