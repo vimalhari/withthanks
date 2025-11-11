@@ -66,8 +66,6 @@ pipeline {
         stage('Run New Container') {
             steps {
                 echo "🚀 Starting new Django container using Jenkins secret .env file..."
-
-                // 🔒 Pull .env file from Jenkins credentials
                 withCredentials([file(credentialsId: 'django-env-file', variable: 'ENV_FILE')]) {
                     sh '''
                     echo "🧩 Using .env file from Jenkins secrets..."
@@ -84,6 +82,15 @@ pipeline {
                 }
             }
         }
+
+        stage('Run Django Migrations') {
+            steps {
+                echo "🛠 Running Django migrations inside the container..."
+                sh '''
+                docker exec -i $CONTAINER_NAME python manage.py migrate --noinput
+                '''
+            }
+        }
     }
 
     post {
@@ -94,7 +101,8 @@ pipeline {
             echo "❌ Deployment failed! Check Jenkins logs."
         }
         always {
-            echo "📋 Pipeline finished at $(date)"
+            // Proper Groovy date logging
+            echo "📋 Pipeline finished at ${new Date()}"
         }
     }
 }
