@@ -108,6 +108,8 @@ USE_TZ = True
 # ------------------------------------------------------------
 # Video processing paths
 # ------------------------------------------------------------
+VIDEO_OUTPUT_DIR = Path("/home/rankraze/uploads/video-generation/uploads/")  # Directory for temporary or stitched output videos
+
 # ✅ Correct base video file path
 BASE_VIDEO_PATH = BASE_DIR / "media" / "base_videos" / "newbase3.mp4"
 
