@@ -408,6 +408,13 @@ def invoice_void(request, invoice_id):
             invoice = get_object_or_404(Invoice, id=invoice_id)
         else:
             invoice = get_object_or_404(Invoice, id=invoice_id, charity=charity)
+
+        # Void on Stripe if applicable
+        from .services.stripe_billing import is_enabled as stripe_enabled, void_stripe_invoice
+
+        if stripe_enabled() and invoice.stripe_invoice_id:
+            void_stripe_invoice(invoice)
+
         invoice.status = "Void"
         invoice.save()
         messages.success(request, f"Invoice {invoice.invoice_number} has been voided.")
@@ -543,3 +550,39 @@ def invoice_edit_view(request, invoice_id):
     else:
         form = InvoiceForm(instance=invoice)
     return render(request, "invoice_edit.html", {"form": form, "invoice": invoice})
+
+
+@login_required(login_url="charity_login")
+def invoice_stripe_send(request, invoice_id):
+    """
+    Create and send an invoice via Stripe.
+    The charity contact receives an email with a hosted payment page.
+    """
+    from .services.stripe_billing import (
+        finalize_and_send_invoice,
+        is_enabled as stripe_enabled,
+    )
+
+    if not stripe_enabled():
+        messages.error(request, "Stripe is not configured. Set STRIPE_SECRET_KEY in your .env.")
+        return redirect("invoice_detail", invoice_id=invoice_id)
+
+    charity = get_active_charity(request)
+    if request.user.is_superuser and not charity:
+        invoice = get_object_or_404(Invoice, id=invoice_id)
+    else:
+        invoice = get_object_or_404(Invoice, id=invoice_id, charity=charity)
+
+    if request.method == "POST":
+        try:
+            hosted_url = finalize_and_send_invoice(invoice)
+            messages.success(
+                request,
+                f"Invoice {invoice.invoice_number} sent via Stripe. "
+                f'<a href="{hosted_url}" target="_blank">View payment page</a>',
+            )
+        except Exception as e:
+            logger.error(f"Stripe send failed for invoice {invoice.invoice_number}: {e}")
+            messages.error(request, f"Failed to send via Stripe: {e}")
+
+    return redirect("invoice_detail", invoice_id=invoice_id)

@@ -241,16 +241,16 @@ def batch_detail_view(request, batch_id):
 
     video_events = VideoEvent.objects.filter(job__donation_batch=batch)
     _engagement = video_events.aggregate(
-        total_plays=Count("id", filter=Q(event_type="play_started")),
-        completions=Count("id", filter=Q(event_type="100_percent")),
+        total_plays=Count("id", filter=Q(event_type="PLAY")),
+        completions=Count("id", filter=Q(event_type="COMPLETE")),
     )
 
     email_events = EmailEvent.objects.filter(job__donation_batch=batch)
     delivery_breakdown = email_events.values("event_type").annotate(count=Count("id"))
-    bounced_logs = email_events.filter(event_type="bounced").select_related("job")
+    bounced_logs = email_events.filter(event_type="BOUNCED").select_related("job")
 
     daily_sent = (
-        email_events.filter(event_type="sent")
+        email_events.filter(event_type="SENT")
         .annotate(date=TruncDate("timestamp"))
         .values("date")
         .annotate(count=Count("id"))
@@ -291,7 +291,7 @@ def export_donation_report(request):
     response["Content-Disposition"] = 'attachment; filename="donation_report.csv"'
     writer = csv.writer(response)
     writer.writerow(["Date", "Job Name", "Email", "Status", "Total Views"])
-    for job in jobs.select_related("donor_name"):
+    for job in jobs.select_related("donation_batch"):
         writer.writerow(
             [
                 job.created_at.strftime("%Y-%m-%d"),

@@ -13,11 +13,9 @@ from django.utils.timezone import now
 
 from .models import DonationBatch, DonationJob, EmailTracking, UnsubscribedUser
 from .models_analytics import EmailEvent, VideoEvent
+from .services.video_builder import VideoSpec, build_personalized_video
 from .utils.cloudflare_stream import upload_video_to_stream
-from .utils.filenames import safe_filename
 from .utils.resend_utils import send_video_email
-from .utils.video_utils import stitch_voice_and_overlay
-from .utils.voiceover import generate_voiceover
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +82,7 @@ def process_donation_row(self, job_id):
                 base_video_path = campaign.video_template_override.path
 
         # Log Video Generation started (eventually update on success)
-        VideoEvent.objects.create(job=job, campaign=campaign, event_type="generated")
+        VideoEvent.objects.create(job=job, campaign=campaign, event_type="GENERATED")
 
         if not base_video_path and client.default_template_video:
             base_video_path = client.default_template_video.path
@@ -228,47 +226,30 @@ def process_donation_row(self, job_id):
                     is_personalized = campaign.is_personalized
 
                 if is_personalized:
-                    # PERSONALIZED FLOW
-                    # 1. Resolve Script
+                    # PERSONALIZED FLOW — delegate to shared video builder
                     raw_script = ""
                     if campaign and campaign.voiceover_script_override:
                         raw_script = campaign.voiceover_script_override
-                    else:
+                    elif client.default_voiceover_script:
                         raw_script = client.default_voiceover_script
 
-                    # 2. Resolve Voice
-                    voice_id = client.default_voice_id
-
-                    # 3. Personalize Text
-                    personalized_script = (
-                        raw_script.replace("{{donor_name}}", str(job.donor_name))
-                        .replace("{{donation_amount}}", str(job.donation_amount))
-                        .replace("{{organization_name}}", str(client.organization_name))
-                    )
-
-                    # 4. Generate Voice (TTS)
-                    file_base = safe_filename(f"voice_{job.id}")
-                    tts_path = generate_voiceover(
-                        text=personalized_script, file_name=file_base, voice_id=voice_id
-                    )
-                    intermediate_files.append(tts_path)
-
-                    # 5. Stitch Video
                     if not base_video_path or not os.path.exists(base_video_path):
                         raise FileNotFoundError(
                             f"Base video template missing for stitching Job {job.id}"
                         )
 
-                    output_filename = f"final_video_{job.id}.mp4"
-
-                    final_video_path, _ = stitch_voice_and_overlay(
-                        input_video=base_video_path,
-                        tts_mp3=tts_path,
+                    spec = VideoSpec(
+                        donor_name=str(job.donor_name),
+                        donation_amount=str(job.donation_amount),
+                        charity_name=client.organization_name,
+                        campaign_name=campaign.name if campaign else "",
+                        voiceover_script=raw_script or None,
+                        voice_id=client.default_voice_id or "",
+                        base_video_path=base_video_path,
                         overlay_text="",
-                        out_filename=output_filename,
-                        output_dir=settings.VIDEO_OUTPUT_DIR,
-                        logo_path=None,
                     )
+                    final_video_path, tts_path = build_personalized_video(spec)
+                    intermediate_files.append(tts_path)
 
                 else:
                     # NOT PERSONALIZED -> Send Default Video
@@ -403,14 +384,12 @@ def process_donation_row(self, job_id):
                 is_card_only=is_card_only,
                 html=email_html,  # Pass rendered HTML
             )
-            # Log successful sent event
-            EmailEvent.objects.create(job=job, campaign=campaign, event_type="sent")
         except Exception as e:
             job.status = "failed"
             job.error_message = f"Resend failed: {e!s}"
             job.save()
             # Log failed event
-            EmailEvent.objects.create(job=job, campaign=campaign, event_type="failed")
+            EmailEvent.objects.create(job=job, campaign=campaign, event_type="FAILED")
             logger.error(f"Job {job_id} Resend failure: {e}")
             cleanup_intermediate(intermediate_files, final_video_path)
             # Re-raising allows Celery retry
@@ -436,6 +415,11 @@ def process_donation_row(self, job_id):
 
         logger.info(f"✅ Job {job.id} success in {generation_time}s")
 
+        # Sync into normalized Donor/Donation/VideoSendLog tables
+        from .services.sync_bridge import sync_job_to_normalized_models
+
+        sync_job_to_normalized_models(job)
+
     except Exception as exc:
         logger.error(f"❌ Job {job_id} critical failure: {exc}\n{traceback.format_exc()}")
         try:
@@ -447,6 +431,66 @@ def process_donation_row(self, job_id):
             logger.error(f"Could not mark job {job_id} as failed: {save_err}")
 
         cleanup_intermediate(intermediate_files, None)
+        raise self.retry(exc=exc) from exc
+
+
+# ---------------------------------------------------------------------------
+# Async wrapper for the Stage-3 API video dispatch pipeline
+# ---------------------------------------------------------------------------
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def dispatch_donation_video_task(
+    self,
+    *,
+    charity_id: int,
+    donor_email: str,
+    donor_name: str,
+    amount: str,
+    donated_at: str | None = None,
+    source: str = "API",
+    campaign_type: str = "THANK_YOU",
+) -> dict:
+    """
+    Celery wrapper around :func:`charity.services.video_dispatch.dispatch_donation_video`.
+
+    All arguments are JSON-serialisable so the task can be sent via any
+    Celery broker.  The heavy work (TTS, FFmpeg stitching, email send) runs
+    in the worker, keeping the API request/response cycle fast.
+    """
+    from decimal import Decimal
+
+    from django.utils.dateparse import parse_datetime
+
+    from charity.models import Charity
+    from charity.services.video_dispatch import dispatch_donation_video
+
+    try:
+        charity = Charity.objects.get(id=charity_id)
+        parsed_at = parse_datetime(donated_at) if donated_at else None
+
+        result = dispatch_donation_video(
+            charity=charity,
+            donor_email=donor_email,
+            donor_name=donor_name,
+            amount=Decimal(amount),
+            donated_at=parsed_at,
+            source=source,
+            campaign_type=campaign_type,
+        )
+
+        return {
+            "donation_id": result.donation_id,
+            "send_log_id": result.send_log_id,
+            "donor_email": result.donor_email,
+            "send_kind": result.send_kind,
+            "campaign_type": result.campaign_type,
+            "video_path": result.video_path,
+            "stream_video_id": result.stream_video_id,
+            "stream_playback_url": result.stream_playback_url,
+        }
+    except Exception as exc:
+        logger.error("dispatch_donation_video_task failed for %s: %s", donor_email, exc)
         raise self.retry(exc=exc) from exc
 
 
@@ -518,3 +562,92 @@ def batch_process_csv(batch_id):
     except Exception as e:
         logger.error(f"Error in batch_process_csv {batch_id}: {e}")
         traceback.print_exc()
+
+
+# ---------------------------------------------------------------------------
+# Periodic tasks (called by Celery Beat — see withthanks/celery.py)
+# ---------------------------------------------------------------------------
+
+
+@shared_task
+def refresh_all_campaign_stats():
+    """Refresh materialized CampaignStats for all campaigns."""
+    from .models import Campaign
+    from .models_analytics import CampaignStats
+
+    campaigns = Campaign.objects.all()
+    refreshed = 0
+    for campaign in campaigns:
+        stats, _ = CampaignStats.objects.get_or_create(campaign=campaign)
+        stats.update_stats()
+        refreshed += 1
+    logger.info(f"Refreshed CampaignStats for {refreshed} campaigns")
+    return {"refreshed": refreshed}
+
+
+@shared_task
+def mark_overdue_invoices():
+    """Transition Sent invoices past their due date to Overdue status."""
+    from .models import Invoice
+
+    overdue = Invoice.objects.filter(
+        status="Sent",
+        due_date__lt=now().date(),
+    ).update(status="Overdue")
+    logger.info(f"Marked {overdue} invoices as Overdue")
+    return {"marked_overdue": overdue}
+
+
+@shared_task
+def cleanup_stale_jobs():
+    """Reset jobs stuck in 'processing' for over 2 hours back to 'failed'."""
+    cutoff = now() - timedelta(hours=2)
+    stale = DonationJob.objects.filter(
+        status="processing",
+        updated_at__lt=cutoff,
+    ).update(status="failed", error_message="Stale job — timed out after 2 hours")
+    logger.info(f"Cleaned up {stale} stale processing jobs")
+    return {"stale_cleaned": stale}
+
+
+@shared_task
+def prune_voiceover_cache():
+    """Delete voiceover cache files older than 30 days."""
+    cache_dir = os.path.join(settings.MEDIA_ROOT, "voiceover_cache")
+    if not os.path.isdir(cache_dir):
+        return {"pruned": 0}
+
+    cutoff = time.time() - (30 * 86400)  # 30 days in seconds
+    pruned = 0
+    for fname in os.listdir(cache_dir):
+        fpath = os.path.join(cache_dir, fname)
+        try:
+            if os.path.isfile(fpath) and os.path.getmtime(fpath) < cutoff:
+                os.remove(fpath)
+                pruned += 1
+        except Exception as err:
+            logger.warning(f"Failed to prune {fpath}: {err}")
+    logger.info(f"Pruned {pruned} old voiceover cache files")
+    return {"pruned": pruned}
+
+
+@shared_task
+def cleanup_old_videos():
+    """Delete generated video files from VIDEO_OUTPUT_DIR older than 7 days."""
+    video_dir = str(settings.VIDEO_OUTPUT_DIR)
+    if not os.path.isdir(video_dir):
+        return {"deleted": 0}
+
+    cutoff = time.time() - (7 * 86400)  # 7 days in seconds
+    deleted = 0
+    for fname in os.listdir(video_dir):
+        fpath = os.path.join(video_dir, fname)
+        try:
+            if os.path.isfile(fpath) and os.path.getmtime(fpath) < cutoff:
+                os.remove(fpath)
+                deleted += 1
+        except Exception as err:
+            logger.warning(f"Failed to delete {fpath}: {err}")
+    logger.info(f"Deleted {deleted} old video files from output dir")
+    return {"deleted": deleted}
+

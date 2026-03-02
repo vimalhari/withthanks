@@ -91,6 +91,26 @@ services:
       redis:
         condition: service_healthy
 
+  # ── Celery Beat (periodic task scheduler) ────────────────────────────────
+  beat:
+    build:
+      context: .
+      target: build
+    command: uv run celery -A withthanks beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://withthanks:withthanks@db:5432/withthanks
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   media_data:

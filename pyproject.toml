@@ -9,7 +9,6 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
     "drf-yasg>=1.21.15",
     "elevenlabs>=2.37.0",
-    "ffmpeg-python>=0.2.0",
     "resend>=2.23.0",
     "python-dotenv>=1.2.2",
     "gunicorn>=25.1.0",
@@ -22,13 +21,13 @@ dependencies = [
     "xhtml2pdf>=0.2.17",
     "openpyxl>=3.1.5",
     "django-tailwind-cli>=4.5.1",
-]
-
-[project.optional-dependencies]
-# Cloudflare R2 storage (S3-compatible API — only needed if R2 is enabled)
-r2 = [
+    # Object storage (Cloudflare R2 via S3-compatible API)
     "boto3>=1.42.59",
     "django-storages[s3]>=1.14.6",
+    # Celery Beat (periodic task scheduler)
+    "django-celery-beat>=2.7.0",
+    # Stripe billing
+    "stripe>=12.0.0",
 ]
 
 # ---------------------------------------------------------------------------

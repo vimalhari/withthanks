@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_billing, views_campaign, views_clients, views_revenue
+from . import views, views_billing, views_campaign, views_clients, views_revenue, views_webhooks
 
 # No app_name to keep global namespace for now
 
@@ -56,6 +56,12 @@ urlpatterns = [
         "invoices/<uuid:invoice_id>/mark-paid/", views.invoice_mark_paid, name="invoice_mark_paid"
     ),
     path("invoices/<uuid:invoice_id>/void/", views.invoice_void, name="invoice_void"),
+    # Stripe invoice actions
+    path(
+        "invoices/<uuid:invoice_id>/stripe-send/",
+        views.invoice_stripe_send,
+        name="invoice_stripe_send",
+    ),
     path("api/revenue/", views_revenue.RevenueIntelligenceAPI.as_view(), name="api_revenue"),
     path("api/revenue/view/", views_revenue.revenue_dashboard_view, name="revenue_dashboard"),
     # Billing API
@@ -116,5 +122,16 @@ urlpatterns = [
         "campaigns/<uuid:campaign_id>/fields/<int:field_id>/delete/",
         views_campaign.campaign_field_delete,
         name="campaign_field_delete",
+    ),
+    # Webhooks
+    path(
+        "webhooks/stripe/",
+        views_webhooks.StripeWebhookView.as_view(),
+        name="stripe_webhook",
+    ),
+    path(
+        "webhooks/cloudflare/",
+        views_webhooks.CloudflareWebhookView.as_view(),
+        name="cloudflare_webhook",
     ),
 ]

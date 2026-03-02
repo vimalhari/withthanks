@@ -39,27 +39,34 @@ A Django web application that helps charities send personalized thank-you videos
 
 ## Architecture Overview
 
+Both ingestion channels (REST API and CSV batch upload) share the same video
+production service (`video_builder`) and write to a unified set of normalised
+models (`Donor → Donation → VideoSendLog`).
+
 ```
-Donation event (CSV row or API call)
-        │
-        ▼
-video_dispatch.dispatch_donation_video()
-        │
-        ├─► Resolve active Campaign for the given charity & campaign type
-        ├─► Look up or create Donor record
-        ├─► Create Donation record
-        │
-        ├─► Decide send kind:
-        │     - GRATITUDE   (repeat donor within cooldown window)
-        │     - TEMPLATE    (campaign has a video template, no personalisation)
-        │     - PERSONALIZED (generate TTS voiceover → stitch video)
-        │
-        ├─► [Personalized / Gratitude] generate_voiceover() → ElevenLabs TTS
-        ├─► stitch_voice_and_overlay() → FFmpeg
-        │
-        ├─► upload_video_to_stream() → Cloudflare Stream
-        ├─► send_video_email() → Resend
-        └─► Write VideoSendLog record
+Donation event
+     ┌────────────┴────────────┐
+     │                         │
+  REST API                CSV batch upload
+  (async — Celery)        (Celery task per row)
+     │                         │
+     ▼                         ▼
+video_dispatch             process_donation_row
+     │                         │
+     └──────────┬──────────────┘
+                │
+        video_builder.build_personalized_video()
+                │
+    ┌───────────┼───────────────┐
+    ▼           ▼               ▼
+ElevenLabs   FFmpeg          Cloudflare Stream
+  (TTS)     (stitch)           (upload)
+                │
+                ▼
+         send_video_email() → Resend
+                │
+                ▼
+     Donor / Donation / VideoSendLog (normalised)
 ```
 
 ---
@@ -71,11 +78,13 @@ video_dispatch.dispatch_donation_video()
 | Web framework | Django 6.0.2 |
 | REST API | Django REST Framework 3.16.1 |
 | Task queue | Celery 5.6 + Redis 7.2 |
-| Video processing | FFmpeg (via `ffmpeg-python`) |
+| Video processing | FFmpeg (subprocess) |
 | TTS / Voiceover | ElevenLabs 2.37 |
 | Video hosting | Cloudflare Stream |
 | Email delivery | Resend 2.23 |
-| Object storage | Cloudflare R2 *(optional, S3-compatible via `boto3`)* |
+| Object storage | Cloudflare R2 (S3-compatible via `boto3` + `django-storages`) |
+| Billing | Stripe |
+| Scheduled tasks | Celery Beat (`django-celery-beat`) |
 | Database (dev) | SQLite |
 | Database (prod) | PostgreSQL 17 (psycopg 3.3) |
 | Containerisation | Docker (built with uv) |
@@ -101,7 +110,10 @@ WithThanks/
 │   │   ├── views.py            # DonationIngestAPIView, BulkDonationIngestAPIView
 │   │   └── serializers.py      # DonationIngestSerializer, BulkDonationIngestSerializer
 │   ├── services/
-│   │   └── video_dispatch.py   # Core orchestration logic
+│   │   ├── video_dispatch.py   # API pipeline orchestration
+│   │   ├── video_builder.py    # Shared TTS + FFmpeg stitching (used by both pipelines)
+│   │   ├── sync_bridge.py      # CSV → normalised model bridge (Donor/Donation/VideoSendLog)
+│   │   └── stripe_billing.py   # Stripe invoice & webhook handling
 │   ├── utils/
 │   │   ├── video_utils.py      # FFmpeg stitching helpers
 │   │   ├── voiceover.py        # ElevenLabs TTS wrapper
@@ -114,6 +126,7 @@ WithThanks/
 │   └── templates/              # HTML templates (upload_csv, voiceovers_list, ...)
 ├── withthanks/                 # Django project configuration
 │   ├── settings.py
+│   ├── celery.py               # Celery app + Beat schedule
 │   ├── urls.py
 │   ├── wsgi.py
 │   └── asgi.py
@@ -276,20 +289,50 @@ Trigger a thank-you video for a single donation.
   "donor_name": "Jane Doe",
   "amount": "50.00",
   "donated_at": "2026-03-01T10:00:00Z",   // optional, defaults to now
-  "campaign_type": "THANK_YOU"             // THANK_YOU | DIRECT_EMAIL
+  "campaign_type": "THANK_YOU"             // THANK_YOU | VDM
 }
 ```
 
-**Response `201 Created`:**
+**Response `202 Accepted`:**
+
+Video generation runs asynchronously via Celery.  Poll `GET /api/tasks/<task_id>/`
+for the result.
 
 ```json
 {
-  "donation_id": 42,
-  "send_log_id": 7,
-  "donor_email": "donor@example.com",
-  "send_kind": "PERSONALIZED",
-  "campaign_type": "THANK_YOU",
-  "video_path": "/app/media/videos/jane_doe_thankyou.mp4"
+  "task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "queued",
+  "donor_email": "donor@example.com"
+}
+```
+
+### `GET /api/tasks/<task_id>/`
+
+Poll the status of an async donation dispatch task.
+
+**Response (pending):**
+
+```json
+{
+  "task_id": "a1b2c3d4-...",
+  "status": "PENDING"
+}
+```
+
+**Response (success):**
+
+```json
+{
+  "task_id": "a1b2c3d4-...",
+  "status": "SUCCESS",
+  "result": {
+    "donation_id": 42,
+    "send_log_id": 7,
+    "donor_email": "donor@example.com",
+    "send_kind": "PERSONALIZED",
+    "campaign_type": "THANK_YOU",
+    "video_path": "/app/media/videos/jane_doe_thankyou.mp4"
+  }
 }
 ```
 
@@ -316,7 +359,7 @@ Trigger thank-you videos for multiple donations in a single request.
       "donor_email": "donor2@example.com",
       "donor_name": "Bob",
       "amount": "100.00",
-      "campaign_type": "DIRECT_EMAIL"
+      "campaign_type": "VDM"
     }
   ]
 }
@@ -407,4 +450,5 @@ Runs the full CI suite first, then triggers the Coolify **prod** application web
 | `Donor` | A donor record scoped to a charity (unique per `charity + email`). |
 | `Campaign` | Links a charity to a campaign type, video template, and text template with configurable gratitude cooldown. |
 | `Donation` | A financial donation record linking donor, charity, amount, and campaign type. |
-| `VideoSendLog` | Audit log of every video send attempt, including Cloudflare Stream metadata, email provider message ID, and error details. |
+| `DonationJob` | A single CSV row being processed — tracks status, video path, and generation time. |
+| `VideoSendLog` | Audit log of every video send attempt (unified across both pipelines), including Cloudflare Stream metadata, email provider message ID, and error details. |

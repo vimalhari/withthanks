@@ -271,9 +271,9 @@ class AnalyticsHomeView(AnalyticsBaseView):
         )
 
         context["stats"] = {
-            "total_sent": email_qs.filter(event_type="sent").count(),
-            "total_opened": email_qs.filter(event_type="opened").count(),
-            "total_plays": video_qs.filter(event_type="play_started").count(),
+            "total_sent": email_qs.filter(event_type="SENT").count(),
+            "total_opened": email_qs.filter(event_type="OPEN").count(),
+            "total_plays": video_qs.filter(event_type="PLAY").count(),
         }
         return context
 
@@ -295,11 +295,11 @@ class VideoEngagementView(AnalyticsBaseView):
 
             # KPI Aggregates
             stats = video_qs.aggregate(
-                plays=Count("id", filter=Q(event_type="play_started")),
-                q1=Count("id", filter=Q(event_type="25_percent")),
-                q2=Count("id", filter=Q(event_type="50_percent")),
-                q3=Count("id", filter=Q(event_type="75_percent")),
-                comp=Count("id", filter=Q(event_type="100_percent")),
+                plays=Count("id", filter=Q(event_type="PLAY")),
+                q1=Count("id", filter=Q(event_type="PROGRESS", completion_percentage__gte=25)),
+                q2=Count("id", filter=Q(event_type="PROGRESS", completion_percentage__gte=50)),
+                q3=Count("id", filter=Q(event_type="PROGRESS", completion_percentage__gte=75)),
+                comp=Count("id", filter=Q(event_type="COMPLETE")),
                 total_duration=Sum("watch_duration", filter=Q(event_type="PROGRESS")),
             )
 
@@ -334,11 +334,11 @@ class DeliveryDashboardView(AnalyticsBaseView):
             )
 
             delivery_stats = email_qs.aggregate(
-                sent=Count("id", filter=Q(event_type="sent")),
-                delivered=Count("id", filter=Q(event_type="delivered")),
-                bounced=Count("id", filter=Q(event_type="bounced")),
-                failed=Count("id", filter=Q(event_type="failed")),
-                opened=Count("id", filter=Q(event_type="opened")),
+                sent=Count("id", filter=Q(event_type="SENT")),
+                delivered=Count("id", filter=Q(event_type="SENT")),  # R2: no separate delivered state
+                bounced=Count("id", filter=Q(event_type="BOUNCED")),
+                failed=Count("id", filter=Q(event_type="FAILED")),
+                opened=Count("id", filter=Q(event_type="OPEN")),
             )
 
             sent = delivery_stats["sent"] or 1  # Avoid div by zero
@@ -349,7 +349,7 @@ class DeliveryDashboardView(AnalyticsBaseView):
                 "bounce_rate": round(delivery_stats["bounced"] / sent * 100, 1),
                 "open_rate": round(delivery_stats["opened"] / sent * 100, 1),
                 "errors": list(
-                    email_qs.filter(event_type="failed")
+                    email_qs.filter(event_type="FAILED")
                     .values("event_type")
                     .annotate(count=Count("id"))
                     .order_by("-count")[:5]
@@ -378,9 +378,9 @@ class CampaignPerformanceView(AnalyticsBaseView):
                 campaign=camp, timestamp__range=(start_date, end_date)
             )
 
-            sent = c_emails.filter(event_type="sent").count()
-            opened = c_emails.filter(event_type="opened").count()
-            plays = c_videos.filter(event_type="play_started").count()
+            sent = c_emails.filter(event_type="SENT").count()
+            opened = c_emails.filter(event_type="OPEN").count()
+            plays = c_videos.filter(event_type="PLAY").count()
 
             if sent > 0:
                 perf.append(
@@ -447,15 +447,15 @@ class ExportAnalyticsView(AnalyticsBaseView, View):
                 campaign=camp, timestamp__range=(start_date, end_date)
             )
 
-            sent = c_emails.filter(event_type="sent").count()
+            sent = c_emails.filter(event_type="SENT").count()
             if sent == 0:
                 continue
 
-            delivered = c_emails.filter(event_type="delivered").count()
-            opened = c_emails.filter(event_type="opened").count()
-            clicked = c_emails.filter(event_type="clicked").count()
-            plays = c_videos.filter(event_type="play_started").count()
-            comp = c_videos.filter(event_type="100_percent").count()
+            delivered = c_emails.filter(event_type="SENT").count()  # No separate delivered state
+            opened = c_emails.filter(event_type="OPEN").count()
+            clicked = c_emails.filter(event_type="CLICK").count()
+            plays = c_videos.filter(event_type="PLAY").count()
+            comp = c_videos.filter(event_type="COMPLETE").count()
             duration = (
                 c_videos.filter(event_type="PROGRESS").aggregate(Sum("watch_duration"))[
                     "watch_duration__sum"
@@ -495,11 +495,11 @@ class ChartDataAPIView(AnalyticsBaseView, View):
                 timestamp__range=(start_date, end_date)
             )
             stats = video_qs.aggregate(
-                plays=Count("id", filter=Q(event_type="play_started")),
-                q1=Count("id", filter=Q(event_type="25_percent")),
-                q2=Count("id", filter=Q(event_type="50_percent")),
-                q3=Count("id", filter=Q(event_type="75_percent")),
-                comp=Count("id", filter=Q(event_type="100_percent")),
+                plays=Count("id", filter=Q(event_type="PLAY")),
+                q1=Count("id", filter=Q(event_type="PROGRESS", completion_percentage__gte=25)),
+                q2=Count("id", filter=Q(event_type="PROGRESS", completion_percentage__gte=50)),
+                q3=Count("id", filter=Q(event_type="PROGRESS", completion_percentage__gte=75)),
+                comp=Count("id", filter=Q(event_type="COMPLETE")),
             )
             data = {
                 "labels": ["Play Started", "25%", "50%", "75%", "100%"],
@@ -516,9 +516,9 @@ class ChartDataAPIView(AnalyticsBaseView, View):
                 timestamp__range=(start_date, end_date)
             )
             stats = email_qs.aggregate(
-                delivered=Count("id", filter=Q(event_type="delivered")),
-                bounced=Count("id", filter=Q(event_type="bounced")),
-                failed=Count("id", filter=Q(event_type="failed")),
+                delivered=Count("id", filter=Q(event_type="SENT")),
+                bounced=Count("id", filter=Q(event_type="BOUNCED")),
+                failed=Count("id", filter=Q(event_type="FAILED")),
             )
             data = {
                 "labels": ["Delivered", "Bounced", "Failed"],

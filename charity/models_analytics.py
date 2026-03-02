@@ -9,16 +9,10 @@ class EmailEvent(models.Model):
     EVENT_TYPES = [
         ("SENT", "Sent"),
         ("FAILED", "Failed"),
+        ("BOUNCED", "Bounced"),
         ("OPEN", "Open"),
         ("CLICK", "Click"),
         ("UNSUB", "Unsubscribe"),
-        # Backward compatibility aliases
-        ("delivered", "Delivered"),
-        ("failed", "Failed"),
-        ("bounced", "Bounced"),
-        ("opened", "Opened"),
-        ("clicked", "Clicked"),
-        ("sent", "Sent"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -70,16 +64,10 @@ class EmailEvent(models.Model):
 
 class VideoEvent(models.Model):
     EVENT_TYPES = [
+        ("GENERATED", "Generated"),
         ("PLAY", "Play"),
         ("PROGRESS", "Progress"),
         ("COMPLETE", "Complete"),
-        # Backward compatibility aliases
-        ("generated", "Generated"),
-        ("play_started", "Play Started"),
-        ("25_percent", "25% Completion"),
-        ("50_percent", "50% Completion"),
-        ("75_percent", "75% Completion"),
-        ("100_percent", "100% Completion"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -152,19 +140,19 @@ class CampaignStats(models.Model):
     def update_stats(self):
         """Recalculate stats from events"""
         email_stats = EmailEvent.objects.filter(campaign=self.campaign).aggregate(
-            sent=Count("id", filter=Q(event_type__in=["SENT", "sent"])),
-            failed=Count("id", filter=Q(event_type__in=["FAILED", "failed"])),
-            opens=Count("id", filter=Q(event_type__in=["OPEN", "opened"])),
-            unique_opens=Count("job", filter=Q(event_type__in=["OPEN", "opened"]), distinct=True),
-            clicks=Count("id", filter=Q(event_type__in=["CLICK", "clicked"])),
-            unsubs=Count("id", filter=Q(event_type__in=["UNSUB", "unsub"])),
+            sent=Count("id", filter=Q(event_type="SENT")),
+            failed=Count("id", filter=Q(event_type__in=["FAILED", "BOUNCED"])),
+            opens=Count("id", filter=Q(event_type="OPEN")),
+            unique_opens=Count("job", filter=Q(event_type="OPEN"), distinct=True),
+            clicks=Count("id", filter=Q(event_type="CLICK")),
+            unsubs=Count("id", filter=Q(event_type="UNSUB")),
         )
 
         video_stats = VideoEvent.objects.filter(campaign=self.campaign).aggregate(
-            views=Count("id", filter=Q(event_type__in=["PLAY", "play_started"])),
+            views=Count("id", filter=Q(event_type="PLAY")),
             unique_viewers=Count("job", distinct=True),
             total_duration=Sum("watch_duration"),
-            completions=Count("id", filter=Q(event_type__in=["COMPLETE", "100_percent"])),
+            completions=Count("id", filter=Q(event_type="COMPLETE")),
         )
 
         # Apply Counts

@@ -85,7 +85,7 @@ def track_open(request):
                 job=job,
                 campaign=job.campaign,
                 batch=job.donation_batch,
-                event_type="opened",
+                event_type="OPEN",
                 provider_status="tracking_pixel",
             )
             # Legacy counter update

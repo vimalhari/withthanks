@@ -67,6 +67,11 @@ class Charity(models.Model):
     county = models.CharField(max_length=100, blank=True, null=True)
     postcode = models.CharField(max_length=20, blank=True, null=True)
 
+    # Stripe
+    stripe_customer_id = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Stripe Customer ID (cus_xxx)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -205,6 +210,20 @@ class Invoice(models.Model):
 
     # Additional metadata
     notes = models.TextField(blank=True)
+
+    # Stripe integration
+    stripe_invoice_id = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Stripe Invoice ID (in_xxx)"
+    )
+    stripe_hosted_url = models.URLField(
+        max_length=512, blank=True, null=True, help_text="Stripe hosted invoice payment page URL"
+    )
+    stripe_pdf_url = models.URLField(
+        max_length=512, blank=True, null=True, help_text="Stripe-generated PDF URL"
+    )
+    stripe_payment_intent_id = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Stripe PaymentIntent ID (pi_xxx)"
+    )
 
     class Meta:
         ordering = ["-issue_date"]
@@ -524,7 +543,39 @@ class PackageCode(models.Model):
         return self.code
 
 
+# ---------------------------------------------------------------------------
+# Stage 3 — Template models (used by API pipeline / video_dispatch service)
+# ---------------------------------------------------------------------------
+
+
+class TextTemplate(models.Model):
+    """Voiceover script template with an optional ElevenLabs voice ID."""
+
+    name = models.CharField(max_length=255)
+    body = models.TextField(
+        blank=True,
+        help_text="Script with {{donor_name}}, {{donation_amount}}, {{charity}}, {{campaign_name}} placeholders",
+    )
+    voice_id = models.CharField(max_length=128, blank=True, help_text="ElevenLabs voice ID")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class VideoTemplate(models.Model):
+    """Reusable base video asset attached to campaigns."""
+
+    name = models.CharField(max_length=255)
+    video_file = models.FileField(upload_to="video_templates/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Campaign(models.Model):
+    # Legacy plain-list choices (used by CSV batch pipeline)
     STATUS_CHOICES = [
         ("draft", "Draft"),
         ("active", "Active"),
@@ -534,6 +585,15 @@ class Campaign(models.Model):
         ("WithThanks", "Thank you"),
         ("VDM", "Video Direct Mail (VDM)"),
     ]
+
+    # Stage 3 enums (used by API pipeline / video_dispatch service)
+    class CampaignType(models.TextChoices):
+        THANK_YOU = "THANK_YOU", "Thank You"
+        VDM = "VDM", "Video Direct Mail"
+
+    class VideoMode(models.TextChoices):
+        PERSONALIZED = "PERSONALIZED", "Personalized (TTS + stitch)"
+        TEMPLATE = "TEMPLATE", "Template-only (pre-rendered)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -549,6 +609,48 @@ class Campaign(models.Model):
 
     # Financial Overview & Dates removed as per request
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+
+    # Stage 3 fields (API pipeline)
+    campaign_type = models.CharField(
+        max_length=20,
+        choices=CampaignType.choices,
+        default=CampaignType.THANK_YOU,
+        help_text="API pipeline campaign type",
+    )
+    video_mode = models.CharField(
+        max_length=20,
+        choices=VideoMode.choices,
+        default=VideoMode.PERSONALIZED,
+        help_text="How the video is produced for the API pipeline",
+    )
+    text_template = models.ForeignKey(
+        TextTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="campaigns",
+        help_text="Voiceover script template (API pipeline)",
+    )
+    video_template = models.ForeignKey(
+        VideoTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="campaigns",
+        help_text="Base video template (API pipeline)",
+    )
+    gratitude_video_template = models.ForeignKey(
+        VideoTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="gratitude_campaigns",
+        help_text="Gratitude video template (API pipeline)",
+    )
+    gratitude_cooldown_days = models.PositiveIntegerField(
+        default=30,
+        help_text="Days within which a repeat donation triggers a gratitude video instead",
+    )
 
     # NEW CAMPAIGN MEDIA ASSETS
     charity_video = models.FileField(
@@ -613,6 +715,16 @@ class Campaign(models.Model):
 
         return json.dumps([{"code": pc.code} for pc in self.package_codes.all()])
 
+    # Compatibility properties — video_dispatch.py uses `charity` while the
+    # CSV pipeline uses `client`.  Both refer to the same FK.
+    @property
+    def charity(self):
+        return self.client
+
+    @property
+    def is_active(self):
+        return self.status == "active"
+
 
 class CampaignField(models.Model):
     FIELD_TYPES = [
@@ -663,6 +775,108 @@ def cleanup_charity_media(sender, instance, **kwargs):
     #         shutil.rmtree(client_dir)
     # except:
     #     pass
+
+
+# ---------------------------------------------------------------------------
+# Stage 3 — Donor / Donation / VideoSendLog (used by API pipeline)
+# ---------------------------------------------------------------------------
+
+
+class Donor(models.Model):
+    """
+    A unique donor record per charity, keyed by email.
+
+    Created automatically when donations arrive via the API pipeline.
+    """
+
+    charity = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="donors")
+    email = models.EmailField()
+    full_name = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("charity", "email")]
+        indexes = [
+            models.Index(fields=["charity", "email"]),
+        ]
+
+    def __str__(self):
+        return f"{self.full_name or self.email} ({self.charity})"
+
+
+class Donation(models.Model):
+    """Individual donation record linked to a Donor."""
+
+    donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name="donations")
+    charity = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="donations")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    donated_at = models.DateTimeField()
+    campaign_type = models.CharField(
+        max_length=20,
+        choices=Campaign.CampaignType.choices,
+        default=Campaign.CampaignType.THANK_YOU,
+    )
+    source = models.CharField(max_length=50, default="API")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Donation #{self.pk} — {self.amount} from {self.donor}"
+
+
+class VideoSendLog(models.Model):
+    """
+    Tracks each video email dispatched through the API pipeline.
+
+    Analogous to DonationJob in the CSV batch pipeline, but normalised
+    around Donor/Donation instead of raw CSV rows.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SENT = "SENT", "Sent"
+        FAILED = "FAILED", "Failed"
+
+    class SendKind(models.TextChoices):
+        PERSONALIZED = "PERSONALIZED", "Personalized"
+        TEMPLATE = "TEMPLATE", "Template"
+        GRATITUDE = "GRATITUDE", "Gratitude"
+
+    charity = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="video_send_logs")
+    donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name="video_send_logs")
+    donation = models.ForeignKey(
+        Donation, on_delete=models.CASCADE, related_name="video_send_logs"
+    )
+    campaign = models.ForeignKey(
+        Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name="video_send_logs"
+    )
+
+    campaign_type = models.CharField(
+        max_length=20,
+        choices=Campaign.CampaignType.choices,
+        default=Campaign.CampaignType.THANK_YOU,
+    )
+    send_kind = models.CharField(max_length=20, choices=SendKind.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    recipient_email = models.EmailField()
+    video_file = models.CharField(max_length=512, blank=True)
+    stream_video_id = models.CharField(max_length=255, blank=True)
+    stream_playback_url = models.URLField(max_length=512, blank=True)
+    stream_thumbnail_url = models.URLField(max_length=512, blank=True)
+    provider_message_id = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField(blank=True)
+
+    sent_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["charity", "donor"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self):
+        return f"VideoSendLog #{self.pk} — {self.recipient_email} [{self.status}]"
 
 
 class EmailTracking(models.Model):

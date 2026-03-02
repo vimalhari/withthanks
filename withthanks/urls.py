@@ -37,8 +37,8 @@ urlpatterns = [
     # JWT auth
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    # REST API (DRF) — disabled until serializers are reconciled with stage3 models
-    # path("api/", include("charity.api.urls")),
+    # REST API (DRF) — async video dispatch via Celery
+    path("api/", include("charity.api.urls")),
     # Analytics
     path("analytics/", include("charity.analytics_urls")),
     # Charity frontend (dashboard, campaigns, clients, invoices, etc.)

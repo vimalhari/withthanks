@@ -115,3 +115,34 @@ class CloudflareWebhookView(View):
             "video.completed": "COMPLETE",
         }
         return mapping.get(action)
+
+
+class StripeWebhookView(View):
+    """
+    Handles webhooks from Stripe for invoice payment lifecycle events.
+
+    Configure the endpoint in Stripe Dashboard → Developers → Webhooks:
+      URL: https://yourdomain.com/charity/webhooks/stripe/
+      Events: invoice.paid, invoice.payment_failed, invoice.finalized
+    """
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        from .services.stripe_billing import handle_webhook_event, is_enabled
+
+        if not is_enabled():
+            return JsonResponse({"error": "Stripe is not enabled"}, status=503)
+
+        sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+        if not sig_header:
+            return HttpResponse(status=400)
+
+        try:
+            result = handle_webhook_event(request.body, sig_header)
+            return JsonResponse(result)
+        except Exception as exc:
+            logger.error(f"Stripe webhook error: {exc}")
+            return HttpResponse(status=400)

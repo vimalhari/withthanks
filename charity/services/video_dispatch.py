@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -15,16 +14,11 @@ from django.db import transaction
 from django.utils import timezone
 
 from charity.models import Campaign, Charity, Donation, Donor, VideoSendLog
+from charity.services.video_builder import VideoSpec, build_personalized_video
 from charity.utils.cloudflare_stream import StreamUploadResult, upload_video_to_stream
-from charity.utils.filenames import safe_filename
 from charity.utils.resend_utils import send_video_email
-from charity.utils.video_utils import stitch_voice_and_overlay
-from charity.utils.voiceover import generate_voiceover
 
 logger = logging.getLogger(__name__)
-
-PLACEHOLDER_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_]+)\s*}}")
-
 
 @dataclass
 class DispatchResult:
@@ -38,38 +32,12 @@ class DispatchResult:
     stream_playback_url: str = field(default="")
 
 
-def _render_template(body: str, context: dict[str, Any]) -> str:
-    if not body:
-        return ""
-
-    def replace(match: re.Match[str]) -> str:
-        key = match.group(1)
-        value = context.get(key, "")
-        return str(value)
-
-    return PLACEHOLDER_PATTERN.sub(replace, body)
-
-
-def _default_personalized_text(donor_name: str, amount: Decimal) -> str:
-    return (
-        f"Hi {donor_name}, thank you for your donation of {amount} euros! "
-        "We really appreciate your support."
-    )
-
-
-def _default_gratitude_text(donor_name: str) -> str:
-    return (
-        f"Hi {donor_name}, thank you again for your continued support. "
-        "Your repeated generosity means a lot to us."
-    )
-
-
 def _resolve_campaign(charity: Charity, campaign_type: str) -> Campaign:
     campaign = (
         Campaign.objects.filter(
-            charity=charity,
+            client=charity,
             campaign_type=campaign_type,
-            is_active=True,
+            status="active",
         )
         .select_related("text_template", "video_template", "gratitude_video_template")
         .first()
@@ -125,40 +93,34 @@ def _build_personalized_video(
     campaign: Campaign,
     gratitude_mode: bool,
 ) -> str:
-    context = {
-        "donor_name": donor_name,
-        "donation_amount": donation_amount,
-        "charity": charity_name,
-        "campaign_name": campaign.name,
-    }
-
+    # Resolve script & voice from the campaign's text template
     if gratitude_mode:
-        text = _default_gratitude_text(donor_name)
+        script = None  # builder will use default gratitude text
         voice_id = getattr(campaign.text_template, "voice_id", "") if campaign.text_template else ""
     elif campaign.text_template and campaign.text_template.body:
-        text = _render_template(campaign.text_template.body, context)
+        script = campaign.text_template.body
         voice_id = campaign.text_template.voice_id or ""
     else:
-        text = _default_personalized_text(donor_name, donation_amount)
+        script = None  # builder will use default personalized text
         voice_id = ""
 
-    file_base = safe_filename(f"{donor_name}_{donation_amount}_{timezone.now().timestamp()}")[:120]
-
-    voiceover_path = generate_voiceover(text=text, file_name=file_base, voice_id=voice_id)
-
+    # Resolve base video
     if campaign.video_template and campaign.video_template.video_file:
-        input_video = campaign.video_template.video_file.path
+        base_video = campaign.video_template.video_file.path
     else:
-        input_video = str(settings.BASE_VIDEO_PATH)
+        base_video = None  # builder falls back to settings.BASE_VIDEO_PATH
 
-    output_path = stitch_voice_and_overlay(
-        input_video=input_video,
-        tts_mp3=voiceover_path,
-        overlay_text=text,
-        out_filename=f"{file_base}.mp4",
-        output_dir=settings.VIDEO_OUTPUT_DIR,
-        intro_duration=5,
+    spec = VideoSpec(
+        donor_name=donor_name,
+        donation_amount=donation_amount,
+        charity_name=charity_name,
+        campaign_name=campaign.name,
+        voiceover_script=script,
+        voice_id=voice_id,
+        base_video_path=base_video,
+        gratitude_mode=gratitude_mode,
     )
+    output_path, _voiceover_path = build_personalized_video(spec)
     return output_path
 
 

@@ -66,6 +66,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "drf_yasg",
     "django_tailwind_cli",
+    "storages",
+    "django_celery_beat",
     # Local
     "charity",
 ]
@@ -139,6 +141,9 @@ if _db_url:
             "HOST": _parsed.hostname or "localhost",
             "PORT": str(_parsed.port or 5432),
             "OPTIONS": {"connect_timeout": 10},
+            # Reuse DB connections for up to 10 minutes (avoids per-request reconnect overhead)
+            "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "600")),
+            "CONN_HEALTH_CHECKS": True,
         }
     }
 else:
@@ -237,27 +242,35 @@ CLOUDFLARE_STREAM_TOKEN = os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
 CLOUDFLARE_STREAM_ENABLED = os.environ.get("CLOUDFLARE_STREAM_ENABLED", "true").lower() == "true"
 
 # ------------------------------------------------------------
-# Cloudflare R2 (optional - install the r2 extra: uv sync --extra r2)
-# Compatible with Django Storages S3 backend.
+# Cloudflare R2 — default object storage (S3-compatible)
+# R2 is now the recommended default.  Set CLOUDFLARE_R2_BUCKET_NAME
+# in your .env to enable.  Falls back to local FileSystemStorage
+# when the bucket name is empty (e.g. quick local development).
 # ------------------------------------------------------------
 CLOUDFLARE_R2_ACCESS_KEY_ID = os.environ.get("CLOUDFLARE_R2_ACCESS_KEY_ID", "")
 CLOUDFLARE_R2_SECRET_ACCESS_KEY = os.environ.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY", "")
 CLOUDFLARE_R2_BUCKET_NAME = os.environ.get("CLOUDFLARE_R2_BUCKET_NAME", "")
 CLOUDFLARE_R2_ACCOUNT_ID = os.environ.get("CLOUDFLARE_R2_ACCOUNT_ID", "")
-if CLOUDFLARE_R2_BUCKET_NAME:
+
+_USE_R2 = bool(CLOUDFLARE_R2_BUCKET_NAME)
+if _USE_R2:
     # S3-compatible endpoint for Cloudflare R2
     AWS_ACCESS_KEY_ID = CLOUDFLARE_R2_ACCESS_KEY_ID
     AWS_SECRET_ACCESS_KEY = CLOUDFLARE_R2_SECRET_ACCESS_KEY
     AWS_STORAGE_BUCKET_NAME = CLOUDFLARE_R2_BUCKET_NAME
     AWS_S3_ENDPOINT_URL = f"https://{CLOUDFLARE_R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
     AWS_S3_REGION_NAME = "auto"
+    # R2 does not support ACLs
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
 
 # Django 4.2+ STORAGES dict (replaces deprecated DEFAULT_FILE_STORAGE / STATICFILES_STORAGE).
 STORAGES = {
     "default": {
         "BACKEND": (
             "storages.backends.s3boto3.S3Boto3Storage"
-            if CLOUDFLARE_R2_BUCKET_NAME
+            if _USE_R2
             else "django.core.files.storage.FileSystemStorage"
         ),
     },
@@ -290,6 +303,17 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per video task
+
+# Celery Beat: use django-celery-beat database scheduler
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# ------------------------------------------------------------
+# Stripe
+# ------------------------------------------------------------
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_ENABLED = bool(STRIPE_SECRET_KEY)
 
 # ------------------------------------------------------------
 # Timezone / internationalization
