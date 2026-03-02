@@ -43,9 +43,7 @@ class Command(BaseCommand):
             "video_url",
             "error_message",
             "real_views",
-            "fake_views",
             "real_clicks",
-            "fake_clicks",
         ]
 
         output_file = options.get("output")
@@ -78,9 +76,7 @@ class Command(BaseCommand):
                         j.video_url,
                         j.error_message,
                         j.real_views,
-                        j.fake_views,
                         j.real_clicks,
-                        j.fake_clicks,
                     ]
                 )
                 count += 1

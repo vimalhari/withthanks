@@ -6,7 +6,7 @@ import time
 import traceback
 from datetime import timedelta
 
-from celery import shared_task
+from celery import chord, group, shared_task
 from django.conf import settings
 from django.urls import reverse
 from django.utils.timezone import now
@@ -422,20 +422,90 @@ def process_donation_row(self, job_id):
 
     except Exception as exc:
         logger.error(f"❌ Job {job_id} critical failure: {exc}\n{traceback.format_exc()}")
+
+        already_failed = False
         try:
             job = DonationJob.objects.get(id=job_id)
-            job.status = "failed"
-            job.error_message = str(exc)
-            job.save()
+            already_failed = job.status == "failed"
+            if not already_failed:
+                job.status = "failed"
+                job.error_message = str(exc)
+                job.save()
         except Exception as save_err:
             logger.error(f"Could not mark job {job_id} as failed: {save_err}")
 
         cleanup_intermediate(intermediate_files, None)
+
+        # Do NOT retry if the job was already committed as failed (e.g. after
+        # a successful email send attempt that raised a post-send error, or
+        # an explicit Resend failure) — retrying would re-send the email.
+        if already_failed:
+            return {"status": "failed", "job_id": job_id}
+
         raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------
-# Async wrapper for the Stage-3 API video dispatch pipeline
+# Batch completion callback (chord header callback)
+# ---------------------------------------------------------------------------
+
+
+@shared_task(queue="default")
+def on_batch_complete(job_results, *, batch_id):
+    """
+    Chord callback fired after *all* process_donation_row tasks in a batch
+    have finished.  Marks DonationBatch.status and sends an admin notification.
+
+    ``job_results`` is a list of return values from each process_donation_row
+    call (Celery passes the header results as the first positional argument).
+    """
+    from django.core.mail import send_mail
+
+    try:
+        batch = DonationBatch.objects.select_related("charity").get(id=batch_id)
+    except DonationBatch.DoesNotExist:
+        logger.error("on_batch_complete: DonationBatch %s not found", batch_id)
+        return
+
+    total = len(job_results) if job_results else 0
+    failed = sum(
+        1
+        for r in (job_results or [])
+        if isinstance(r, dict) and r.get("status") == "failed"
+    )
+
+    new_status = (
+        DonationBatch.BatchStatus.COMPLETED_WITH_ERRORS if failed else DonationBatch.BatchStatus.COMPLETED
+    )
+    batch.status = new_status
+    batch.save(update_fields=["status"])
+
+    logger.info(
+        "Batch %s completed — total=%d failed=%d status=%s",
+        batch_id, total, failed, new_status,
+    )
+
+    # Admin notification via Django email backend (respects EMAIL_* settings)
+    admin_email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", None)
+    if admin_email:
+        charity_name = batch.charity.organization_name if batch.charity else "Unknown"
+        subject = f"[WithThanks] Batch #{batch.batch_number} complete — {charity_name}"
+        body = (
+            f"Batch #{batch.batch_number} for {charity_name} has finished.\n"
+            f"Total jobs : {total}\n"
+            f"Failed     : {failed}\n"
+            f"Status     : {new_status}\n"
+        )
+        try:
+            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [admin_email])
+        except Exception as mail_err:
+            logger.warning("on_batch_complete: admin email failed: %s", mail_err)
+
+    return {"batch_id": batch_id, "total": total, "failed": failed, "status": new_status}
+
+
+# ---------------------------------------------------------------------------
+# Async wrapper for the Stage-3 API video dispatch pipeline (DEPRECATED)
 # ---------------------------------------------------------------------------
 
 
@@ -452,60 +522,78 @@ def dispatch_donation_video_task(
     campaign_type: str = "THANK_YOU",
 ) -> dict:
     """
-    Celery wrapper around :func:`charity.services.video_dispatch.dispatch_donation_video`.
+    DEPRECATED — use the DonationJob-based pipeline instead.
 
-    All arguments are JSON-serialisable so the task can be sent via any
-    Celery broker.  The heavy work (TTS, FFmpeg stitching, email send) runs
-    in the worker, keeping the API request/response cycle fast.
+    This stub creates a DonationBatch + DonationJob and delegates to
+    ``process_donation_row`` so that any external callers that have not yet
+    been migrated continue to work without code changes.
     """
-    from decimal import Decimal
-
-    from django.utils.dateparse import parse_datetime
-
-    from charity.models import Charity
-    from charity.services.video_dispatch import dispatch_donation_video
+    import warnings
+    warnings.warn(
+        "dispatch_donation_video_task is deprecated. "
+        "Create a DonationJob directly and call process_donation_row instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    logger.warning(
+        "dispatch_donation_video_task is deprecated (charity_id=%s, donor_email=%s). "
+        "Routing to process_donation_row via DonationJob.",
+        charity_id, donor_email,
+    )
 
     try:
-        charity = Charity.objects.get(id=charity_id)
-        parsed_at = parse_datetime(donated_at) if donated_at else None
+        from charity.models import Campaign, Charity
 
-        result = dispatch_donation_video(
-            charity=charity,
-            donor_email=donor_email,
-            donor_name=donor_name,
-            amount=Decimal(amount),
-            donated_at=parsed_at,
-            source=source,
+        charity = Charity.objects.get(id=charity_id)
+
+        # Resolve the active campaign of the requested type
+        campaign = Campaign.objects.filter(
+            client=charity,
             campaign_type=campaign_type,
+            status="active",
+        ).first()
+
+        batch, _ = DonationBatch.objects.get_or_create(
+            charity=charity,
+            campaign_name=f"API — {campaign_type}",
+            status=DonationBatch.BatchStatus.PROCESSING,
+            defaults={"batch_number": DonationBatch.get_next_batch_number(charity)},
         )
 
-        return {
-            "donation_id": result.donation_id,
-            "send_log_id": result.send_log_id,
-            "donor_email": result.donor_email,
-            "send_kind": result.send_kind,
-            "campaign_type": result.campaign_type,
-            "video_path": result.video_path,
-            "stream_video_id": result.stream_video_id,
-            "stream_playback_url": result.stream_playback_url,
-        }
+        job = DonationJob.objects.create(
+            donor_name=donor_name,
+            email=donor_email,
+            donation_amount=amount,
+            status="pending",
+            charity=charity,
+            campaign=campaign,
+            donation_batch=batch,
+        )
+
+        process_donation_row.apply_async(args=(job.id,), queue="video")
+        return {"status": "queued", "job_id": job.id, "batch_id": batch.id}
+
     except Exception as exc:
-        logger.error("dispatch_donation_video_task failed for %s: %s", donor_email, exc)
+        logger.error("dispatch_donation_video_task (compat stub) failed: %s", exc)
         raise self.retry(exc=exc) from exc
 
 
-@shared_task
-def batch_process_csv(batch_id):
+@shared_task(bind=True, max_retries=3, default_retry_delay=30)
+def batch_process_csv(self, batch_id):
     """
-    Scalable CSV processor: reads file and triggers individual jobs.
+    Scalable CSV processor: reads the CSV file, bulk-creates DonationJob rows,
+    then fans them out as a Celery group with an on_batch_complete chord
+    callback so the batch status is updated atomically when all jobs finish.
     """
     try:
         batch = DonationBatch.objects.select_related("charity", "campaign").get(id=batch_id)
         client = batch.charity
         campaign = batch.campaign
 
-        # Resolve CSV path (Assuming it was saved to media)
-        # Using a safer approach with the file on disk
+        # Mark batch as processing before dispatching workers
+        batch.status = DonationBatch.BatchStatus.PROCESSING
+        batch.save(update_fields=["status"])
+
         from django.core.files.storage import default_storage
 
         file_path = (
@@ -515,20 +603,24 @@ def batch_process_csv(batch_id):
         )
 
         if not os.path.exists(file_path):
-            logger.error(f"Batch {batch_id}: CSV file not found at {file_path}")
+            logger.error("Batch %s: CSV file not found at %s", batch_id, file_path)
+            batch.status = DonationBatch.BatchStatus.FAILED
+            batch.save(update_fields=["status"])
             return
 
         with open(file_path, encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
-
-            # Normalize headers
             if reader.fieldnames:
                 reader.fieldnames = [h.strip().lower() for h in reader.fieldnames]
 
-            count = 0
-            for _, row in enumerate(reader, start=1):
-                # Flexible mapping
-                name = row.get("donor_name") or row.get("name") or row.get("full name") or "Donor"
+            jobs_to_create = []
+            for row in reader:
+                name = (
+                    row.get("donor_name")
+                    or row.get("name")
+                    or row.get("full name")
+                    or "Donor"
+                )
                 email = (
                     row.get("email")
                     or row.get("recipient email")
@@ -536,32 +628,56 @@ def batch_process_csv(batch_id):
                     or row.get("email address")
                 )
                 amount = (
-                    row.get("donation_amount") or row.get("amount") or row.get("donation") or "0"
+                    row.get("donation_amount")
+                    or row.get("amount")
+                    or row.get("donation")
+                    or "0"
                 )
 
                 if not email:
                     continue
 
-                # Create Job
-                job = DonationJob.objects.create(
-                    donor_name=name,
-                    donation_amount=amount,
-                    email=email.strip(),
-                    status="pending",
-                    charity=client,
-                    campaign=campaign,
-                    donation_batch=batch,
+                jobs_to_create.append(
+                    DonationJob(
+                        donor_name=name,
+                        donation_amount=amount,
+                        email=email.strip(),
+                        status="pending",
+                        charity=client,
+                        campaign=campaign,
+                        donation_batch=batch,
+                    )
                 )
 
-                # Trigger specific job task
-                process_donation_row.apply_async(args=(job.id,))
-                count += 1
+        if not jobs_to_create:
+            logger.warning("Batch %s: no valid rows found in CSV", batch_id)
+            batch.status = DonationBatch.BatchStatus.COMPLETED
+            batch.save(update_fields=["status"])
+            return
 
-        logger.info(f"Successfully queued {count} jobs from batch {batch_id}")
+        # Bulk-create all jobs in one DB round-trip, retrieve their IDs
+        created_jobs = DonationJob.objects.bulk_create(jobs_to_create)
+        job_ids = [j.id for j in created_jobs]
 
-    except Exception as e:
-        logger.error(f"Error in batch_process_csv {batch_id}: {e}")
-        traceback.print_exc()
+        # Build a group of process_donation_row signatures routed to the video queue
+        header = group(
+            process_donation_row.s(jid).set(queue="video") for jid in job_ids
+        )
+        # on_batch_complete receives the collected results list as the first arg
+        callback = on_batch_complete.s(batch_id=batch_id).set(queue="default")
+        chord(header)(callback)
+
+        logger.info("Batch %s: dispatched %d jobs via chord", batch_id, len(job_ids))
+
+    except Exception as exc:
+        logger.error("batch_process_csv %s failed: %s\n%s", batch_id, exc, traceback.format_exc())
+        try:
+            DonationBatch.objects.filter(id=batch_id).update(
+                status=DonationBatch.BatchStatus.FAILED
+            )
+        except Exception:
+            pass
+        raise self.retry(exc=exc) from exc
 
 
 # ---------------------------------------------------------------------------

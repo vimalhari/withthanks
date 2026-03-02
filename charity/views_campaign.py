@@ -3,7 +3,7 @@ from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -91,9 +91,7 @@ def campaign_detail(request, campaign_id):
         total_failed += batch.failed_count
         total_pending += batch.pending_count
         # Total views across all jobs in this campaign
-        from django.db.models import F, Sum
-
-        job_stats = batch.jobs.aggregate(total_v=Sum(F("real_views") + F("fake_views")))
+        job_stats = batch.jobs.aggregate(total_v=Sum("real_views"))
         total_views += job_stats["total_v"] or 0
         # Count unsubscribes triggered by jobs in this campaign
         total_unsubscribes += (

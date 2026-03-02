@@ -69,12 +69,19 @@ services:
       redis:
         condition: service_healthy
 
-  # ── Celery worker ────────────────────────────────────────────────────────
+  # ── Celery worker — video + orchestration queues ─────────────────────────
+  # Handles process_donation_row (CPU/FFmpeg), batch_process_csv, and
+  # on_batch_complete callbacks.  Scaled up independently of maintenance work.
   worker:
     build:
       context: .
       target: build
-    command: uv run celery -A withthanks worker --loglevel=info --concurrency=2
+    command: >
+      uv run celery -A withthanks worker
+        --loglevel=info
+        --concurrency=2
+        --queues=video,default
+        --hostname=worker-video@%h
     volumes:
       - .:/app
       - media_data:/app/media
@@ -85,6 +92,33 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       MEDIA_ROOT: /app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery worker — maintenance queue ────────────────────────────────────
+  # Isolated from video work so beat tasks (stats refresh, cleanup, etc.)
+  # are never delayed by slow FFmpeg jobs.
+  worker-maintenance:
+    build:
+      context: .
+      target: build
+    command: >
+      uv run celery -A withthanks worker
+        --loglevel=info
+        --concurrency=1
+        --queues=maintenance
+        --hostname=worker-maintenance@%h
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://withthanks:withthanks@db:5432/withthanks
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy

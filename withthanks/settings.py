@@ -118,10 +118,19 @@ TEMPLATES = [
 ]
 
 # ------------------------------------------------------------
-# WSGI / ASGI
+# WSGI
 # ------------------------------------------------------------
 WSGI_APPLICATION = "withthanks.wsgi.application"
-ASGI_APPLICATION = "withthanks.asgi.application"
+
+# ------------------------------------------------------------
+# Password Validation
+# ------------------------------------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 # ------------------------------------------------------------
 # Database
@@ -302,10 +311,48 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per video task
+CELERY_TASK_TIME_LIMIT = 30 * 60       # 30 min hard kill (SIGKILL)
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 min soft limit — allows graceful cleanup
+CELERY_RESULT_EXPIRES = 60 * 60 * 24   # Keep results in Redis for 24 h then auto-expire
 
 # Celery Beat: use django-celery-beat database scheduler
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# ---------------------------------------------------------------------------
+# Queue routing
+# ---------------------------------------------------------------------------
+# Three queues:
+#   video       – CPU/I-O heavy tasks (TTS, FFmpeg, email send)
+#   default     – lightweight orchestration (batch_process_csv, callbacks)
+#   maintenance – periodic beat tasks so they're never blocked by video work
+
+from kombu import Queue  # noqa: E402
+
+CELERY_TASK_QUEUES = (
+    Queue("video"),
+    Queue("default"),
+    Queue("maintenance"),
+)
+CELERY_TASK_DEFAULT_QUEUE = "default"
+CELERY_TASK_ROUTES = {
+    # Heavy processing — routed to the video queue
+    "charity.tasks.process_donation_row": {"queue": "video"},
+    # Orchestration / callbacks — default queue
+    "charity.tasks.batch_process_csv": {"queue": "default"},
+    "charity.tasks.on_batch_complete": {"queue": "default"},
+    # Deprecated compat stub — default queue (lightweight)
+    "charity.tasks.dispatch_donation_video_task": {"queue": "default"},
+    # Periodic maintenance — isolated from video work
+    "charity.tasks.refresh_all_campaign_stats": {"queue": "maintenance"},
+    "charity.tasks.mark_overdue_invoices": {"queue": "maintenance"},
+    "charity.tasks.cleanup_stale_jobs": {"queue": "maintenance"},
+    "charity.tasks.prune_voiceover_cache": {"queue": "maintenance"},
+    "charity.tasks.cleanup_old_videos": {"queue": "maintenance"},
+}
+
+# Optional: e-mail address that receives batch-completion admin notifications.
+# If unset, admin e-mail notifications are silently skipped.
+ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
 
 # ------------------------------------------------------------
 # Stripe

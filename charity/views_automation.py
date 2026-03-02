@@ -192,22 +192,3 @@ def track_video_event_view(request):
             logger.error(f"Video Event Tracking Error: {e}")
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"status": "invalid_method"}, status=405)
-
-
-def update_job_fake_views(request, job_id):
-    if request.method == "POST":
-        job = get_object_or_404(DonationJob, id=job_id)
-        job.fake_views = int(request.POST.get("fake_views", 0))
-        job.save(update_fields=["fake_views"])
-        # Sanitise batch_id: only allow integers or the literal string "all"
-        raw_batch = request.POST.get("batch_id", "all")
-        if raw_batch != "all":
-            try:
-                batch_id = int(raw_batch)
-            except (ValueError, TypeError):
-                batch_id = "all"
-        else:
-            batch_id = "all"
-        dashboard_url = reverse("dashboard")
-        return redirect(f"{dashboard_url}?batch_id={batch_id}")
-    return JsonResponse({"success": False}, status=400)

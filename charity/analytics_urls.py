@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import api_reports, views_analytics, views_webhooks
+from . import api_reports, views_analytics
 
 urlpatterns = [
     path("", views_analytics.AnalyticsHomeView.as_view(), name="analytics_home"),
@@ -14,11 +14,6 @@ urlpatterns = [
         name="analytics_campaigns",
     ),
     path("unified/", views_analytics.UnifiedAnalyticsView.as_view(), name="analytics_unified"),
-    path(
-        "advanced-dashboards/",
-        views_analytics.AdvancedDashboardsView.as_view(),
-        name="analytics_advanced",
-    ),
     # Export Endpoints
     path(
         "export/csv/",
@@ -44,11 +39,6 @@ urlpatterns = [
         name="analytics_api_unified_data",
     ),
     # Advanced Analytics Webhooks & Reports
-    path(
-        "api/webhooks/cloudflare-stream/",
-        views_webhooks.CloudflareWebhookView.as_view(),
-        name="api_cloudflare_webhook",
-    ),
     path(
         "api/reports/campaign/<uuid:campaign_id>/",
         api_reports.CampaignReportAPIView.as_view(),

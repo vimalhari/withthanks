@@ -28,25 +28,30 @@ app.conf.beat_schedule = {
     "refresh-campaign-stats": {
         "task": "charity.tasks.refresh_all_campaign_stats",
         "schedule": crontab(minute="*/15"),
+        "options": {"queue": "maintenance"},
     },
     # Mark overdue invoices (daily at 6 AM UTC)
     "mark-overdue-invoices": {
         "task": "charity.tasks.mark_overdue_invoices",
         "schedule": crontab(hour=6, minute=0),
+        "options": {"queue": "maintenance"},
     },
     # Clean up stale processing jobs older than 2 hours (every 30 min)
     "cleanup-stale-jobs": {
         "task": "charity.tasks.cleanup_stale_jobs",
         "schedule": crontab(minute="*/30"),
+        "options": {"queue": "maintenance"},
     },
     # Prune voiceover cache files older than 30 days (daily at 3 AM UTC)
     "prune-voiceover-cache": {
         "task": "charity.tasks.prune_voiceover_cache",
         "schedule": crontab(hour=3, minute=0),
+        "options": {"queue": "maintenance"},
     },
     # Clean up generated video files older than 7 days (daily at 4 AM UTC)
     "cleanup-old-videos": {
         "task": "charity.tasks.cleanup_old_videos",
         "schedule": crontab(hour=4, minute=0),
+        "options": {"queue": "maintenance"},
     },
 }

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from charity.models import Service
+from charity.models import InvoiceService
 
 
 class Command(BaseCommand):
@@ -80,7 +80,7 @@ class Command(BaseCommand):
         ]
 
         for name, category, price, desc in services:
-            _, created = Service.objects.update_or_create(
+            _, created = InvoiceService.objects.update_or_create(
                 name=name,
                 defaults={
                     "category": category,

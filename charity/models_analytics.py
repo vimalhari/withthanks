@@ -201,25 +201,3 @@ class WatchSession(models.Model):
 
     def __str__(self):
         return f"Session {self.id} for Job {self.job_id}"
-
-
-class UnsubscribeEvent(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    charity = models.ForeignKey(
-        "charity.Charity", on_delete=models.CASCADE, related_name="unsubscribe_events"
-    )
-    job = models.ForeignKey(
-        "charity.DonationJob",
-        on_delete=models.CASCADE,
-        related_name="unsubscribe_events",
-        null=True,
-        blank=True,
-    )
-    email = models.EmailField()
-    created_at = models.DateTimeField(default=timezone.now)
-    reason = models.TextField(blank=True)
-    ip_address = models.GenericIPAddressField(null=True, blank=True)
-    user_agent = models.TextField(null=True, blank=True)
-
-    def __str__(self):
-        return f"Unsubscribe {self.email} from {self.charity_id if self.charity else 'Unknown'}"

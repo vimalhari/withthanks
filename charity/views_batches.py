@@ -3,6 +3,7 @@ import json
 import logging
 import uuid
 
+from celery import chord, group
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Q, Sum
@@ -12,9 +13,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Campaign, Charity, DonationBatch, DonationJob
 from .models_analytics import EmailEvent, VideoEvent
-from .tasks import batch_process_csv, process_donation_row
+from .tasks import batch_process_csv, on_batch_complete, process_donation_row
 from .utils.access_control import get_active_charity
-from .utils.metrics_sim import simulate_batch_engagement
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,19 @@ def get_col(row, *keys):
                 if val:
                     return val.strip()
     return ""
+
+
+def _dispatch_batch_chord(batch, job_ids):
+    """
+    Mark ``batch`` as processing, then fire a Celery group of
+    ``process_donation_row`` tasks (routed to the *video* queue) with an
+    ``on_batch_complete`` chord callback.
+    """
+    batch.status = DonationBatch.BatchStatus.PROCESSING
+    batch.save(update_fields=["status"])
+    header = group(process_donation_row.s(jid).set(queue="video") for jid in job_ids)
+    callback = on_batch_complete.s(batch_id=batch.id).set(queue="default")
+    chord(header)(callback)
 
 
 @login_required(login_url="charity_login")
@@ -54,19 +67,22 @@ def upload_csv_and_process(request):
                 .values("email")
                 .annotate(name=Max("donor_name"), last_amount=Max("donation_amount"))
             )
-            queued_count = 0
-            for donor in previous_donors:
-                job = DonationJob.objects.create(
+            jobs_to_create = [
+                DonationJob(
                     donor_name=donor["name"] or "Supporter",
                     email=donor["email"],
                     charity=current_charity,
                     status="pending",
                     donation_batch=batch,
                 )
-                process_donation_row.apply_async(args=(job.id,))
-                queued_count += 1
+                for donor in previous_donors
+            ]
+            created_jobs = DonationJob.objects.bulk_create(jobs_to_create)
+            job_ids = [j.id for j in created_jobs]
+            if job_ids:
+                _dispatch_batch_chord(batch, job_ids)
             messages.success(
-                request, f"Started campaign '{subject}' for {queued_count} supporters."
+                request, f"Started campaign '{subject}' for {len(job_ids)} supporters."
             )
             return redirect("dashboard")
 
@@ -157,8 +173,8 @@ def send_email_wizard(request):
                     .values("email")
                     .annotate(name=Max("donor_name"))
                 )
-                for donor in previous_donors:
-                    job = DonationJob.objects.create(
+                jobs_to_create = [
+                    DonationJob(
                         donor_name=donor["name"] or "Supporter",
                         email=donor["email"],
                         charity=selected_client,
@@ -166,8 +182,13 @@ def send_email_wizard(request):
                         status="pending",
                         donation_batch=batch,
                     )
-                    process_donation_row.apply_async(args=(job.id,))
-                    queued_count += 1
+                    for donor in previous_donors
+                ]
+                created_jobs = DonationJob.objects.bulk_create(jobs_to_create)
+                job_ids = [j.id for j in created_jobs]
+                if job_ids:
+                    _dispatch_batch_chord(batch, job_ids)
+                queued_count = len(job_ids)
             elif method == "single":
                 job = DonationJob.objects.create(
                     donor_name=request.POST.get("recipient_name") or "Supporter",
@@ -177,28 +198,34 @@ def send_email_wizard(request):
                     status="pending",
                     donation_batch=batch,
                 )
-                process_donation_row.apply_async(args=(job.id,))
+                process_donation_row.apply_async(args=(job.id,), queue="video")
+                batch.status = DonationBatch.BatchStatus.PROCESSING
+                batch.save(update_fields=["status"])
                 queued_count = 1
             elif method == "bulk" and "wizard_csv_data" in request.session:
+                jobs_to_create = []
                 for row in request.session["wizard_csv_data"]:
                     name, email = (
                         get_col(row, "name", "donor name"),
                         get_col(row, "email", "email address"),
                     )
                     if email:
-                        job = DonationJob.objects.create(
-                            donor_name=name or "Donor",
-                            email=email,
-                            charity=selected_client,
-                            campaign=selected_campaign,
-                            status="pending",
-                            donation_batch=batch,
+                        jobs_to_create.append(
+                            DonationJob(
+                                donor_name=name or "Donor",
+                                email=email,
+                                charity=selected_client,
+                                campaign=selected_campaign,
+                                status="pending",
+                                donation_batch=batch,
+                            )
                         )
-                        process_donation_row.apply_async(args=(job.id,))
-                        queued_count += 1
+                created_jobs = DonationJob.objects.bulk_create(jobs_to_create)
+                job_ids = [j.id for j in created_jobs]
+                if job_ids:
+                    _dispatch_batch_chord(batch, job_ids)
+                queued_count = len(job_ids)
 
-            if request.POST.get("simulate_metrics") == "on":
-                simulate_batch_engagement(batch.id)
             messages.success(request, f"Wizard complete: {queued_count} emails queued.")
             return redirect("dashboard")
 
@@ -227,14 +254,9 @@ def batch_detail_view(request, batch_id):
     else:
         batch = get_object_or_404(DonationBatch, id=batch_id, charity=current_charity)
 
-    if request.method == "POST" and request.POST.get("action") == "simulate_views":
-        simulate_batch_engagement(batch.id)
-        return redirect("batch_detail", batch_id=batch_id)
-
     jobs = batch.jobs.all()
     stats = jobs.aggregate(
         total_real=Sum("real_views"),
-        total_fake=Sum("fake_views"),
         total_videos=Count("id"),
         success_count=Count("id", filter=Q(status="success")),
     )

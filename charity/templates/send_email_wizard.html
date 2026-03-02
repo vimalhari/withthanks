@@ -203,26 +203,6 @@
                         </div>
                     </div>
 
-                    <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
-                        <label class="flex items-center gap-3 cursor-pointer mb-4">
-                            <input type="checkbox" name="simulate_metrics" id="simToggle" onchange="toggleSimFields(this.checked)" class="form-checkbox w-[18px] h-[18px]">
-                            <span class="font-bold text-gray-900">Simulate Performance Metrics</span>
-                        </label>
-                        <div id="simFields" class="hidden">
-                            <p class="text-xs text-gray-400 mb-4">Apply random engagement counts (views/clicks) to this batch automatically.</p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="form-label">Min Threshold</label>
-                                    <input type="number" name="sim_min" class="form-input" value="100" min="0">
-                                </div>
-                                <div>
-                                    <label class="form-label">Max Threshold</label>
-                                    <input type="number" name="sim_max" class="form-input" value="1000" min="0">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div>
                         <label class="form-label">CTA Link (Optional)</label>
                         <input type="url" name="cta_url" class="form-input" placeholder="https://{{ selected_client.name|slugify }}.org/donate" value="{{ cta_url }}">
@@ -244,12 +224,6 @@
                 <input type="hidden" name="method" value="{{ method }}">
                 <input type="hidden" name="media_type" value="{{ media_type }}">
                 <input type="hidden" name="cta_url" value="{{ cta_url }}">
-                {% if request.POST.simulate_metrics == 'on' %}
-                <input type="hidden" name="simulate_metrics" value="on">
-                <input type="hidden" name="sim_min" value="{{ request.POST.sim_min }}">
-                <input type="hidden" name="sim_max" value="{{ request.POST.sim_max }}">
-                {% endif %}
-
                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200 max-w-[600px] mx-auto space-y-4">
                     <div class="flex justify-between border-b border-black/5 pb-3">
                         <span class="form-label">Client Account</span>
@@ -287,13 +261,6 @@
                         <span class="form-label">Email Subject</span>
                         <span class="font-semibold text-gray-700">{{ subject }}</span>
                     </div>
-                    {% if request.POST.simulate_metrics == 'on' %}
-                    <div class="flex justify-between border-b border-black/5 pb-3">
-                        <span class="form-label">Simulate Metrics</span>
-                        <span class="font-bold text-amber-600">Enabled ({{ request.POST.sim_min }}-{{ request.POST.sim_max }})</span>
-                    </div>
-                    {% endif %}
-
                     <div class="mt-8 p-4 bg-white rounded-xl border border-brand/20 flex gap-3">
                         <i data-lucide="shield-check" class="w-5 h-5 text-brand shrink-0 mt-0.5"></i>
                         <p class="text-xs text-gray-400 leading-relaxed">
@@ -385,8 +352,5 @@
         });
     }
 
-    function toggleSimFields(checked) {
-        document.getElementById('simFields').style.display = checked ? 'block' : 'none';
-    }
 </script>
 {% endblock %}

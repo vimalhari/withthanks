@@ -6,7 +6,7 @@
 {% block breadcrumb_child %}Delivery Report #{{ batch.batch_number }}{% endblock %}
 
 {% block page_content %}
-<div x-data="{ showSimModal: false, exportOpen: false }">
+<div x-data="{ exportOpen: false }">
     <div class="flex justify-between items-end mb-10">
         <div>
             <a href="{% url 'analytics_unified' %}" class="text-gray-400 text-sm flex items-center gap-1.5 mb-3 hover:text-gray-600 transition">
@@ -16,9 +16,6 @@
             <p class="text-gray-400 text-base">{{ batch.created_at|date:"F j, Y, P" }}</p>
         </div>
         <div class="flex gap-3">
-            <button type="button" class="btn-secondary" @click="showSimModal = true">
-                <i data-lucide="sparkles" class="w-4 h-4 mr-2 inline"></i> Add Simulation
-            </button>
             <div class="relative" @click.away="exportOpen = false">
                 <button class="btn-primary" @click="exportOpen = !exportOpen">
                     <i data-lucide="download" class="w-4 h-4 mr-2 inline"></i> Export Report
@@ -33,46 +30,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Simulation Modal -->
-    <template x-if="showSimModal">
-        <div class="modal-backdrop" @click.self="showSimModal = false" x-transition.opacity>
-            <div class="modal-panel max-w-md" @click.stop>
-                <div class="modal-header">
-                    <h5 class="font-extrabold text-gray-900">Simulate Delivery Engagement</h5>
-                    <button type="button" @click="showSimModal = false" class="text-gray-400 hover:text-gray-600">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                </div>
-                <form method="POST">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="simulate_views">
-                    <div class="modal-body space-y-4">
-                        <p class="text-gray-400 text-sm">This will generate simulated (fake) views and clicks for all jobs in this delivery run. Useful for demonstration and testing.</p>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="form-label">Minimum Views</label>
-                                <input type="number" name="min_views" class="form-input" value="100" min="0">
-                            </div>
-                            <div>
-                                <label class="form-label">Maximum Views</label>
-                                <input type="number" name="max_views" class="form-input" value="1000" min="0">
-                            </div>
-                        </div>
-
-                        <div class="alert-info">
-                            <i data-lucide="info" class="w-4 h-4 mr-2 inline"></i> Existing simulated data will be randomized within this range.
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" @click="showSimModal = false">Cancel</button>
-                        <button type="submit" class="btn-primary !py-2.5 !px-6">Generate Metrics</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </template>
 
     <!-- Recipient Table -->
     <div class="card !p-0 overflow-hidden">
@@ -114,9 +71,8 @@
                         </td>
                         <td>
                             <div class="font-bold text-gray-900">
-                                {{ job.real_views }} <span class="text-gray-400 font-normal">/ {{ job.fake_views }}</span>
+                                {{ job.real_views }}
                             </div>
-                            <div class="text-[10px] text-gray-400">Total: {{ job.real_views|add:job.fake_views }}</div>
                         </td>
                         <td class="text-center">
                             <div class="flex gap-1.5 justify-center">

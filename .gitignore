@@ -35,6 +35,7 @@ env/
 
 # Django
 *.sqlite3
+data.csv
 *.pyc
 *.pyo
 *.pyd

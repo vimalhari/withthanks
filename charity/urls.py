@@ -9,11 +9,6 @@ urlpatterns = [
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("export-csv/", views.export_donation_report, name="export_csv"),
     path("upload-csv/", views.upload_csv_and_process, name="upload_csv"),
-    path(
-        "update-job-fake-views/<int:job_id>/",
-        views.update_job_fake_views,
-        name="update_job_fake_views",
-    ),
     path("login/", views.login_view, name="charity_login"),
     path("register/", views.register_view, name="register"),
     path("logout/", views.logout_view, name="logout"),

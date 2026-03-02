@@ -332,6 +332,13 @@ class InvoiceBatch(models.Model):
 
 
 class DonationBatch(models.Model):
+    class BatchStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PROCESSING = "processing", "Processing"
+        COMPLETED = "completed", "Completed"
+        COMPLETED_WITH_ERRORS = "completed_with_errors", "Completed with Errors"
+        FAILED = "failed", "Failed"
+
     charity = models.ForeignKey(
         Charity, on_delete=models.CASCADE, related_name="batches", null=True, blank=True
     )
@@ -345,6 +352,12 @@ class DonationBatch(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     csv_filename = models.CharField(max_length=255, blank=True)
     batch_number = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=25,
+        choices=BatchStatus.choices,
+        default=BatchStatus.PENDING,
+        db_index=True,
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -384,11 +397,8 @@ class DonationBatch(models.Model):
 
     @property
     def batch_status_display(self):
-        if self.pending_count > 0:
-            return "Processing"
-        if self.failed_count > 0:
-            return "Completed with Errors"
-        return "Completed"
+        """Deprecated: use .status / .get_status_display() directly."""
+        return self.get_status_display()
 
 
 class DonationJob(models.Model):
@@ -429,9 +439,7 @@ class DonationJob(models.Model):
 
     # Stats
     real_views = models.PositiveIntegerField(default=0)
-    fake_views = models.PositiveIntegerField(default=0)
     real_clicks = models.PositiveIntegerField(default=0)
-    fake_clicks = models.PositiveIntegerField(default=0)
 
     # Backward compatibility properties
     @property
@@ -444,7 +452,7 @@ class DonationJob(models.Model):
 
     @property
     def total_views(self):
-        return self.real_views + self.fake_views
+        return self.real_views
 
     @property
     def video_url(self):
@@ -761,10 +769,10 @@ def cleanup_charity_media(sender, instance, **kwargs):
     Delete media files when Charity is deleted.
     Also deletes the entire client directory if possible, but safely.
     """
-    if instance.logo:
-        instance.logo.delete(save=False)
-    if instance.thank_you_card:
-        instance.thank_you_card.delete(save=False)
+    if instance.default_template_video:
+        instance.default_template_video.delete(save=False)
+    if instance.gratitude_card:
+        instance.gratitude_card.delete(save=False)
     # Ideally we'd remove the folder too, but standard file field delete just removes the file.
     # Given the strict structure media/clients/client_<id>/, we could try:
     # try:

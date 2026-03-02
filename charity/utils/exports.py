@@ -224,7 +224,6 @@ def export_batch_detail_csv(batch_info, data_list, filename):
             "Type",
             "Status",
             "Real Hits",
-            "Simulated Views",
             "Total Views",
             "Watch Duration (s)",
             "Bounce Reason",
@@ -239,7 +238,6 @@ def export_batch_detail_csv(batch_info, data_list, filename):
                 row["type"],
                 row["status"],
                 row["real_views"],
-                row["fake_views"],
                 row["total_views"],
                 row["duration"],
                 row["bounce_reason"] or "",
@@ -263,7 +261,6 @@ def export_batch_detail_excel(batch_info, data_list, filename, timeline_stats=No
 
     # Calculate Summaries for View Chart
     total_real = sum(r["real_views"] for r in data_list)
-    total_fake = sum(r["fake_views"] for r in data_list)
 
     # Calculate Summaries for Status Chart
     status_counts = {"Delivered": 0, "Bounced": 0, "Failed": 0}
@@ -284,8 +281,6 @@ def export_batch_detail_excel(batch_info, data_list, filename, timeline_stats=No
 
     ws.cell(row=summary_row_start + 1, column=1, value="Real Views")
     ws.cell(row=summary_row_start + 1, column=2, value=total_real)
-    ws.cell(row=summary_row_start + 2, column=1, value="Simulated Views")
-    ws.cell(row=summary_row_start + 2, column=2, value=total_fake)
 
     # Status Dist (Spacing it out)
     status_row_start = summary_row_start + 4
@@ -360,7 +355,6 @@ def export_batch_detail_excel(batch_info, data_list, filename, timeline_stats=No
         "Type",
         "Status",
         "Real Hits",
-        "Simulated Views",
         "Total Views",
         "Watch Duration (s)",
         "Bounce Reason",
@@ -380,7 +374,6 @@ def export_batch_detail_excel(batch_info, data_list, filename, timeline_stats=No
                 row["type"],
                 row["status"],
                 row["real_views"],
-                row["fake_views"],
                 row["total_views"],
                 row["duration"],
                 row["bounce_reason"] or "",
@@ -390,8 +383,8 @@ def export_batch_detail_excel(batch_info, data_list, filename, timeline_stats=No
     # 1. View Sources Pie Chart
     pie_views = PieChart()
     pie_views.title = "View Sources"
-    label_v = Reference(ws, min_col=1, min_row=summary_row_start + 1, max_row=summary_row_start + 2)
-    data_v = Reference(ws, min_col=2, min_row=summary_row_start + 1, max_row=summary_row_start + 2)
+    label_v = Reference(ws, min_col=1, min_row=summary_row_start + 1, max_row=summary_row_start + 1)
+    data_v = Reference(ws, min_col=2, min_row=summary_row_start + 1, max_row=summary_row_start + 1)
     pie_views.add_data(data_v, titles_from_data=False)
     pie_views.set_categories(label_v)
     ws.add_chart(pie_views, "K4")

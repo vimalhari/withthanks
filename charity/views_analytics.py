@@ -1,8 +1,5 @@
-import time
 from datetime import datetime, timedelta
 
-import jwt  # PyJWT
-from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.cache import cache
 from django.db.models import Count, Q, Sum
@@ -42,7 +39,7 @@ class AnalyticsBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateVi
             ).values_list("charity_id", flat=True)
 
             if model_class == EmailEvent:
-                qs = qs.filter(batch__charity_id__in=user_charity_ids)
+                qs = qs.filter(job__donation_batch__charity_id__in=user_charity_ids)
             elif model_class == VideoEvent:
                 qs = qs.filter(job__donation_batch__charity_id__in=user_charity_ids)
             elif model_class == Campaign:
@@ -393,37 +390,6 @@ class CampaignPerformanceView(AnalyticsBaseView):
                 )
 
         context["campaign_perf"] = perf
-        return context
-
-
-class AdvancedDashboardsView(AnalyticsBaseView):
-    template_name = "analytics/metabase_embed.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        # Metabase Embedding Logic
-        METABASE_SITE_URL = getattr(settings, "METABASE_SITE_URL", "http://localhost:3000")
-        METABASE_SECRET_KEY = getattr(settings, "METABASE_SECRET_KEY", "your_secret_key_here")
-
-        # Example Dashboard ID (should be configurable)
-        dashboard_id = 1
-
-        payload = {
-            "resource": {"dashboard": dashboard_id},
-            "params": {},
-            "exp": round(time.time()) + (60 * 10),  # 10 minute expiration
-        }
-
-        token = jwt.encode(payload, METABASE_SECRET_KEY, algorithm="HS256")
-
-        # In newer PyJWT, it returns a string. In older ones, it returns bytes.
-        if isinstance(token, bytes):
-            token = token.decode("utf-8")
-
-        context["iframe_url"] = (
-            f"{METABASE_SITE_URL}/embed/dashboard/{token}#bordered=true&titled=true"
-        )
         return context
 
 
