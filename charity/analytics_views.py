@@ -107,25 +107,24 @@ def track_open(request):
 
 def track_click(request):
     """
-    Wraps links to track clicks before redirecting.
+    Wraps links to track clicks before redirecting to the video landing page.
+    Records a CLICK email event and increments the real_clicks counter, then
+    performs a proper HTTP redirect so the donor's browser navigates to the
+    video player (which fires JS watch-duration events).
     """
-    job_id = request.GET.get("u")
-    # target_url logic would go here if needed, but usually it's the video page
-    # For now, we'll just track and redirect to dashboard (or wherever the video is)
+    from django.shortcuts import redirect as http_redirect
+    from django.urls import reverse as url_reverse
 
+    job_id = request.GET.get("u")
     if job_id:
         try:
             job = DonationJob.objects.get(id=job_id)
             EmailEvent.objects.create(
-                job=job, campaign=job.campaign, batch=job.donation_batch, event_type="clicked"
+                job=job, campaign=job.campaign, batch=job.donation_batch, event_type="CLICK"
             )
-            # Legacy counter update
             job.real_clicks += 1
             job.save(update_fields=["real_clicks"])
-
-            # Redirect to the video URL
-            if job.video_path:
-                return JsonResponse({"redirect_url": job.video_path})  # Or handle actual redirect
+            return http_redirect(url_reverse("video_landing", args=[job.id]))
         except DonationJob.DoesNotExist:
             pass
 

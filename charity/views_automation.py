@@ -4,6 +4,7 @@ import logging
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
@@ -61,8 +62,6 @@ def track_click_view(request):
                     EmailEvent.objects.create(campaign=job.campaign, job=job, event_type="CLICK")
                     v_url = job.video_url
                     if v_url and v_url.lower().split("?")[0].endswith((".mp4", ".mov", ".avi")):
-                        from django.urls import reverse
-
                         server_url = getattr(
                             settings, "SERVER_BASE_URL", "https://hirefella.com"
                         ).rstrip("/")
@@ -139,10 +138,17 @@ def track_invoice_open(request, invoice_id):
 def video_landing_view(request, job_id):
     """Displays the video landing page with engagement tracking."""
     job = get_object_or_404(DonationJob, id=job_id)
-    video_url = job.video_url  # Simplified logic for move
+    video_url = job.video_url
     if not video_url:
         return redirect("/")
-    return render(request, "video_landing.html", {"job": job, "video_url": video_url})
+    # Resolve the EmailTracking record so the JS player can send watch events
+    tracking = EmailTracking.objects.filter(job=job).first()
+    tracking_id = str(tracking.id) if tracking else ""
+    return render(
+        request,
+        "video_landing.html",
+        {"job": job, "video_url": video_url, "tracking_id": tracking_id},
+    )
 
 
 def track_video_event_view(request):
@@ -193,5 +199,15 @@ def update_job_fake_views(request, job_id):
         job = get_object_or_404(DonationJob, id=job_id)
         job.fake_views = int(request.POST.get("fake_views", 0))
         job.save(update_fields=["fake_views"])
-        return redirect(f"/charity/dashboard/?batch_id={request.POST.get('batch_id', 'all')}")
+        # Sanitise batch_id: only allow integers or the literal string "all"
+        raw_batch = request.POST.get("batch_id", "all")
+        if raw_batch != "all":
+            try:
+                batch_id = int(raw_batch)
+            except (ValueError, TypeError):
+                batch_id = "all"
+        else:
+            batch_id = "all"
+        dashboard_url = reverse("dashboard")
+        return redirect(f"{dashboard_url}?batch_id={batch_id}")
     return JsonResponse({"success": False}, status=400)

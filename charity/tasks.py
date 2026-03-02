@@ -13,6 +13,7 @@ from django.utils.timezone import now
 
 from .models import DonationBatch, DonationJob, EmailTracking, UnsubscribedUser
 from .models_analytics import EmailEvent, VideoEvent
+from .utils.cloudflare_stream import upload_video_to_stream
 from .utils.filenames import safe_filename
 from .utils.resend_utils import send_video_email
 from .utils.video_utils import stitch_voice_and_overlay
@@ -105,7 +106,8 @@ def process_donation_row(self, job_id):
             # MODE 1: VDM (Video Direct Marketing)
             # - No personalization
             # - No voice generation
-            # - Just send default video
+            # - Upload charity_video to Cloudflare Stream ONCE per campaign (cached)
+            # - All 10k recipients share the same CF-hosted URL — zero server egress
             # - Use vdm.html
 
             if not base_video_path or not os.path.exists(base_video_path):
@@ -118,6 +120,41 @@ def process_donation_row(self, job_id):
 
             unsubscribe_path = reverse("unsubscribe", kwargs={"job_id": job.id})
             unsubscribe_url = f"{server_url}{unsubscribe_path}"
+
+            # --- Cloudflare Stream: upload once, cache on Campaign ---
+            cf_stream_enabled = getattr(settings, "CLOUDFLARE_STREAM_ENABLED", False)
+            if cf_stream_enabled and campaign:
+                if campaign.cf_stream_video_url:
+                    # Already uploaded — reuse cached CDN URL
+                    logger.info(
+                        f"Job {job.id}: Reusing cached CF Stream URL for campaign {campaign.id}"
+                    )
+                else:
+                    # First job for this campaign — upload to Cloudflare Stream
+                    try:
+                        logger.info(
+                            f"Job {job.id}: Uploading VDM video to Cloudflare Stream "
+                            f"for campaign {campaign.id}"
+                        )
+                        cf_result = upload_video_to_stream(
+                            base_video_path,
+                            meta_name=f"{campaign.name} — VDM",
+                        )
+                        campaign.cf_stream_video_id = cf_result.video_id
+                        campaign.cf_stream_video_url = cf_result.playback_url
+                        campaign.save(
+                            update_fields=["cf_stream_video_id", "cf_stream_video_url"]
+                        )
+                        logger.info(
+                            f"Job {job.id}: CF Stream upload success — "
+                            f"uid={cf_result.video_id}"
+                        )
+                    except Exception as cf_err:
+                        # Non-fatal: fall back to local URL
+                        logger.warning(
+                            f"Job {job.id}: CF Stream upload failed, falling back to "
+                            f"local URL. Error: {cf_err}"
+                        )
 
         elif mode == "Gratitude":
             # MODE 3: Gratitude (New Template)
@@ -296,8 +333,14 @@ def process_donation_row(self, job_id):
             unsubscribe_url = f"{server_url}{track_unsub_path}?u={job.id}&type={mode}"
 
         # 4. Resolve Public Video Link for Template
+        # For VDM: prefer Cloudflare Stream URL (CDN) over local server path
         video_url_link = ""
-        if final_video_path:
+        cf_stream_url = None
+        if mode == "VDM" and campaign and campaign.cf_stream_video_url:
+            video_url_link = campaign.cf_stream_video_url
+            cf_stream_url = campaign.cf_stream_video_url
+            logger.info(f"Job {job.id}: Using CF Stream URL: {video_url_link}")
+        elif final_video_path:
             try:
                 rel_path = os.path.relpath(final_video_path, settings.MEDIA_ROOT)
                 clean_rel_path = rel_path.replace("\\", "/")
@@ -321,8 +364,9 @@ def process_donation_row(self, job_id):
             "organization_name": client.organization_name,
             "from_email": client.contact_email,
             "image_url": full_image_url,
-            "video_url": video_url_link,  # Pass raw video link for reference, but template likely uses click_url
-            "is_video_card": is_card_only,  # Fixed: was is_video_card (undefined)
+            "video_url": video_url_link,  # CF Stream URL for VDM, local URL otherwise
+            "cf_stream_url": cf_stream_url,  # Non-None only for VDM with CF enabled
+            "is_video_card": is_card_only,
             "campaign_name": campaign.name if campaign else "WithThanks Campaign",
             "unsubscribe_url": unsubscribe_url,  # Now available for both modes if needed
             # New Tracking Context

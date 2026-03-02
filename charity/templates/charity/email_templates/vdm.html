@@ -120,9 +120,25 @@
                 
                 <p>Check out our latest campaign video to see what we've been up to.</p>
                 
-                {% if video_url %}
+                {% if cf_stream_url %}
+                {# Cloudflare Stream hosted player — no egress from our server #}
+                <div class="cta-container" style="margin: 30px 0;">
+                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; max-width: 520px; margin: 0 auto;">
+                        <iframe
+                            src="{{ cf_stream_url }}"
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 8px;"
+                            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                            allowfullscreen="true"
+                        ></iframe>
+                    </div>
+                    <p style="margin-top: 12px; font-size: 13px; color: #94a3b8;">
+                        Can't see the video?
+                        <a href="{{ tracking_click_url }}" style="color: #ea580c;">Watch it here</a>.
+                    </p>
+                </div>
+                {% elif video_url %}
                 <div class="cta-container">
-                    <a href="{{ tracking_click_url }}" class="cta-button">▶ Watch Video</a>
+                    <a href="{{ tracking_click_url }}" class="cta-button">&#9654; Watch Video</a>
                 </div>
                 {% endif %}
                 

@@ -584,6 +584,20 @@ class Campaign(models.Model):
         blank=True, null=True, help_text="Override sender email address for this campaign"
     )
 
+    # Cloudflare Stream cache — populated on first VDM send, reused for all subsequent jobs
+    cf_stream_video_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Cloudflare Stream video UID (cached after first VDM upload)",
+    )
+    cf_stream_video_url = models.URLField(
+        max_length=512,
+        blank=True,
+        null=True,
+        help_text="Cloudflare Stream hosted player URL (cached after first VDM upload)",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
