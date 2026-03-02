@@ -1,59 +1,58 @@
 # -------------------------------------------------------
 # Stage 1: Build & Dependencies
 # -------------------------------------------------------
-FROM python:3.10-slim AS build
+FROM python:3.12-slim AS build
 
-# Set working directory
 WORKDIR /app
 
-# Prevent Python from writing .pyc files and enable unbuffered logs
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Install uv (pinned to match the version used locally)
+COPY --from=ghcr.io/astral-sh/uv:0.10.7 /uv /uvx /usr/local/bin/
 
-# Install system dependencies (includes ffmpeg + postgres libs)
-RUN apt-get update && apt-get install -y \
+# Compile bytecode for faster startup; copy mode avoids hard-link issues
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
+# Install system build deps (ffmpeg + libpq needed at build time)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency list
-COPY requirements.txt .
+# Install Python dependencies before copying source (better layer cache)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy all project files
+# Copy source and install the project itself
 COPY . .
+RUN uv sync --frozen --no-dev
 
 # Collect static files
-RUN python manage.py collectstatic --noinput
+RUN uv run python manage.py collectstatic --noinput
 
 
 # -------------------------------------------------------
 # Stage 2: Runtime Image (smaller)
 # -------------------------------------------------------
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 WORKDIR /app
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+# Use the venv created by uv
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Install runtime dependencies (ffmpeg + PostgreSQL client)
-RUN apt-get update && apt-get install -y \
+# Runtime-only system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependencies from build image
-COPY --from=build /usr/local/lib/python3.10 /usr/local/lib/python3.10
-COPY --from=build /usr/local/bin /usr/local/bin
-
-# Copy project code & static files
+# Copy the entire built app (venv + source + staticfiles) from the build stage
 COPY --from=build /app /app
 
-# Expose Django port
 EXPOSE 8000
 
-# Run Gunicorn (recommended for production)
+# Production server – 4 workers, 120 s timeout for video processing requests
 CMD ["gunicorn", "withthanks.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]

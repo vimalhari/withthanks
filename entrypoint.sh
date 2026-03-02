@@ -1,14 +1,16 @@
 #!/bin/bash
-
-echo "📦 Waiting for database to be ready..."
-# optional: wait for DB if you’re using PostgreSQL/MySQL
-sleep 5
+set -e
 
 echo "🧩 Applying database migrations..."
 python manage.py migrate --noinput
 
 echo "👤 Collecting static files..."
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput --clear
 
-echo "🚀 Starting Django server..."
-exec python manage.py runserver 0.0.0.0:8000
+echo "🚀 Starting Gunicorn..."
+exec gunicorn withthanks.wsgi:application \
+  --bind 0.0.0.0:${PORT:-8000} \
+  --workers ${GUNICORN_WORKERS:-4} \
+  --timeout ${GUNICORN_TIMEOUT:-120} \
+  --access-logfile - \
+  --error-logfile -

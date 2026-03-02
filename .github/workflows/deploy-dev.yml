@@ -1,0 +1,26 @@
+name: Deploy – Dev (Hetzner)
+
+on:
+  push:
+    branches: [develop]
+
+# Prevent concurrent deploys to the same environment
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Trigger Coolify (Hetzner)
+    runs-on: ubuntu-latest
+    environment: dev          # Maps to the "dev" GitHub Environment (Hetzner secrets)
+
+    steps:
+      - name: Trigger Coolify redeploy
+        run: |
+          curl --fail -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            -H "Content-Type: application/json"
+
+      - name: Report deployment URL
+        run: echo "Deployed to ${{ vars.APP_URL }}"

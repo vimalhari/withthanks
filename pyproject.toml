@@ -2,21 +2,30 @@
 name = "withthanks"
 version = "0.1.0"
 description = "Personalised donor thank-you video engine"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
-    "Django>=5.2",
-    "djangorestframework>=3.16",
-    "djangorestframework-simplejwt>=5.5",
-    "drf-yasg>=1.21",
-    "elevenlabs>=2.21",
-    "ffmpeg-python>=0.2",
-    "resend>=2.19",
-    "python-dotenv>=1.2",
-    "gunicorn",
+    "Django>=6.0.2",
+    "djangorestframework>=3.16.1",
+    "djangorestframework-simplejwt>=5.5.1",
+    "drf-yasg>=1.21.15",
+    "elevenlabs>=2.37.0",
+    "ffmpeg-python>=0.2.0",
+    "resend>=2.23.0",
+    "python-dotenv>=1.2.2",
+    "gunicorn>=25.1.0",
+    "celery>=5.6.2",
+    "redis>=7.2.1",
+    "psycopg[binary]>=3.3.3",
+    "pydantic>=2.12.5",
+    "httpx>=0.28.1",
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.4", "pyright>=1.1"]
+# Cloudflare R2 storage (S3-compatible API — only needed if R2 is enabled)
+r2 = [
+    "boto3>=1.42.59",
+    "django-storages[s3]>=1.14.6",
+]
 
 # ---------------------------------------------------------------------------
 # uv
@@ -27,15 +36,15 @@ dev = ["ruff>=0.4", "pyright>=1.1"]
 dev = [
     "django-stubs[compatible-mypy]>=5.1",
     "djangorestframework-stubs>=3.15",
-    "pyright>=1.1",
-    "ruff>=0.4",
+    "pyright>=1.1.408",
+    "ruff>=0.15.4",
 ]
 
 # ---------------------------------------------------------------------------
 # ruff
 # ---------------------------------------------------------------------------
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 100
 src = ["."]
 
@@ -71,7 +80,7 @@ line-ending = "auto"
 # pyright
 # ---------------------------------------------------------------------------
 [tool.pyright]
-pythonVersion = "3.10"
+pythonVersion = "3.12"
 pythonPlatform = "Linux"
 include = ["charity", "withthanks"]
 exclude = ["**/__pycache__", "**/migrations", ".venv"]

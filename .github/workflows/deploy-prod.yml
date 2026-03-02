@@ -1,0 +1,31 @@
+name: Deploy – Prod (DigitalOcean)
+
+on:
+  push:
+    branches: [main]
+
+# Prevent concurrent deploys to the same environment
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false    # Never cancel a production deploy mid-flight
+
+jobs:
+  # CI must pass before deploying to production
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Trigger Coolify (DigitalOcean)
+    runs-on: ubuntu-latest
+    needs: ci
+    environment: prod           # Maps to the "prod" GitHub Environment (DigitalOcean secrets)
+
+    steps:
+      - name: Trigger Coolify redeploy
+        run: |
+          curl --fail -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            -H "Content-Type: application/json"
+
+      - name: Report deployment URL
+        run: echo "Deployed to ${{ vars.APP_URL }}"
