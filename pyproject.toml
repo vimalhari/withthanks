@@ -1,0 +1,98 @@
+[project]
+name = "withthanks"
+version = "0.1.0"
+description = "Personalised donor thank-you video engine"
+requires-python = ">=3.10"
+dependencies = [
+    "Django>=5.2",
+    "djangorestframework>=3.16",
+    "djangorestframework-simplejwt>=5.5",
+    "drf-yasg>=1.21",
+    "elevenlabs>=2.21",
+    "ffmpeg-python>=0.2",
+    "resend>=2.19",
+    "python-dotenv>=1.2",
+    "gunicorn",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.4", "pyright>=1.1"]
+
+# ---------------------------------------------------------------------------
+# uv
+# ---------------------------------------------------------------------------
+[tool.uv]
+
+[dependency-groups]
+dev = [
+    "django-stubs[compatible-mypy]>=5.1",
+    "djangorestframework-stubs>=3.15",
+    "pyright>=1.1",
+    "ruff>=0.4",
+]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long — ruff format handles it
+    "B008",   # do not perform function calls in default arguments (Django ORM common pattern)
+    "RUF012", # mutable class vars — common in Django models
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["charity", "withthanks"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ---------------------------------------------------------------------------
+# pyright
+# ---------------------------------------------------------------------------
+[tool.pyright]
+pythonVersion = "3.10"
+pythonPlatform = "Linux"
+include = ["charity", "withthanks"]
+exclude = ["**/__pycache__", "**/migrations", ".venv"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+
+# Suppress noise from missing / incomplete stubs
+reportMissingModuleSource = false
+reportMissingImports = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportPrivateImportUsage = false
+
+# Known Django ORM false-positives without full stub coverage
+reportAttributeAccessIssue = false
+reportAssignmentType = false
+reportIndexIssue = false
+reportOptionalSubscript = false
+reportCallIssue = false
+reportArgumentType = false
+reportReturnType = false

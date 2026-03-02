@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # ------------------------------------------------------------
@@ -11,8 +12,8 @@ load_dotenv(BASE_DIR / ".env")
 # ------------------------------------------------------------
 # Core settings
 # ------------------------------------------------------------
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-do-not-use-in-prod")
-DEBUG = False
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or "dev-secret-key-change-in-production"
+DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
 
 ALLOWED_HOSTS = [
     "hirefella.com",
@@ -92,19 +93,32 @@ DATABASES = {
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# 🧩 Inside Docker container
 MEDIA_URL = "/media/"
-MEDIA_ROOT = Path("/app/media")  # volume-mounted from Jenkins host path
+# In Docker the MEDIA_ROOT env-var is set to /app/media (volume mount).
+# Locally it falls back to <project>/media so `manage.py check` works without /app.
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 
 # ------------------------------------------------------------
 # Video processing paths
 # ------------------------------------------------------------
-# ✅ Base video path inside container
+# Base video used when no campaign VideoTemplate is configured.
 BASE_VIDEO_PATH = MEDIA_ROOT / "base_videos" / "newbase3.mp4"
 
-# ✅ Directory for generated or stitched videos
+# Output directory for generated / stitched videos.
 VIDEO_OUTPUT_DIR = MEDIA_ROOT / "videos"
-VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+except Exception as _e:
+    print(f"⚠️ Could not create VIDEO_OUTPUT_DIR: {_e}")
+
+# ------------------------------------------------------------
+# Cloudflare Stream
+# ------------------------------------------------------------
+# Credentials – set these in your .env / environment.
+CLOUDFLARE_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+CLOUDFLARE_STREAM_TOKEN = os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
+# Set to "false" to disable Stream and fall back to e-mail attachments.
+CLOUDFLARE_STREAM_ENABLED = os.environ.get("CLOUDFLARE_STREAM_ENABLED", "true").lower() == "true"
 
 # ------------------------------------------------------------
 # Email defaults

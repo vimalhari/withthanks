@@ -1,6 +1,7 @@
 # charity/management/commands/generate_videos.py
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
     help = "Test command to verify discovery."
 

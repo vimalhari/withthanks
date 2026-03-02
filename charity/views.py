@@ -2,16 +2,18 @@
 import csv
 import logging
 import traceback
-from pathlib import Path
+from decimal import Decimal
+
 from django.shortcuts import render
-from django.conf import settings
+from django.utils.dateparse import parse_datetime
+
+from charity.models import Campaign
+from charity.services.video_dispatch import dispatch_donation_video
+
 from .forms import CSVUploadForm
-from .utils.voiceover import generate_voiceover
-from .utils.video_utils import stitch_voice_and_overlay
-from .utils.resend_utils import send_video_email
-from .utils.filenames import safe_filename
 
 logger = logging.getLogger(__name__)
+
 
 def upload_csv_and_process(request):
     """
@@ -33,6 +35,8 @@ def upload_csv_and_process(request):
                 logger.exception("CSV decode failed: %s", e)
                 return render(request, "upload_csv.html", {"form": form, "message": message})
 
+            charity = form.cleaned_data["charity"]
+            campaign_type = form.cleaned_data["campaign_type"]
             reader = csv.DictReader(lines)
             processed_count = 0
             errors = []
@@ -40,34 +44,29 @@ def upload_csv_and_process(request):
             for i, row in enumerate(reader, start=1):
                 try:
                     name = (row.get("name") or "donor").strip()
-                    amount = (row.get("amount") or "").strip()
+                    amount_str = (row.get("amount") or "").strip()
                     email = (row.get("email") or "").strip()
+                    donated_at_raw = (row.get("donated_at") or "").strip()
 
                     if not email:
                         logger.info("Row %d skipped: no email", i)
                         continue
 
-                    # Sanitize file name
-                    file_base = safe_filename(f"{name}_{amount}")[:120]
+                    if not amount_str:
+                        raise ValueError("amount is required")
 
-                    # Step 1: generate TTS voiceover
-                    voiceover_path = generate_voiceover(
-                        text=f"Hi {name}, thank you for your donation of {amount} euros! We really appreciate your support.",
-                        file_name=file_base,
+                    amount = Decimal(amount_str)
+                    donated_at = parse_datetime(donated_at_raw) if donated_at_raw else None
+
+                    dispatch_donation_video(
+                        charity=charity,
+                        donor_email=email,
+                        donor_name=name,
+                        amount=amount,
+                        donated_at=donated_at,
+                        source="CSV",
+                        campaign_type=campaign_type,
                     )
-
-                    # Step 2: stitch first 5s intro with TTS + overlay, then append remaining video
-                    stitched_video_path = stitch_voice_and_overlay(
-                        input_video=settings.BASE_VIDEO_PATH,
-                        tts_wav=voiceover_path,
-                        overlay_text=f"Hi {name}, thank you for your donation of {amount} euros! We really appreciate your support.",
-                        out_filename=f"{file_base}.mp4",
-                        output_dir=settings.VIDEO_OUTPUT_DIR,
-                        intro_duration=5
-                    )
-
-                    # Step 3: send video to donor via email
-                    send_video_email(email, stitched_video_path)
                     processed_count += 1
 
                 except Exception as exc:
@@ -76,7 +75,8 @@ def upload_csv_and_process(request):
                     # 👇 add short visible message for web display
                     visible_errors.append(f"Row {i}: {exc}")
 
-            message = f"Processed {processed_count} donations successfully!"
+            campaign_label = dict(Campaign.CampaignType.choices).get(campaign_type, campaign_type)
+            message = f"Processed {processed_count} rows for {charity.name} ({campaign_label}) successfully!"
             if errors:
                 message += f" ({len(errors)} rows failed.)"
 
@@ -84,4 +84,6 @@ def upload_csv_and_process(request):
         form = CSVUploadForm()
 
     # 👇 Pass visible_errors to the template
-    return render(request, "upload_csv.html", {"form": form, "message": message, "errors": visible_errors})
+    return render(
+        request, "upload_csv.html", {"form": form, "message": message, "errors": visible_errors}
+    )
