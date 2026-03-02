@@ -6,291 +6,216 @@
 {% block breadcrumb_parent %}Invoices{% endblock %}
 {% block breadcrumb_child %}
     {{ invoice.invoice_number }}
-    <span class="status-badge status-{{ invoice.status|lower }} ms-2" style="font-size: 11px; padding: 2px 8px;">{{ invoice.status }}</span>
+    {% if invoice.status == 'Paid' %}<span class="badge badge-success ml-2">{{ invoice.status }}</span>
+    {% elif invoice.status == 'Sent' or invoice.status == 'Issued' %}<span class="badge badge-brand ml-2">{{ invoice.status }}</span>
+    {% elif invoice.status == 'Overdue' %}<span class="badge badge-danger ml-2">{{ invoice.status }}</span>
+    {% else %}<span class="badge badge-default ml-2">{{ invoice.status }}</span>{% endif %}
 {% endblock %}
 
 {% block layout_head %}
 <style>
-    /* Tab Navigation Styles */
-    .nav-tabs .nav-link {
-        color: #6c757d;
-        border: none;
-        border-bottom: 2px solid transparent;
-        padding: 1rem 1.5rem;
-        font-weight: 500;
-    }
-    .nav-tabs .nav-link:hover {
-        color: #343a40;
-        border-color: #e9ecef;
-    }
-    .nav-tabs .nav-link.active {
-        color: var(--primary-color);
-        border-bottom: 2px solid var(--primary-color);
-        background: none;
-    }
-    
-    /* Metrics Cards */
-    .metric-card {
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid rgba(0,0,0,0.05);
-        height: 100%;
-    }
-    .metric-card.blue { background-color: #eff6ff; color: #1e40af; }
-    .metric-card.green { background-color: #f0fdf4; color: #166534; }
-    .metric-card.purple { background-color: #faf5ff; color: #6b21a8; }
-    .metric-card.yellow { background-color: #fefce8; color: #854d0e; }
-    
-    .metric-value { font-size: 2rem; font-weight: 700; line-height: 1; margin: 0.5rem 0; }
-    .metric-label { font-size: 0.875rem; font-weight: 500; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
-    .metric-sub { font-size: 0.75rem; opacity: 0.7; }
-
-    /* Print Overrides */
     @media print {
         .no-print, .sidebar, .top-header, .messages-container { display: none !important; }
         .card { border: none !important; box-shadow: none !important; }
         body { background: #fff !important; }
         .app-container { display: block !important; }
-        .main-content { 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            width: 100% !important;
-            background: #fff !important;
-        }
+        .main-content { padding: 0 !important; margin: 0 !important; width: 100% !important; background: #fff !important; }
         .page-wrapper { padding: 0 !important; margin: 0 !important; }
-        .tab-content { display: block !important; }
-        .tab-pane { display: none !important; }
-        .tab-pane.active { display: block !important; }
     }
 </style>
 {% endblock %}
 
 {% block page_content %}
-<div class="container-fluid px-0">
+<div x-data="{ activeTab: 'preview' }">
 
-    <!-- Status Banner & Actions Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
-        <div>
-           <div class="d-flex align-items-center gap-3">
-               <span class="badge rounded-pill 
-                    {% if invoice.status == 'Draft' %}bg-light text-dark border
-                    {% elif invoice.status == 'Sent' or invoice.status == 'Issued' %}bg-primary-subtle text-primary border border-primary-subtle
-                    {% elif invoice.status == 'Paid' %}bg-success-subtle text-success border border-success-subtle
-                    {% elif invoice.status == 'Overdue' %}bg-danger-subtle text-danger border border-danger-subtle
-                    {% else %}bg-secondary-subtle text-secondary{% endif %}
-                    px-3 py-2 fs-6">
-                    {{ invoice.status|upper }}
-               </span>
-               <div>
-                   <div class="fw-bold">Total: £{{ invoice.amount|floatformat:2 }}</div>
-                   <div class="small text-muted"> Due: {{ invoice.due_date|date:"M d, Y" }}</div>
-               </div>
-           </div>
+    <!-- Status Banner & Actions -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
+        <div class="flex items-center gap-3">
+            <span class="px-4 py-2 rounded-full text-sm font-bold
+                {% if invoice.status == 'Draft' %}bg-gray-100 text-gray-700 border border-gray-200
+                {% elif invoice.status == 'Sent' or invoice.status == 'Issued' %}bg-brand/10 text-brand border border-brand/20
+                {% elif invoice.status == 'Paid' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                {% elif invoice.status == 'Overdue' %}bg-red-50 text-red-700 border border-red-200
+                {% else %}bg-gray-100 text-gray-500{% endif %}">
+                {{ invoice.status|upper }}
+            </span>
+            <div>
+                <div class="font-bold text-gray-900">Total: £{{ invoice.amount|floatformat:2 }}</div>
+                <div class="text-sm text-gray-400">Due: {{ invoice.due_date|date:"M d, Y" }}</div>
+            </div>
         </div>
-        
-        <div class="d-flex gap-2">
-            <a href="{% url 'invoices' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Back
-            </a>
 
-            <a href="{% url 'invoice_send_email' invoice.id %}" class="btn btn-primary-subtle text-primary" onclick="return confirm('Send invoice to {{ invoice.billing_email }}?');">
-                <i class="bi bi-envelope me-1"></i> Send Email
+        <div class="flex gap-2 items-center" x-data="{ menuOpen: false }" @click.away="menuOpen = false">
+            <a href="{% url 'invoices' %}" class="btn-secondary"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</a>
+            <a href="{% url 'invoice_send_email' invoice.id %}" class="btn-secondary text-brand" onclick="return confirm('Send invoice to {{ invoice.billing_email }}?');">
+                <i data-lucide="mail" class="w-4 h-4"></i> Send Email
             </a>
-            
-            <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn btn-primary-subtle text-primary">
-                 <i class="bi bi-printer me-1"></i> Print / PDF
+            <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn-secondary text-brand">
+                <i data-lucide="printer" class="w-4 h-4"></i> Print / PDF
             </a>
-
-            <div class="dropdown">
-                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    Actions
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow">
-                    <li><h6 class="dropdown-header">Manage Invoice</h6></li>
-                    <li><a class="dropdown-item" href="{% url 'invoice_edit' invoice.id %}"><i class="bi bi-pencil me-2"></i>Edit Metadata</a></li>
-                    <li><a class="dropdown-item" href="{% url 'invoice_csv' invoice.id %}"><i class="bi bi-filetype-csv me-2"></i>Export CSV</a></li>
-                    <li><hr class="dropdown-divider"></li>
+            <div class="relative">
+                <button @click="menuOpen = !menuOpen" class="btn-primary">Actions <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-1"></i></button>
+                <div x-show="menuOpen" x-transition class="dropdown-menu right-0 w-56">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-1.5">Manage Invoice</div>
+                    <a href="{% url 'invoice_edit' invoice.id %}" class="dropdown-item"><i data-lucide="pencil" class="w-4 h-4"></i> Edit Metadata</a>
+                    <a href="{% url 'invoice_csv' invoice.id %}" class="dropdown-item"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export CSV</a>
+                    <div class="dropdown-divider"></div>
                     {% if invoice.status != 'Paid' %}
-                    <li>
-                        <form method="post" action="{% url 'invoice_mark_paid' invoice.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i>Mark as Paid</button>
-                        </form>
-                    </li>
+                    <form method="post" action="{% url 'invoice_mark_paid' invoice.id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-emerald-600 hover:bg-emerald-50"><i data-lucide="check-circle" class="w-4 h-4"></i> Mark as Paid</button>
+                    </form>
                     {% endif %}
                     {% if invoice.status != 'Void' %}
-                    <li>
-                        <form method="post" action="{% url 'invoice_void' invoice.id %}" onsubmit="return confirm('Void invoice?');" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-slash-circle me-2"></i>Void Invoice</button>
-                        </form>
-                    </li>
+                    <form method="post" action="{% url 'invoice_void' invoice.id %}" onsubmit="return confirm('Void invoice?');" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-red-600 hover:bg-red-50"><i data-lucide="slash" class="w-4 h-4"></i> Void Invoice</button>
+                    </form>
                     {% endif %}
-                </ul>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Tabs -->
-    <ul class="nav nav-tabs mb-4 no-print" id="invoiceTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-selected="true">
-                <i class="bi bi-file-earmark-text me-2"></i>Invoice Preview
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="metrics-tab" data-bs-toggle="tab" data-bs-target="#metrics" type="button" role="tab" aria-selected="false">
-                <i class="bi bi-graph-up me-2"></i>Service Metrics
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-selected="false">
-                <i class="bi bi-info-circle me-2"></i>Details & Notes
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="invoiceTabContent">
-        
-        <!-- PREVIEW TAB (The A4 Document) -->
-        <div class="tab-pane fade show active" id="preview" role="tabpanel">
-            <div style="background: #cbd5e1; padding: 48px 40px; border-radius: 12px; min-height: 700px; display: flex; justify-content: center; align-items: flex-start;">
-                <div style="background: white; width: 85%; min-height: 1100px; border-radius: 4px; box-shadow: 0 0 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0;">
-                    {% include '_invoice_content.html' %}
-                </div>
-            </div>
-        </div>
-
-        <!-- METRICS TAB -->
-        <div class="tab-pane fade" id="metrics" role="tabpanel">
-            <div class="row g-4 mb-4">
-                <div class="col-md-3">
-                    <div class="metric-card blue">
-                        <div class="metric-label">Total Videos</div>
-                        <div class="metric-value">{{ invoice.total_videos }}</div>
-                        <div class="metric-sub">Personalized videos generated</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card green">
-                        <div class="metric-label">Total Views</div>
-                        <div class="metric-value">{{ invoice.total_views }}</div>
-                        <div class="metric-sub">Recipient engagement</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card purple">
-                        <div class="metric-label">Total Clicks</div>
-                        <div class="metric-value">{{ invoice.total_clicks }}</div>
-                        <div class="metric-sub">Call-to-action clicks</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card yellow">
-                        <div class="metric-label">Batches</div>
-                        <div class="metric-value">{{ invoice.invoice_batches.count }}</div>
-                        <div class="metric-sub">Campaign batches included</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Campaign Breakdown Table -->
-             <div class="saas-card">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h6 class="mb-0 fw-bold">Batch & Campaign Breakdown</h6>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="ps-4 text-uppercase text-muted small fw-bold">Batch ID</th>
-                                <th class="text-uppercase text-muted small fw-bold">Campaign</th>
-                                <th class="text-uppercase text-muted small fw-bold">Created</th>
-                                <th class="text-end text-uppercase text-muted small fw-bold">Videos</th>
-                                <th class="text-end pe-4 text-uppercase text-muted small fw-bold">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for batch_item in invoice.invoice_batches.all %}
-                            <tr>
-                                <td class="ps-4 fw-bold">#{{ batch_item.batch.id }}</td>
-                                <td>
-                                    <div class="fw-medium">{{ batch_item.batch.campaign_name }}</div>
-                                    <div class="small text-muted">{{ batch_item.batch.campaign.get_appeal_type_display|default:"Standard Campaign" }}</div>
-                                </td>
-                                <td class="small text-muted">{{ batch_item.batch.created_at|date:"M d, Y" }}</td>
-                                <td class="text-end font-monospace">{{ batch_item.videos_count }}</td>
-                                <td class="text-end pe-4 font-monospace">£{{ batch_item.line_amount|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="5" class="text-center py-4 text-muted">No batches linked to this invoice.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- DETAILS TAB -->
-        <div class="tab-pane fade" id="details" role="tabpanel">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="saas-card mb-4">
-                        <div class="card-header bg-white py-3 border-bottom">
-                            <h6 class="mb-0 fw-bold">Audit Information</h6>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Created Date</span>
-                                    <span class="fw-medium">{{ invoice.created_at|date:"M d, Y H:i" }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Issue Date</span>
-                                    <span class="fw-medium">{{ invoice.issue_date|date:"M d, Y" }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Due Date</span>
-                                    <span class="fw-medium">{{ invoice.due_date|date:"M d, Y" }}</span>
-                                </li>
-                                 <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Invoice Type</span>
-                                    <span class="fw-medium text-capitalize">{{ invoice.get_invoice_type_display }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Campaign</span>
-                                    <span class="fw-medium">{{ invoice.campaign.name|default:"General Billing" }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Pricing Tier</span>
-                                    <span class="fw-medium">{{ invoice.pricing_tier|title }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span class="text-muted">Campaign Volume</span>
-                                    <span class="fw-medium">{{ invoice.campaign_volume|default:0 }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="saas-card mb-4">
-                         <div class="card-header bg-white py-3 border-bottom">
-                            <h6 class="mb-0 fw-bold">Full Notes</h6>
-                        </div>
-                        <div class="card-body bg-light rounded text-muted">
-                            {% if invoice.notes %}
-                                {{ invoice.notes|linebreaks }}
-                            {% else %}
-                                <em class="text-muted">No internal notes added.</em>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+    <div class="flex gap-1 border-b border-gray-200 mb-6 no-print">
+        <button @click="activeTab = 'preview'" class="tab-pill" :class="activeTab === 'preview' ? 'bg-brand/10 text-brand font-bold' : 'text-gray-500 hover:text-gray-700'">
+            <i data-lucide="file-text" class="w-4 h-4"></i> Invoice Preview
+        </button>
+        <button @click="activeTab = 'metrics'" class="tab-pill" :class="activeTab === 'metrics' ? 'bg-brand/10 text-brand font-bold' : 'text-gray-500 hover:text-gray-700'">
+            <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Service Metrics
+        </button>
+        <button @click="activeTab = 'details'" class="tab-pill" :class="activeTab === 'details' ? 'bg-brand/10 text-brand font-bold' : 'text-gray-500 hover:text-gray-700'">
+            <i data-lucide="info" class="w-4 h-4"></i> Details & Notes
+        </button>
     </div>
+
+    <!-- PREVIEW TAB -->
+    <div x-show="activeTab === 'preview'" x-transition>
+        <div class="bg-slate-300 p-12 rounded-xl min-h-[700px] flex justify-center items-start">
+            <div class="bg-white w-[85%] min-h-[1100px] rounded shadow-2xl border border-gray-200">
+                {% include '_invoice_content.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- METRICS TAB -->
+    <div x-show="activeTab === 'metrics'" x-transition>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="rounded-xl p-6 border border-blue-100 bg-blue-50 text-blue-800">
+                <div class="text-sm font-medium uppercase tracking-wider opacity-80">Total Videos</div>
+                <div class="text-3xl font-bold mt-2 mb-1">{{ invoice.total_videos }}</div>
+                <div class="text-xs opacity-70">Personalized videos generated</div>
+            </div>
+            <div class="rounded-xl p-6 border border-emerald-100 bg-emerald-50 text-emerald-800">
+                <div class="text-sm font-medium uppercase tracking-wider opacity-80">Total Views</div>
+                <div class="text-3xl font-bold mt-2 mb-1">{{ invoice.total_views }}</div>
+                <div class="text-xs opacity-70">Recipient engagement</div>
+            </div>
+            <div class="rounded-xl p-6 border border-purple-100 bg-purple-50 text-purple-800">
+                <div class="text-sm font-medium uppercase tracking-wider opacity-80">Total Clicks</div>
+                <div class="text-3xl font-bold mt-2 mb-1">{{ invoice.total_clicks }}</div>
+                <div class="text-xs opacity-70">Call-to-action clicks</div>
+            </div>
+            <div class="rounded-xl p-6 border border-amber-100 bg-amber-50 text-amber-800">
+                <div class="text-sm font-medium uppercase tracking-wider opacity-80">Batches</div>
+                <div class="text-3xl font-bold mt-2 mb-1">{{ invoice.invoice_batches.count }}</div>
+                <div class="text-xs opacity-70">Campaign batches included</div>
+            </div>
+        </div>
+
+        <!-- Batch Breakdown Table -->
+        <div class="card overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h6 class="font-bold text-gray-900">Batch & Campaign Breakdown</h6>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Batch ID</th>
+                            <th>Campaign</th>
+                            <th>Created</th>
+                            <th class="text-right">Videos</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch_item in invoice.invoice_batches.all %}
+                        <tr>
+                            <td class="font-bold">#{{ batch_item.batch.id }}</td>
+                            <td>
+                                <div class="font-medium text-gray-900">{{ batch_item.batch.campaign_name }}</div>
+                                <div class="text-xs text-gray-400">{{ batch_item.batch.campaign.get_appeal_type_display|default:"Standard Campaign" }}</div>
+                            </td>
+                            <td class="text-sm text-gray-400">{{ batch_item.batch.created_at|date:"M d, Y" }}</td>
+                            <td class="text-right font-mono">{{ batch_item.videos_count }}</td>
+                            <td class="text-right font-mono">£{{ batch_item.line_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center py-8 text-gray-400">No batches linked to this invoice.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETAILS TAB -->
+    <div x-show="activeTab === 'details'" x-transition>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h6 class="font-bold text-gray-900">Audit Information</h6>
+                </div>
+                <div class="card-body p-0">
+                    <dl class="divide-y divide-gray-100">
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Created Date</dt>
+                            <dd class="font-medium text-gray-900">{{ invoice.created_at|date:"M d, Y H:i" }}</dd>
+                        </div>
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Issue Date</dt>
+                            <dd class="font-medium text-gray-900">{{ invoice.issue_date|date:"M d, Y" }}</dd>
+                        </div>
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Due Date</dt>
+                            <dd class="font-medium text-gray-900">{{ invoice.due_date|date:"M d, Y" }}</dd>
+                        </div>
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Invoice Type</dt>
+                            <dd class="font-medium text-gray-900 capitalize">{{ invoice.get_invoice_type_display }}</dd>
+                        </div>
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Campaign</dt>
+                            <dd class="font-medium text-gray-900">{{ invoice.campaign.name|default:"General Billing" }}</dd>
+                        </div>
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Pricing Tier</dt>
+                            <dd class="font-medium text-gray-900">{{ invoice.pricing_tier|title }}</dd>
+                        </div>
+                        <div class="flex justify-between px-6 py-3">
+                            <dt class="text-gray-400">Campaign Volume</dt>
+                            <dd class="font-medium text-gray-900">{{ invoice.campaign_volume|default:0 }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h6 class="font-bold text-gray-900">Full Notes</h6>
+                </div>
+                <div class="card-body bg-gray-50 text-gray-500">
+                    {% if invoice.notes %}
+                        {{ invoice.notes|linebreaks }}
+                    {% else %}
+                        <em class="text-gray-400">No internal notes added.</em>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}

@@ -4,30 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0049_campaignstats_bounce_rate_campaignstats_click_rate_and_more'),
+        ("charity", "0049_campaignstats_bounce_rate_campaignstats_click_rate_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='invoice',
-            name='email_opened_at',
+            model_name="invoice",
+            name="email_opened_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='email_sent_at',
+            model_name="invoice",
+            name="email_sent_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='paid_at',
+            model_name="invoice",
+            name="paid_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='resend_id',
+            model_name="invoice",
+            name="resend_id",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
     ]

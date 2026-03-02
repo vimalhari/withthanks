@@ -6,184 +6,41 @@
 {% block breadcrumb_child %}Send Wizard{% endblock %}
 
 {% block page_content %}
-<style>
-    :root {
-        --wizard-primary: #4f46e5;
-        --wizard-bg: #f8fafc;
-        --wizard-border: #e2e8f0;
-    }
+<div class="max-w-3xl mx-auto pb-16">
+    <!-- Step Indicator -->
+    <div class="flex justify-between mb-12 relative">
+        <div class="absolute top-6 left-0 right-0 h-0.5 bg-gray-200 z-0"></div>
 
-    .wizard-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding-bottom: 60px;
-    }
-
-    .wizard-step-indicator {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 48px;
-        position: relative;
-    }
-
-    .wizard-step-indicator::before {
-        content: '';
-        position: absolute;
-        top: 24px;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: var(--wizard-border);
-        z-index: 1;
-    }
-
-    .step-item {
-        position: relative;
-        z-index: 2;
-        background: var(--wizard-bg);
-        padding: 0 12px;
-        text-align: center;
-        flex: 1;
-    }
-
-    .step-dot {
-        width: 48px;
-        height: 48px;
-        background: #fff;
-        border: 2px solid var(--wizard-border);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 12px;
-        font-weight: 700;
-        color: var(--text-muted);
-        transition: all 0.3s;
-    }
-
-    .step-item.active .step-dot {
-        border-color: var(--wizard-primary);
-        background: var(--wizard-primary);
-        color: white;
-        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-    }
-
-    .step-item.completed .step-dot {
-        border-color: var(--wizard-primary);
-        color: var(--wizard-primary);
-    }
-
-    .step-label {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
-    }
-
-    .step-item.active .step-label {
-        color: var(--wizard-primary);
-    }
-
-    .mode-card {
-        background: white;
-        border: 2px solid var(--wizard-border);
-        border-radius: 16px;
-        padding: 24px;
-        cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        height: 100%;
-    }
-
-    .mode-card:hover {
-        border-color: var(--wizard-primary);
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .mode-card.selected {
-        border-color: var(--wizard-primary);
-        background: var(--primary-accent);
-    }
-
-    .mode-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-    }
-
-    /* Target Search Item */
-    .client-select-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px;
-        border: 1px solid var(--wizard-border);
-        border-radius: 12px;
-        margin-bottom: 12px;
-        background: white;
-        transition: all 0.2s;
-        cursor: pointer;
-    }
-
-    .client-select-item:hover {
-        border-color: var(--wizard-primary);
-        background: var(--bg-hover);
-    }
-
-    .client-select-item.active {
-        border-color: var(--wizard-primary);
-        background: var(--primary-accent);
-    }
-
-    .file-upload-zone, .dropzone {
-        border: 2px dashed var(--wizard-border);
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        background: white;
-        transition: all 0.2s;
-        cursor: pointer;
-    }
-
-    .dropzone:hover {
-        border-color: var(--wizard-primary);
-        background: var(--bg-hover);
-    }
-
-    .execution-summary {
-        background: var(--bg-hover);
-        border-radius: 16px;
-        padding: 24px;
-        border: 1px solid var(--wizard-border);
-    }
-</style>
-
-<div class="wizard-container">
-    <!-- Progress Header -->
-    <div class="wizard-step-indicator">
-        <div class="step-item {% if step == 1 %}active{% elif step > 1 %}completed{% endif %}">
-            <div class="step-dot">{% if step > 1 %}<i class="bi bi-check-lg"></i>{% else %}1{% endif %}</div>
-            <div class="step-label">Select Client</div>
+        <div class="relative z-10 flex-1 text-center px-3">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full border-2 flex items-center justify-center font-bold transition-all
+                {% if step == 1 %}border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]{% elif step > 1 %}border-brand text-brand bg-white{% else %}border-gray-200 text-gray-400 bg-white{% endif %}">
+                {% if step > 1 %}<i data-lucide="check" class="w-5 h-5"></i>{% else %}1{% endif %}
+            </div>
+            <div class="text-[11px] font-bold uppercase tracking-wider {% if step == 1 %}text-brand{% else %}text-gray-400{% endif %}">Select Client</div>
         </div>
-        <div class="step-item {% if step == 2 %}active{% elif step > 2 %}completed{% endif %}">
-            <div class="step-dot">{% if step > 2 %}<i class="bi bi-check-lg"></i>{% else %}2{% endif %}</div>
-            <div class="step-label">Choose Method</div>
+
+        <div class="relative z-10 flex-1 text-center px-3">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full border-2 flex items-center justify-center font-bold transition-all
+                {% if step == 2 %}border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]{% elif step > 2 %}border-brand text-brand bg-white{% else %}border-gray-200 text-gray-400 bg-white{% endif %}">
+                {% if step > 2 %}<i data-lucide="check" class="w-5 h-5"></i>{% else %}2{% endif %}
+            </div>
+            <div class="text-[11px] font-bold uppercase tracking-wider {% if step == 2 %}text-brand{% else %}text-gray-400{% endif %}">Choose Method</div>
         </div>
-        <div class="step-item {% if step == 3 %}active{% elif step > 3 %}completed{% endif %}">
-            <div class="step-dot">{% if step > 3 %}<i class="bi bi-check-lg"></i>{% else %}3{% endif %}</div>
-            <div class="step-label">Configure</div>
+
+        <div class="relative z-10 flex-1 text-center px-3">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full border-2 flex items-center justify-center font-bold transition-all
+                {% if step == 3 %}border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]{% elif step > 3 %}border-brand text-brand bg-white{% else %}border-gray-200 text-gray-400 bg-white{% endif %}">
+                {% if step > 3 %}<i data-lucide="check" class="w-5 h-5"></i>{% else %}3{% endif %}
+            </div>
+            <div class="text-[11px] font-bold uppercase tracking-wider {% if step == 3 %}text-brand{% else %}text-gray-400{% endif %}">Configure</div>
         </div>
-        <div class="step-item {% if step == 4 %}active{% endif %}">
-            <div class="step-dot">4</div>
-            <div class="step-label">Review & Send</div>
+
+        <div class="relative z-10 flex-1 text-center px-3">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full border-2 flex items-center justify-center font-bold transition-all
+                {% if step == 4 %}border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]{% else %}border-gray-200 text-gray-400 bg-white{% endif %}">
+                4
+            </div>
+            <div class="text-[11px] font-bold uppercase tracking-wider {% if step == 4 %}text-brand{% else %}text-gray-400{% endif %}">Review & Send</div>
         </div>
     </div>
 
@@ -195,197 +52,191 @@
         <input type="hidden" name="campaign_id" id="hidden_campaign_id" value="{{ selected_campaign.id|default:'' }}">
         <input type="hidden" name="method" id="hidden_method" value="{{ method|default:'' }}">
 
-        <div class="saas-card" style="padding: 40px;">
+        <div class="card !p-10">
             {% if step == 1 %}
                 <!-- STEP 1: SELECT CLIENT -->
-                <div style="text-align: center; margin-bottom: 32px;">
-                    <h2 style="font-size: 24px; font-weight: 800; color: var(--text-headings); margin-bottom: 8px;">Who are we emailing for?</h2>
-                    <p style="color: var(--text-muted); font-size: 15px;">Select the client account that will be associated with this sending batch.</p>
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-extrabold text-gray-900 mb-2">Who are we emailing for?</h2>
+                    <p class="text-gray-400 text-[15px]">Select the client account that will be associated with this sending batch.</p>
                 </div>
 
-                <div style="max-width: 500px; margin: 0 auto;">
+                <div class="max-w-[500px] mx-auto">
                     {% if request.user.is_superuser %}
-                        <div style="position: relative; margin-bottom: 24px;">
-                            <i class="bi bi-search" style="position: absolute; left: 16px; top: 12px; color: var(--text-muted);"></i>
-                            <input type="text" placeholder="Search Charity Clients..." class="saas-input" style="padding-left: 44px;" onkeyup="filterClients(this.value)">
+                        <div class="relative mb-6">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-4 top-3 text-gray-400"></i>
+                            <input type="text" placeholder="Search Charity Clients..." class="form-input !pl-11" onkeyup="filterClients(this.value)">
                         </div>
 
-                        <div id="clientList" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+                        <div id="clientList" class="max-h-[400px] overflow-y-auto pr-1 space-y-3">
                             {% for client in all_clients %}
-                            <div class="client-select-item {% if selected_client.id == client.id %}active{% endif %}" onclick="selectClient('{{ client.id }}', this)">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="width: 32px; height: 32px; background: var(--bg-hover); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--primary);">
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl cursor-pointer transition-all hover:border-brand hover:bg-gray-50 {% if selected_client.id == client.id %}!border-brand !bg-brand/5{% endif %}" onclick="selectClient('{{ client.id }}', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-xs text-brand">
                                         {{ client.name|slice:":1"|upper }}
                                     </div>
-                                    <span style="font-weight: 600; color: var(--text-headings);">{{ client.name }}</span>
+                                    <span class="font-semibold text-gray-900">{{ client.name }}</span>
                                 </div>
                                 {% if selected_client.id == client.id %}
-                                <i class="bi bi-check-circle-fill" style="color: var(--primary);"></i>
+                                <i data-lucide="check-circle-2" class="w-5 h-5 text-brand"></i>
                                 {% endif %}
                             </div>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <div class="client-select-item active">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 32px; height: 32px; background: var(--bg-hover); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--primary);">
+                        <div class="flex items-center justify-between p-4 border border-brand rounded-xl bg-brand/5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-xs text-brand">
                                     {{ selected_client.name|slice:":1"|upper }}
                                 </div>
-                                <span style="font-weight: 600; color: var(--text-headings);">{{ selected_client.name }}</span>
+                                <span class="font-semibold text-gray-900">{{ selected_client.name }}</span>
                             </div>
-                            <i class="bi bi-check-circle-fill" style="color: var(--primary);"></i>
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-brand"></i>
                         </div>
                     {% endif %}
                 </div>
 
             {% elif step == 2 %}
                 <!-- STEP 2: CHOOSE METHOD -->
-                <div style="text-align: center; margin-bottom: 32px;">
-                    <h2 style="font-size: 24px; font-weight: 800; color: var(--text-headings); margin-bottom: 8px;">Choose your sending method</h2>
-                    <p style="color: var(--text-muted); font-size: 15px;">Targeting <strong>{{ selected_client.name }}</strong></p>
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-extrabold text-gray-900 mb-2">Choose your sending method</h2>
+                    <p class="text-gray-400 text-[15px]">Targeting <strong>{{ selected_client.name }}</strong></p>
                 </div>
 
-                <div class="grid-3" style="gap: 20px;">
-                    <div class="mode-card {% if request.GET.method == 'bulk' %}selected{% endif %}" onclick="selectMethod('bulk', this)">
-                        <div class="mode-icon" style="background: #eff6ff; color: #2563eb;"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 cursor-pointer transition-all hover:border-brand hover:-translate-y-1 hover:shadow-md flex flex-col gap-4 h-full {% if request.GET.method == 'bulk' %}!border-brand !bg-brand/5{% endif %}" onclick="selectMethod('bulk', this)">
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600">
+                            <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                        </div>
                         <div>
-                            <h4 style="font-weight: 700; margin-bottom: 4px;">Bulk Upload</h4>
-                            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">Process hundreds of recipients via CSV file.</p>
+                            <h4 class="font-bold mb-1">Bulk Upload</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Process hundreds of recipients via CSV file.</p>
                         </div>
                     </div>
-                    <div class="mode-card {% if request.GET.method == 'reengage' %}selected{% endif %}" onclick="selectMethod('reengage', this)">
-                        <div class="mode-icon" style="background: #f0fdf4; color: #16a34a;"><i class="bi bi-people"></i></div>
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 cursor-pointer transition-all hover:border-brand hover:-translate-y-1 hover:shadow-md flex flex-col gap-4 h-full {% if request.GET.method == 'reengage' %}!border-brand !bg-brand/5{% endif %}" onclick="selectMethod('reengage', this)">
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
                         <div>
-                            <h4 style="font-weight: 700; margin-bottom: 4px;">Re-engagement</h4>
-                            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">Send a blast to previous donors and supporters.</p>
+                            <h4 class="font-bold mb-1">Re-engagement</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Send a blast to previous donors and supporters.</p>
                         </div>
                     </div>
-                    <div class="mode-card {% if request.GET.method == 'single' %}selected{% endif %}" onclick="selectMethod('single', this)">
-                        <div class="mode-icon" style="background: #fefce8; color: #ca8a04;"><i class="bi bi-person-plus"></i></div>
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 cursor-pointer transition-all hover:border-brand hover:-translate-y-1 hover:shadow-md flex flex-col gap-4 h-full {% if request.GET.method == 'single' %}!border-brand !bg-brand/5{% endif %}" onclick="selectMethod('single', this)">
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-yellow-50 text-yellow-600">
+                            <i data-lucide="user-plus" class="w-6 h-6"></i>
+                        </div>
                         <div>
-                            <h4 style="font-weight: 700; margin-bottom: 4px;">Single Email</h4>
-                            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">Quickly send a personalized email to one recipient.</p>
+                            <h4 class="font-bold mb-1">Single Email</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">Quickly send a personalized email to one recipient.</p>
                         </div>
                     </div>
                 </div>
 
             {% elif step == 3 %}
-                <!-- STEP 3: CONFIGURE (Drafting Content) -->
-                <div style="text-align: center; margin-bottom: 32px;">
-                    <h2 style="font-size: 24px; font-weight: 800; color: var(--text-headings); margin-bottom: 8px;">Configure Campaign</h2>
-                    <p style="color: var(--text-muted); font-size: 15px;">Setup your email content for <strong>{{ selected_client.name }}</strong></p>
+                <!-- STEP 3: CONFIGURE -->
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-extrabold text-gray-900 mb-2">Configure Campaign</h2>
+                    <p class="text-gray-400 text-[15px]">Setup your email content for <strong>{{ selected_client.name }}</strong></p>
                 </div>
 
-                <div style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
-                    <!-- DEBUG INFO: Remove before production -->
-                    <div style="font-size: 10px; color: #ccc; text-align: center;">
-                        Debug: Step={{ step }}, Method={{ method }}, hidden_method={{ request.GET.method }}
-                    </div>
-                    
-                    <!-- Recipient Info (Conditional) -->
+                <div class="max-w-[600px] mx-auto space-y-6">
                     {% if method == 'single' %}
-                        <div class="grid-2" style="gap: 16px;">
-                            <div class="form-group">
-                                <label class="saas-label">Recipient Name</label>
-                                <input type="text" name="recipient_name" class="saas-input" placeholder="e.g. David Smith" value="{{ recipient_name }}" required>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label">Recipient Name</label>
+                                <input type="text" name="recipient_name" class="form-input" placeholder="e.g. David Smith" value="{{ recipient_name }}" required>
                             </div>
-                            <div class="form-group">
-                                <label class="saas-label">Recipient Email</label>
-                                <input type="email" name="recipient_email" class="saas-input" placeholder="david@example.com" value="{{ recipient_email }}" required>
+                            <div>
+                                <label class="form-label">Recipient Email</label>
+                                <input type="email" name="recipient_email" class="form-input" placeholder="david@example.com" value="{{ recipient_email }}" required>
                             </div>
                         </div>
                     {% endif %}
                     
                     {% if method == 'bulk' %}
-                        <div class="form-group" style="padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;">
-                            <label style="font-weight: 700; display: block; margin-bottom: 8px;">Upload CSV File</label>
-                            <input type="file" name="csv_file" id="wizardCsvInput" class="form-control" accept=".csv" style="display: block; width: 100%;">
-                            <small class="text-muted">Format: Name, Amount, Email (Max 10MB)</small>
+                        <div class="p-5 bg-gray-50 border border-gray-200 rounded-lg">
+                            <label class="font-bold block mb-2">Upload CSV File</label>
+                            <input type="file" name="csv_file" id="wizardCsvInput" accept=".csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20">
+                            <p class="text-gray-400 text-xs mt-2">Format: Name, Amount, Email (Max 10MB)</p>
                         </div>
                     {% endif %}
                     
                     {% if method == 'reengage' %}
-                        <div style="padding: 20px; background: var(--bg-hover); border-radius: 12px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--wizard-border);">
-                            <div style="font-size: 24px; color: var(--primary);"><i class="bi bi-database-fill-check"></i></div>
+                        <div class="p-5 bg-gray-50 rounded-xl flex items-center gap-4 border border-gray-200">
+                            <div class="text-2xl text-brand"><i data-lucide="database" class="w-7 h-7"></i></div>
                             <div>
-                                <h5 style="font-weight: 700; margin: 0;">Previous Leads Analysis</h5>
-                                <p style="font-size: 12px; color: var(--text-muted); margin: 0;">We will automatically target all unique previous recipients from this client.</p>
+                                <h5 class="font-bold">Previous Leads Analysis</h5>
+                                <p class="text-xs text-gray-400">We will automatically target all unique previous recipients from this client.</p>
                             </div>
                         </div>
                     {% endif %}
 
-                    <hr style="border: 0; border-top: 1px solid var(--wizard-border); margin: 8px 0;">
+                    <hr class="border-gray-200">
 
-                    <div class="form-group">
-                        <label class="saas-label">Email Subject</label>
-                        <input type="text" name="subject" class="saas-input" value="{{ subject }}" placeholder="e.g. A personal thank you from {{ selected_client.name }}" required>
+                    <div>
+                        <label class="form-label">Email Subject</label>
+                        <input type="text" name="subject" class="form-input" value="{{ subject }}" placeholder="e.g. A personal thank you from {{ selected_client.name }}" required>
                     </div>
 
-                    <div class="form-group">
-                        <label class="saas-label">Target Campaign (Optional Overrides)</label>
-                        <select name="campaign_id" class="saas-select" onchange="document.getElementById('hidden_campaign_id').value = this.value">
+                    <div>
+                        <label class="form-label">Target Campaign (Optional Overrides)</label>
+                        <select name="campaign_id" class="form-select" onchange="document.getElementById('hidden_campaign_id').value = this.value">
                             <option value="">No Campaign (Use Client Defaults)</option>
                             {% for c in campaigns %}
                                 <option value="{{ c.id }}" {% if campaign_id|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
                             {% endfor %}
                         </select>
-                        <div class="form-text mt-1 small text-muted">Selecting a campaign will use any video/script overrides defined for it.</div>
+                        <p class="text-gray-400 text-xs mt-1">Selecting a campaign will use any video/script overrides defined for it.</p>
                     </div>
 
-                    <div class="form-group">
-                        <label class="saas-label">Media Mode</label>
-                        <div style="display: flex; gap: 16px; margin-top: 8px;">
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="media_type" value="video" {% if media_type == 'video' or not media_type %}checked{% endif %}>
-                                <span style="font-size: 14px; font-weight: 500;">AI Video Animation</span>
+                    <div>
+                        <label class="form-label">Media Mode</label>
+                        <div class="flex gap-4 mt-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="media_type" value="video" {% if media_type == 'video' or not media_type %}checked{% endif %} class="form-checkbox">
+                                <span class="text-sm font-medium">AI Video Animation</span>
                             </label>
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="media_type" value="image" {% if media_type == 'image' %}checked{% endif %}>
-                                <span style="font-size: 14px; font-weight: 500;">Direct Image Personalized</span>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="media_type" value="image" {% if media_type == 'image' %}checked{% endif %} class="form-checkbox">
+                                <span class="text-sm font-medium">Direct Image Personalized</span>
                             </label>
                         </div>
                     </div>
-                    <div class="form-group" style="background: var(--bg-hover); padding: 20px; border-radius: 12px; border: 1px solid var(--wizard-border);">
-                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 16px;">
-                            <input type="checkbox" name="simulate_metrics" id="simToggle" onchange="toggleSimFields(this.checked)" style="width: 18px; height: 18px;">
-                            <span style="font-weight: 700; color: var(--text-headings);">Simulate Performance Metrics</span>
+
+                    <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                        <label class="flex items-center gap-3 cursor-pointer mb-4">
+                            <input type="checkbox" name="simulate_metrics" id="simToggle" onchange="toggleSimFields(this.checked)" class="form-checkbox w-[18px] h-[18px]">
+                            <span class="font-bold text-gray-900">Simulate Performance Metrics</span>
                         </label>
-                        <div id="simFields" style="display: none;">
-                            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Apply random engagement counts (views/clicks) to this batch automatically.</p>
-                            <div class="grid-2" style="gap: 16px;">
-                                <div class="form-group">
-                                    <label class="saas-label">Min Threshold</label>
-                                    <input type="number" name="sim_min" class="saas-input" value="100" min="0">
+                        <div id="simFields" class="hidden">
+                            <p class="text-xs text-gray-400 mb-4">Apply random engagement counts (views/clicks) to this batch automatically.</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="form-label">Min Threshold</label>
+                                    <input type="number" name="sim_min" class="form-input" value="100" min="0">
                                 </div>
-                                <div class="form-group">
-                                    <label class="saas-label">Max Threshold</label>
-                                    <input type="number" name="sim_max" class="saas-input" value="1000" min="0">
+                                <div>
+                                    <label class="form-label">Max Threshold</label>
+                                    <input type="number" name="sim_max" class="form-input" value="1000" min="0">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <script>
-                        function toggleSimFields(checked) {
-                            document.getElementById('simFields').style.display = checked ? 'block' : 'none';
-                        }
-                    </script>
-
-                    <div class="form-group">
-                        <label class="saas-label">CTA Link (Optional)</label>
-                        <input type="url" name="cta_url" class="saas-input" placeholder="https://{{ selected_client.name|slugify }}.org/donate" value="{{ cta_url }}">
-                    </div>
+                    <div>
+                        <label class="form-label">CTA Link (Optional)</label>
+                        <input type="url" name="cta_url" class="form-input" placeholder="https://{{ selected_client.name|slugify }}.org/donate" value="{{ cta_url }}">
                     </div>
                 </div>
 
             {% elif step == 4 %}
                 <!-- STEP 4: REVIEW & SEND -->
-                <div style="text-align: center; margin-bottom: 32px;">
-                    <h2 style="font-size: 24px; font-weight: 800; color: var(--text-headings); margin-bottom: 8px;">Ready to Blast?</h2>
-                    <p style="color: var(--text-muted); font-size: 15px;">Please confirm the details below before we start processing.</p>
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-extrabold text-gray-900 mb-2">Ready to Blast?</h2>
+                    <p class="text-gray-400 text-[15px]">Please confirm the details below before we start processing.</p>
                 </div>
 
-                <!-- Hidden Fields to Carry State to Step 5 -->
+                <!-- Hidden carry-forward fields -->
                 <input type="hidden" name="campaign_id" value="{{ campaign_id }}">
                 <input type="hidden" name="recipient_name" value="{{ recipient_name }}">
                 <input type="hidden" name="recipient_email" value="{{ recipient_email }}">
@@ -399,78 +250,75 @@
                 <input type="hidden" name="sim_max" value="{{ request.POST.sim_max }}">
                 {% endif %}
 
-                <div class="execution-summary" style="max-width: 600px; margin: 0 auto;">
-                    <div style="display: flex; flex-direction: column; gap: 16px;">
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Client Account</span>
-                            <span style="font-weight: 700; color: var(--text-headings);">{{ selected_client.name }}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Sending Method</span>
-                            <span style="font-weight: 700; color: var(--primary);">
-                                {% if method == 'bulk' %}Bulk CSV Upload{% elif method == 'reengage' %}Re-engagement Blast{% else %}Single Recipient{% endif %}
-                            </span>
-                        </div>
-                        {% if method == 'bulk' and request.session.wizard_csv_data %}
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Recipients</span>
-                            <span style="font-weight: 700; color: #16a34a;">{{ request.session.wizard_csv_data|length }} found in {{ request.session.wizard_csv_filename }}</span>
-                        </div>
-                        {% endif %}
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Media Type</span>
-                            <span style="font-weight: 700; color: var(--primary);">{{ media_type|title }}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Selected Campaign</span>
-                            <span style="font-weight: 700; color: var(--primary);">
-                                {% if campaign_id %}
-                                    {% for c in campaigns %}
-                                        {% if c.id|stringformat:"s" == campaign_id|stringformat:"s" %}{{ c.name }}{% endif %}
-                                    {% endfor %}
-                                {% else %}
-                                    None (Using Client Defaults)
-                                {% endif %}
-                            </span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Email Subject</span>
-                            <span style="font-weight: 600; color: var(--text-body);">{{ subject }}</span>
-                        </div>
-                        {% if request.POST.simulate_metrics == 'on' %}
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;">
-                            <span class="saas-label">Simulate Metrics</span>
-                            <span style="font-weight: 700; color: var(--status-running);">Enabled ({{ request.POST.sim_min }}-{{ request.POST.sim_max }})</span>
-                        </div>
-                        {% endif %}
+                <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200 max-w-[600px] mx-auto space-y-4">
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Client Account</span>
+                        <span class="font-bold text-gray-900">{{ selected_client.name }}</span>
                     </div>
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Sending Method</span>
+                        <span class="font-bold text-brand">
+                            {% if method == 'bulk' %}Bulk CSV Upload{% elif method == 'reengage' %}Re-engagement Blast{% else %}Single Recipient{% endif %}
+                        </span>
+                    </div>
+                    {% if method == 'bulk' and request.session.wizard_csv_data %}
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Recipients</span>
+                        <span class="font-bold text-emerald-600">{{ request.session.wizard_csv_data|length }} found in {{ request.session.wizard_csv_filename }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Media Type</span>
+                        <span class="font-bold text-brand">{{ media_type|title }}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Selected Campaign</span>
+                        <span class="font-bold text-brand">
+                            {% if campaign_id %}
+                                {% for c in campaigns %}
+                                    {% if c.id|stringformat:"s" == campaign_id|stringformat:"s" %}{{ c.name }}{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                None (Using Client Defaults)
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Email Subject</span>
+                        <span class="font-semibold text-gray-700">{{ subject }}</span>
+                    </div>
+                    {% if request.POST.simulate_metrics == 'on' %}
+                    <div class="flex justify-between border-b border-black/5 pb-3">
+                        <span class="form-label">Simulate Metrics</span>
+                        <span class="font-bold text-amber-600">Enabled ({{ request.POST.sim_min }}-{{ request.POST.sim_max }})</span>
+                    </div>
+                    {% endif %}
 
-                    <div style="margin-top: 32px; padding: 16px; background: #fff; border-radius: 12px; border: 1px solid rgba(79, 70, 229, 0.2); display: flex; gap: 12px;">
-                         <i class="bi bi-shield-check" style="color: var(--primary); font-size: 20px;"></i>
-                         <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+                    <div class="mt-8 p-4 bg-white rounded-xl border border-brand/20 flex gap-3">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-brand shrink-0 mt-0.5"></i>
+                        <p class="text-xs text-gray-400 leading-relaxed">
                             Your campaign will be processed asynchronously via Celery. You can monitor the progress on the main dashboard once you start.
-                         </p>
+                        </p>
                     </div>
                 </div>
-
             {% endif %}
 
             <!-- Navigation Buttons -->
-            <div style="display: flex; justify-content: space-between; margin-top: 48px; border-top: 1px solid var(--wizard-border); padding-top: 32px;">
+            <div class="flex justify-between mt-12 border-t border-gray-200 pt-8">
                 {% if step > 1 %}
-                <button type="button" class="btn btn-secondary" onclick="prevStep()">
-                    <i class="bi bi-arrow-left"></i> Back
+                <button type="button" class="btn-secondary" onclick="prevStep()">
+                    <i data-lucide="arrow-left" class="w-4 h-4 mr-1 inline"></i> Back
                 </button>
                 {% else %}
-                <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                <a href="{% url 'dashboard' %}" class="btn-secondary">Cancel</a>
                 {% endif %}
 
                 {% if step < 4 %}
-                <button type="button" class="btn btn-primary" style="padding: 10px 40px;" onclick="validateAndNext()">
-                    Continue <i class="bi bi-arrow-right"></i>
+                <button type="button" class="btn-primary !py-2.5 !px-10" onclick="validateAndNext()">
+                    Continue <i data-lucide="arrow-right" class="w-4 h-4 ml-1 inline"></i>
                 </button>
                 {% else %}
-                <button type="submit" class="btn btn-primary" style="padding: 10px 40px; background: var(--status-success); border: none;">
+                <button type="submit" class="btn-primary !py-2.5 !px-10 !bg-emerald-600 hover:!bg-emerald-700">
                     🚀 Start Sending Now
                 </button>
                 {% endif %}
@@ -478,20 +326,25 @@
         </div>
     </form>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
     function selectClient(id, el) {
         document.getElementById('hidden_client_id').value = id;
-        document.querySelectorAll('.client-select-item').forEach(item => item.classList.remove('active'));
-        el.classList.add('active');
+        document.querySelectorAll('#clientList > div').forEach(item => {
+            item.classList.remove('!border-brand', '!bg-brand/5');
+        });
+        el.classList.add('!border-brand', '!bg-brand/5');
     }
 
     function selectMethod(method, el) {
-        // Set hidden field so server receives selected method on submit
         const hidden = document.getElementById('hidden_method');
         if (hidden) hidden.value = method;
-        document.querySelectorAll('.mode-card').forEach(item => item.classList.remove('selected'));
-        if (el) el.classList.add('selected');
+        document.querySelectorAll('.grid > div[onclick]').forEach(item => {
+            item.classList.remove('!border-brand', '!bg-brand/5');
+        });
+        if (el) el.classList.add('!border-brand', '!bg-brand/5');
     }
 
     function prevStep() {
@@ -503,7 +356,6 @@
     function validateAndNext() {
         try {
             const step = parseInt('{{ step }}');
-            
             if (step === 1 && !document.getElementById('hidden_client_id').value) {
                 alert("Please select a client account first.");
                 return;
@@ -513,13 +365,12 @@
                 return;
             }
             if (step === 3 && document.getElementById('hidden_method').value === 'bulk') {
-                 const input = document.getElementById('wizardCsvInput');
-                 if (!input || !input.files || input.files.length === 0) {
-                     alert("Please upload a CSV file to continue.");
-                     return;
-                 }
+                const input = document.getElementById('wizardCsvInput');
+                if (!input || !input.files || input.files.length === 0) {
+                    alert("Please upload a CSV file to continue.");
+                    return;
+                }
             }
-            // Submit form
             document.getElementById('wizardForm').submit();
         } catch (e) {
             alert("Error in validation: " + e.message);
@@ -527,18 +378,15 @@
     }
 
     function filterClients(q) {
-        // ... (unchanged)
-        const items = document.querySelectorAll('.client-select-item');
+        const items = document.querySelectorAll('#clientList > div');
         items.forEach(item => {
             const name = item.querySelector('span').innerText.toLowerCase();
-            if (name.includes(q.toLowerCase())) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+            item.style.display = name.includes(q.toLowerCase()) ? 'flex' : 'none';
         });
     }
 
-
+    function toggleSimFields(checked) {
+        document.getElementById('simFields').style.display = checked ? 'block' : 'none';
+    }
 </script>
 {% endblock %}

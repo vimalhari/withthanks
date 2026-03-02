@@ -6,64 +6,60 @@
 {% block breadcrumb_child %}Campaigns{% endblock %}
 
 {% block page_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 style="font-size: 24px; font-weight: 800;">Campaign Performance</h1>
-    <div class="d-flex gap-2">
-        <a href="{% url 'analytics_export_excel' %}?days={{ request.GET.days|default:'30' }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-excel me-1"></i> Export Comparison</a>
-    </div>
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-extrabold text-gray-900">Campaign Performance</h1>
+    <a href="{% url 'analytics_export_excel' %}?days={{ request.GET.days|default:'30' }}" class="btn-secondary btn-sm">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export Comparison
+    </a>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius: 16px;">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 14px;">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="ps-4 py-3" style="font-weight: 700;">CAMPAIGN NAME</th>
-                        <th class="py-3" style="font-weight: 700;">SENT</th>
-                        <th class="py-3" style="font-weight: 700;">OPEN RATE</th>
-                        <th class="py-3" style="font-weight: 700;">PLAY RATE</th>
-                        <th class="py-3" style="font-weight: 700;">STATUS</th>
-                        <th class="pe-4 py-3 text-end" style="font-weight: 700;">ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cp in campaign_perf %}
-                    <tr>
-                        <td class="ps-4">
-                            <div class="fw-bold text-dark">{{ cp.name }}</div>
-                            <div class="text-muted extra-small">Created via API Integration</div>
-                        </td>
-                        <td>{{ cp.sent }}</td>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-                                    <div class="progress-bar bg-info" style="width: {{ cp.open_rate }}%"></div>
-                                </div>
-                                <span class="fw-bold">{{ cp.open_rate }}%</span>
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Campaign Name</th>
+                    <th>Sent</th>
+                    <th>Open Rate</th>
+                    <th>Play Rate</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cp in campaign_perf %}
+                <tr>
+                    <td>
+                        <div class="font-bold text-gray-900">{{ cp.name }}</div>
+                        <div class="text-xs text-gray-400">Created via API Integration</div>
+                    </td>
+                    <td>{{ cp.sent }}</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[60px] overflow-hidden">
+                                <div class="h-full bg-blue-500 rounded-full" style="width: {{ cp.open_rate }}%"></div>
                             </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
-                                    <div class="progress-bar bg-success" style="width: {{ cp.play_rate }}%"></div>
-                                </div>
-                                <span class="fw-bold text-success">{{ cp.play_rate }}%</span>
+                            <span class="font-bold text-sm">{{ cp.open_rate }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[60px] overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: {{ cp.play_rate }}%"></div>
                             </div>
-                        </td>
-                        <td>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 11px;">Active</span>
-                        </td>
-                        <td class="pe-4 text-end">
-                            <button class="btn btn-sm btn-light" style="border-radius: 8px;"><i class="bi bi-eye"></i></button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="6" class="text-center py-5 text-muted">No campaigns with engagement data found in this period.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                            <span class="font-bold text-sm text-emerald-600">{{ cp.play_rate }}%</span>
+                        </div>
+                    </td>
+                    <td><span class="badge badge-success">Active</span></td>
+                    <td class="text-right">
+                        <button class="btn-secondary btn-sm"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-12 text-gray-400">No campaigns with engagement data found in this period.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

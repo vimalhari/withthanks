@@ -1,7 +1,8 @@
-import subprocess
-from pathlib import Path
 import logging
+import subprocess
 import time
+from pathlib import Path
+
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -11,11 +12,11 @@ def escape_drawtext(text: str) -> str:
     """Escape text for FFmpeg drawtext inside double quotes."""
     return (
         text.replace("\\", "\\\\")
-            .replace('"', '\\"')
-            .replace(":", "\\:")
-            .replace(",", "\\,")
-            .replace("!", "\\!")
-            .replace("%", "\\%")
+        .replace('"', '\\"')
+        .replace(":", "\\:")
+        .replace(",", "\\,")
+        .replace("!", "\\!")
+        .replace("%", "\\%")
     )
 
 
@@ -34,8 +35,8 @@ def stitch_voice_and_overlay(
     out_filename: str,
     output_dir: str | Path,
     intro_duration: float = 5,
-    logo_path: str = None,
-    overlay_spec: dict = None
+    logo_path: str | None = None,
+    overlay_spec: dict | None = None,
 ):
     start_time = time.perf_counter()  # ⏱ Start timer
 
@@ -57,10 +58,10 @@ def stitch_voice_and_overlay(
     # The original code assumed relative to settings.MEDIA_ROOT/base_videos
     # We'll stick to that logic unless it looks like an absolute path
     if Path(input_video).is_absolute():
-       input_video_path = Path(input_video)
+        input_video_path = Path(input_video)
     else:
-       input_video_path = Path(settings.MEDIA_ROOT) / "base_videos" / input_video
-       
+        input_video_path = Path(settings.MEDIA_ROOT) / "base_videos" / input_video
+
     tts_mp3_path = Path(tts_mp3)
 
     if not input_video_path.exists():
@@ -85,28 +86,28 @@ def stitch_voice_and_overlay(
     # ---------------------------------------------------------
     # FFmpeg Filter Complex Construction
     # ---------------------------------------------------------
-    
+
     # 1. Base split logic
-    fc = f"[0:v]scale=1280:-2,split[v_intro_raw][v_rest];"
-    
+    fc = "[0:v]scale=1280:-2,split[v_intro_raw][v_rest];"
+
     # 2. Intro trim & Drawtext (Captions)
     fc += (
         f"[v_intro_raw]trim=0:{intro_duration},setpts=PTS-STARTPTS,"
-        f"drawtext=text=\"{safe_text}\":{font_arg}"
+        f'drawtext=text="{safe_text}":{font_arg}'
         f"fontsize={fontsize}:fontcolor={fontcolor}:x={x_pos}:y={y_pos}:"
         f"box={box}:boxcolor={boxcolor}:boxborderw={boxborderw}[v_intro_text];"
     )
-    
+
     # 3. Logo Overlay (Conditional)
     if logo_path and Path(logo_path).exists():
         # Input 2 will be the logo
         # Scale logo to width 150px (auto height)
-        fc += f"[2:v]scale=150:-1[logo_scaled];"
+        fc += "[2:v]scale=150:-1[logo_scaled];"
         # Overlay top-right with 20px padding
-        fc += f"[v_intro_text][logo_scaled]overlay=main_w-overlay_w-20:20[v_intro_done];"
+        fc += "[v_intro_text][logo_scaled]overlay=main_w-overlay_w-20:20[v_intro_done];"
     else:
         # No logo, just pass through
-        fc += f"[v_intro_text]copy[v_intro_done];"
+        fc += "[v_intro_text]copy[v_intro_done];"
 
     # 4. Rest of video trim
     fc += f"[v_rest]trim=start={intro_duration},setpts=PTS-STARTPTS[v_rest_done];"
@@ -126,23 +127,39 @@ def stitch_voice_and_overlay(
     cmd = [
         "ffmpeg",
         "-y",
-        "-i", str(input_video_path),
-        "-i", str(tts_mp3_path),
+        "-i",
+        str(input_video_path),
+        "-i",
+        str(tts_mp3_path),
     ]
 
     # Add logo input if exists
     if logo_path and Path(logo_path).exists():
         cmd.extend(["-i", str(logo_path)])
 
-    cmd.extend([
-        "-filter_complex", fc,
-        "-map", "[v]",
-        "-map", "[a]",
-        "-c:v", video_encoder, "-preset", preset, "-crf", "18",
-        "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
-        str(final_path),
-    ])
+    cmd.extend(
+        [
+            "-filter_complex",
+            fc,
+            "-map",
+            "[v]",
+            "-map",
+            "[a]",
+            "-c:v",
+            video_encoder,
+            "-preset",
+            preset,
+            "-crf",
+            "18",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
+            str(final_path),
+        ]
+    )
 
     proc = subprocess.run(cmd, text=True, capture_output=True)
     if proc.returncode != 0:
@@ -161,11 +178,14 @@ def get_video_duration_ffmpeg(video_path: str | Path) -> float:
     Returns duration in seconds as a float.
     """
     cmd = [
-        "ffprobe", 
-        "-v", "error", 
-        "-show_entries", "format=duration", 
-        "-of", "default=noprint_wrappers=1:nokey=1", 
-        str(video_path)
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(video_path),
     ]
     try:
         result = subprocess.run(cmd, text=True, capture_output=True, check=True)
@@ -176,33 +196,36 @@ def get_video_duration_ffmpeg(video_path: str | Path) -> float:
 
 
 def merge_video_audio_no_reencode(
-    video_input: str | Path,
-    audio_input: str | Path,
-    output_path: str | Path
+    video_input: str | Path, audio_input: str | Path, output_path: str | Path
 ) -> str:
     """
     Merges audio into video with ZERO re-encoding of the video stream.
     Replaces original audio fully. Uses shortest duration.
     """
-    import subprocess
-    
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_input),
-        "-i", str(audio_input),
-        "-c:v", "copy",       # No re-encoding of video
-        "-c:a", "aac",        # Encode audio to AAC for MP4 compatibility
-        "-map", "0:v:0",      # Use first video stream
-        "-map", "1:a:0",      # Use first audio stream (from audio input)
-        "-shortest",          # Use shortest duration
-        str(output_path)
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_input),
+        "-i",
+        str(audio_input),
+        "-c:v",
+        "copy",  # No re-encoding of video
+        "-c:a",
+        "aac",  # Encode audio to AAC for MP4 compatibility
+        "-map",
+        "0:v:0",  # Use first video stream
+        "-map",
+        "1:a:0",  # Use first audio stream (from audio input)
+        "-shortest",  # Use shortest duration
+        str(output_path),
     ]
-    
+
     logger.info(f"🚀 Running FFmpeg (No Re-encode): {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         logger.error(f"FFmpeg failed: {result.stderr}")
         raise RuntimeError(f"FFmpeg merge failed: {result.stderr}")
-        
+
     return str(output_path)

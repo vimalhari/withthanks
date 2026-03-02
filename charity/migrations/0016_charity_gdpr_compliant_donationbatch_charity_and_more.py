@@ -5,40 +5,45 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0015_charitymember_charity_members'),
+        ("charity", "0015_charitymember_charity_members"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='gdpr_compliant',
+            model_name="charity",
+            name="gdpr_compliant",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='donationbatch',
-            name='charity',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='batches', to='charity.charity'),
+            model_name="donationbatch",
+            name="charity",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="batches",
+                to="charity.charity",
+            ),
         ),
         migrations.AddField(
-            model_name='videotemplate',
-            name='content_type',
+            model_name="videotemplate",
+            name="content_type",
             field=models.CharField(blank=True, max_length=100),
         ),
         migrations.AddField(
-            model_name='videotemplate',
-            name='file_size',
+            model_name="videotemplate",
+            name="file_size",
             field=models.BigIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='videotemplate',
-            name='is_default',
+            model_name="videotemplate",
+            name="is_default",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='videotemplate',
-            name='video_blob',
+            model_name="videotemplate",
+            name="video_blob",
             field=models.BinaryField(blank=True, null=True),
         ),
     ]

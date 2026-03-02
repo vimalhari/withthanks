@@ -4,30 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0032_alter_campaign_appeal_type_emailtracking'),
+        ("charity", "0032_alter_campaign_appeal_type_emailtracking"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='emailtracking',
-            name='completion_time',
+            model_name="emailtracking",
+            name="completion_time",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='emailtracking',
-            name='play_time',
+            model_name="emailtracking",
+            name="play_time",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='emailtracking',
-            name='video_completed',
+            model_name="emailtracking",
+            name="video_completed",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='emailtracking',
-            name='video_played',
+            model_name="emailtracking",
+            name="video_played",
             field=models.BooleanField(default=False),
         ),
     ]

@@ -5,25 +5,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0019_donationbatch_campaign_donationbatch_campaign_name'),
+        ("charity", "0019_donationbatch_campaign_donationbatch_campaign_name"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='donationbatch',
-            name='media_type',
-            field=models.CharField(choices=[('video', 'Video'), ('image', 'Image')], default='video', max_length=20),
+            model_name="donationbatch",
+            name="media_type",
+            field=models.CharField(
+                choices=[("video", "Video"), ("image", "Image")], default="video", max_length=20
+            ),
         ),
         migrations.AddField(
-            model_name='donationbatch',
-            name='text_template',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='charity.texttemplate'),
+            model_name="donationbatch",
+            name="text_template",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="charity.texttemplate",
+            ),
         ),
         migrations.AddField(
-            model_name='donationbatch',
-            name='video_template',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='charity.videotemplate'),
+            model_name="donationbatch",
+            name="video_template",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="charity.videotemplate",
+            ),
         ),
     ]

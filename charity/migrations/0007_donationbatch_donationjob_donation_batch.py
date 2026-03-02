@@ -5,27 +5,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0006_donationjob_fake_views_donationjob_real_views'),
+        ("charity", "0006_donationjob_fake_views_donationjob_real_views"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DonationBatch',
+            name="DonationBatch",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('csv_filename', models.CharField(blank=True, max_length=255)),
-                ('batch_number', models.PositiveIntegerField(default=1)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("csv_filename", models.CharField(blank=True, max_length=255)),
+                ("batch_number", models.PositiveIntegerField(default=1)),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.AddField(
-            model_name='donationjob',
-            name='donation_batch',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='jobs', to='charity.donationbatch'),
+            model_name="donationjob",
+            name="donation_batch",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="jobs",
+                to="charity.donationbatch",
+            ),
         ),
     ]

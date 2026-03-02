@@ -5,29 +5,39 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0008_unsubscribeduser'),
+        ("charity", "0008_unsubscribeduser"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='unsubscribeduser',
-            options={'ordering': ['-created_at'], 'verbose_name': 'Unsubscribed User', 'verbose_name_plural': 'Unsubscribed Users'},
+            name="unsubscribeduser",
+            options={
+                "ordering": ["-created_at"],
+                "verbose_name": "Unsubscribed User",
+                "verbose_name_plural": "Unsubscribed Users",
+            },
         ),
         migrations.AddField(
-            model_name='unsubscribeduser',
-            name='ip_address',
+            model_name="unsubscribeduser",
+            name="ip_address",
             field=models.GenericIPAddressField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='unsubscribeduser',
-            name='unsubscribed_from_job',
-            field=models.ForeignKey(blank=True, help_text='The donation job that triggered this unsubscribe', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='unsubscribes', to='charity.donationjob'),
+            model_name="unsubscribeduser",
+            name="unsubscribed_from_job",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="The donation job that triggered this unsubscribe",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="unsubscribes",
+                to="charity.donationjob",
+            ),
         ),
         migrations.AddField(
-            model_name='unsubscribeduser',
-            name='user_agent',
-            field=models.TextField(blank=True, help_text='Browser user agent string'),
+            model_name="unsubscribeduser",
+            name="user_agent",
+            field=models.TextField(blank=True, help_text="Browser user agent string"),
         ),
     ]

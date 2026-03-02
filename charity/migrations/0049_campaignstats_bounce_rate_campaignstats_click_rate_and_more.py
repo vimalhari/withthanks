@@ -4,40 +4,39 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0048_campaignstats_alter_emailevent_options_and_more'),
+        ("charity", "0048_campaignstats_alter_emailevent_options_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='campaignstats',
-            name='bounce_rate',
+            model_name="campaignstats",
+            name="bounce_rate",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='campaignstats',
-            name='click_rate',
+            model_name="campaignstats",
+            name="click_rate",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='campaignstats',
-            name='open_rate',
+            model_name="campaignstats",
+            name="open_rate",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='campaignstats',
-            name='rewatch_rate',
+            model_name="campaignstats",
+            name="rewatch_rate",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='campaignstats',
-            name='unique_viewers',
+            model_name="campaignstats",
+            name="unique_viewers",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='campaignstats',
-            name='unsub_rate',
+            model_name="campaignstats",
+            name="unsub_rate",
             field=models.FloatField(default=0.0),
         ),
     ]

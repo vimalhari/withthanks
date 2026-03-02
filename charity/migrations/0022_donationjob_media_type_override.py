@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0021_charity_thank_you_card_alter_campaign_appeal_type'),
+        ("charity", "0021_charity_thank_you_card_alter_campaign_appeal_type"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='donationjob',
-            name='media_type_override',
+            model_name="donationjob",
+            name="media_type_override",
             field=models.CharField(blank=True, max_length=10, null=True),
         ),
     ]

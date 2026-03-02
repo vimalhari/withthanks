@@ -5,31 +5,51 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0050_invoice_email_opened_at_invoice_email_sent_at_and_more'),
+        ("charity", "0050_invoice_email_opened_at_invoice_email_sent_at_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Service',
+            name="Service",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('category', models.CharField(choices=[('ADDITIONAL', 'Additional Costs'), ('VDM', 'Video Direct Mail'), ('GRATITUDE', 'Gratitude E Card'), ('VOLUME', 'Volume Pricing')], max_length=20)),
-                ('description', models.TextField(blank=True)),
-                ('unit_price', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('active', models.BooleanField(default=True)),
-                ('is_tiered', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("ADDITIONAL", "Additional Costs"),
+                            ("VDM", "Video Direct Mail"),
+                            ("GRATITUDE", "Gratitude E Card"),
+                            ("VOLUME", "Volume Pricing"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("description", models.TextField(blank=True)),
+                ("unit_price", models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
+                ("active", models.BooleanField(default=True)),
+                ("is_tiered", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.AlterField(
-            model_name='invoicelineitem',
-            name='service',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='charity.service'),
+            model_name="invoicelineitem",
+            name="service",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="charity.service",
+            ),
         ),
         migrations.DeleteModel(
-            name='InvoiceService',
+            name="InvoiceService",
         ),
     ]

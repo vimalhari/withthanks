@@ -4,85 +4,84 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0017_receivedemail_charity_unsubscribeduser_charity_and_more'),
+        ("charity", "0017_receivedemail_charity_unsubscribeduser_charity_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='account_manager',
+            model_name="charity",
+            name="account_manager",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='auto_unsubscribe_enabled',
+            model_name="charity",
+            name="auto_unsubscribe_enabled",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='client_status',
-            field=models.CharField(default='Active', max_length=20),
+            model_name="charity",
+            name="client_status",
+            field=models.CharField(default="Active", max_length=20),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='data_retention_days',
+            model_name="charity",
+            name="data_retention_days",
             field=models.PositiveIntegerField(default=365),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='default_cta_url',
+            model_name="charity",
+            name="default_cta_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='internal_notes',
+            model_name="charity",
+            name="internal_notes",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='max_concurrent_batches',
+            model_name="charity",
+            name="max_concurrent_batches",
             field=models.PositiveIntegerField(default=5),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='max_emails_per_day',
+            model_name="charity",
+            name="max_emails_per_day",
             field=models.PositiveIntegerField(default=5000),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='max_retry_attempts',
+            model_name="charity",
+            name="max_retry_attempts",
             field=models.PositiveIntegerField(default=3),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='max_videos_per_day',
+            model_name="charity",
+            name="max_videos_per_day",
             field=models.PositiveIntegerField(default=1000),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='retry_failed_jobs',
+            model_name="charity",
+            name="retry_failed_jobs",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='terms_accepted',
+            model_name="charity",
+            name="terms_accepted",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='track_clicks',
+            model_name="charity",
+            name="track_clicks",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='track_unsubscribes',
+            model_name="charity",
+            name="track_unsubscribes",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='track_views',
+            model_name="charity",
+            name="track_views",
             field=models.BooleanField(default=True),
         ),
     ]

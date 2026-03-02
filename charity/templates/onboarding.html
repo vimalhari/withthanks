@@ -6,98 +6,79 @@
 {% block breadcrumb_child %}Client Onboarding{% endblock %}
 
 {% block page_content %}
-<div style="max-width: 800px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+<div class="max-w-3xl mx-auto">
+    <div class="flex justify-between items-end mb-10">
         <div>
-            <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-bottom: 8px;">Organization Settings</h1>
-            <p style="color: var(--text-muted); font-size: 16px;">Configure your charity's global identity and campaign settings</p>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Organization Settings</h1>
+            <p class="text-gray-400 text-base">Configure your charity's global identity and campaign settings</p>
         </div>
     </div>
 
-    <div class="saas-card">
+    <div class="card">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
-            <div style="margin-bottom: 32px;">
-                <h3 style="font-size: 18px; font-weight: 700; color: var(--text-headings); margin-bottom: 20px;">Organization Details</h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="saas-label">Organization Name</label>
+            <div class="mb-8">
+                <h3 class="text-lg font-bold text-gray-900 mb-5">Organization Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="form-label">Organization Name</label>
                         {{ form.name }}
                     </div>
-                    <div class="form-group">
-                        <label class="saas-label">Website</label>
+                    <div>
+                        <label class="form-label">Website</label>
                         {{ form.website }}
                     </div>
                 </div>
-                <div class="form-group" style="margin-top: 20px;">
-                     <label class="saas-label">Logo</label>
-                     <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
-                         {% if form.instance.logo %}
-                            <div style="padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-hover);">
-                                <img src="{{ form.instance.logo.url }}" alt="Logo" height="40">
+                <div class="mt-5">
+                    <label class="form-label">Logo</label>
+                    <div class="flex items-center gap-4 mt-3">
+                        {% if form.instance.logo %}
+                            <div class="p-3 border border-gray-200 rounded-xl bg-gray-50">
+                                <img src="{{ form.instance.logo.url }}" alt="Logo" class="h-10">
                             </div>
-                         {% endif %}
-                         <div style="flex: 1;">
-                             {{ form.logo }}
-                         </div>
-                     </div>
+                        {% endif %}
+                        <div class="flex-1">
+                            {{ form.logo }}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div style="margin-bottom: 32px; padding-top: 32px; border-top: 1px solid var(--border);">
-                <h3 style="font-size: 18px; font-weight: 700; color: var(--text-headings); margin-bottom: 20px;">Campaign Settings</h3>
-                <div class="form-group">
-                    <label class="saas-label">Current Campaign Name</label>
+            <div class="mb-8 pt-8 border-t border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-5">Campaign Settings</h3>
+                <div>
+                    <label class="form-label">Current Campaign Name</label>
                     {{ form.campaign_name }}
                 </div>
             </div>
             
-            <div style="margin-bottom: 40px; padding-top: 32px; border-top: 1px solid var(--border);">
-                <h3 style="font-size: 18px; font-weight: 700; color: var(--text-headings); margin-bottom: 20px;">Email Configuration</h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="saas-label">Sender Email</label>
+            <div class="mb-10 pt-8 border-t border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900 mb-5">Email Configuration</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="form-label">Sender Email</label>
                         {{ form.sender_email }}
                     </div>
-                    <div class="form-group">
-                        <label class="saas-label">Reply-To Email</label>
+                    <div>
+                        <label class="form-label">Reply-To Email</label>
                         {{ form.reply_to_email }}
                     </div>
-                    <div class="form-group">
-                        <label class="saas-label">Sending Domain</label>
+                    <div>
+                        <label class="form-label">Sending Domain</label>
                         {{ form.domain }}
                     </div>
-                     <div class="form-group">
-                        <label class="saas-label">Email API Key (Resend)</label>
+                    <div>
+                        <label class="form-label">Email API Key (Resend)</label>
                         {{ form.email_api_key }}
                     </div>
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 24px; border-top: 1px solid var(--border);">
-                <button type="submit" class="btn btn-primary" style="padding: 10px 32px;">Save All Changes</button>
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                <button type="submit" class="btn-primary !py-2.5 !px-8">Save All Changes</button>
             </div>
         </form>
     </div>
 </div>
-
-<style>
-/* Ensure Django forms look like SaaS inputs */
-input[type="text"], input[type="email"], input[type="url"], input[type="password"], select, textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    color: var(--text-body);
-    transition: all 0.2s ease;
-    outline: none;
-    background: #ffffff;
-}
-input:focus, select:focus, textarea:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-</style>
 {% endblock %}

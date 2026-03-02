@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0004_donationjob_batch_id_donationjob_completed_at_and_more'),
+        ("charity", "0004_donationjob_batch_id_donationjob_completed_at_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='donationjob',
-            name='generation_time',
+            model_name="donationjob",
+            name="generation_time",
             field=models.FloatField(blank=True, null=True),
         ),
     ]

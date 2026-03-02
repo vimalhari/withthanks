@@ -4,39 +4,48 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0026_remove_donationbatch_text_template_and_more'),
+        ("charity", "0026_remove_donationbatch_text_template_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='campaign',
-            name='campaign_manager_email',
+            model_name="campaign",
+            name="campaign_manager_email",
         ),
         migrations.RemoveField(
-            model_name='campaign',
-            name='close_date',
+            model_name="campaign",
+            name="close_date",
         ),
         migrations.RemoveField(
-            model_name='campaign',
-            name='hgv_amount',
+            model_name="campaign",
+            name="hgv_amount",
         ),
         migrations.RemoveField(
-            model_name='campaign',
-            name='lgv_amount',
+            model_name="campaign",
+            name="lgv_amount",
         ),
         migrations.RemoveField(
-            model_name='campaign',
-            name='open_date',
+            model_name="campaign",
+            name="open_date",
         ),
         migrations.RemoveField(
-            model_name='campaign',
-            name='package_codes',
+            model_name="campaign",
+            name="package_codes",
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='appeal_type',
-            field=models.CharField(choices=[('Donation', 'Donation'), ('Raffle', 'Raffle'), ('WithThanks', 'WithThanks'), ('VDM', 'VDM'), ('Marketing', 'Marketing')], default='Donation', max_length=20),
+            model_name="campaign",
+            name="appeal_type",
+            field=models.CharField(
+                choices=[
+                    ("Donation", "Donation"),
+                    ("Raffle", "Raffle"),
+                    ("WithThanks", "WithThanks"),
+                    ("VDM", "VDM"),
+                    ("Marketing", "Marketing"),
+                ],
+                default="Donation",
+                max_length=20,
+            ),
         ),
     ]

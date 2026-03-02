@@ -6,115 +6,117 @@
 {% block breadcrumb_child %}Profile{% endblock %}
 
 {% block page_content %}
-<div style="max-width: 800px; margin: 0 auto;">
+<div class="max-w-3xl mx-auto" x-data="{ showPasswordModal: false }">
     <!-- User Info Header -->
-    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 48px;">
-        <div style="width: 64px; height: 64px; background: var(--primary-accent); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; border: 2px solid rgba(79, 70, 229, 0.1);">
+    <div class="flex items-center gap-6 mb-12">
+        <div class="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center text-2xl font-extrabold border-2 border-brand/10">
             {{ user.username|slice:":1"|upper }}
         </div>
         <div>
-            <h1 style="font-size: 28px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-bottom: 4px;">{{ user.username }}</h1>
-            <p style="color: var(--text-muted); font-size: 14px;">Member since {{ joined_date|date:"F d, Y" }}</p>
+            <h1 class="text-[28px] font-extrabold text-gray-900 tracking-tight mb-1">{{ user.username }}</h1>
+            <p class="text-gray-400 text-sm">Member since {{ joined_date|date:"F d, Y" }}</p>
         </div>
-        <div style="margin-left: auto;">
-             <span class="status-badge status-success" style="padding: 6px 12px;">Admin Account</span>
+        <div class="ml-auto">
+            <span class="badge-success !py-1.5 !px-3">Admin Account</span>
         </div>
     </div>
 
     <!-- Authentication Section -->
-    <div style="margin-bottom: 48px;">
-        <h3 style="font-size: 18px; font-weight: 700; color: var(--text-headings); margin-bottom: 8px;">Authentication</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Manage your password and connected enterprise accounts.</p>
+    <div class="mb-12">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Authentication</h3>
+        <p class="text-gray-400 text-sm mb-6">Manage your password and connected enterprise accounts.</p>
 
-        <div class="saas-card" style="padding: 0;">
-            <div style="padding: 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border);">
-                <div style="width: 40px; height: 40px; background: var(--bg-app); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
-                    <i class="bi bi-key-fill"></i>
+        <div class="card !p-0">
+            <div class="p-6 flex items-center gap-4 border-b border-gray-200">
+                <div class="w-10 h-10 bg-gray-50 rounded-[10px] flex items-center justify-center text-gray-400">
+                    <i data-lucide="key-round" class="w-5 h-5"></i>
                 </div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 700; color: var(--text-headings); font-size: 14px;">Account Password</div>
-                    <div style="color: var(--text-muted); font-size: 13px;">Last changed recently</div>
+                <div class="flex-1">
+                    <div class="font-bold text-gray-900 text-sm">Account Password</div>
+                    <div class="text-gray-400 text-[13px]">Last changed recently</div>
                 </div>
-                <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
+                <button class="btn-secondary !py-2 !px-4 !text-[13px]" @click="showPasswordModal = true">Change Password</button>
             </div>
             
-            <div style="padding: 24px; display: flex; align-items: center; gap: 16px;">
-                 <div style="width: 40px; height: 40px; background: var(--bg-app); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
-                    <i class="bi bi-building-fill"></i>
+            <div class="p-6 flex items-center gap-4">
+                <div class="w-10 h-10 bg-gray-50 rounded-[10px] flex items-center justify-center text-gray-400">
+                    <i data-lucide="building-2" class="w-5 h-5"></i>
                 </div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 700; color: var(--text-headings); font-size: 14px;">CRM Integration</div>
-                    <div style="color: var(--text-muted); font-size: 13px;">Connect Blackbaud Raiser's Edge NXT</div>
+                <div class="flex-1">
+                    <div class="font-bold text-gray-900 text-sm">CRM Integration</div>
+                    <div class="text-gray-400 text-[13px]">Connect Blackbaud Raiser's Edge NXT</div>
                 </div>
-                <button class="btn btn-primary" style="padding: 8px 16px; font-size: 13px;">Connect CRM</button>
+                <button class="btn-primary !py-2 !px-4 !text-[13px]">Connect CRM</button>
             </div>
         </div>
     </div>
 
     <!-- MFA Section -->
-    <div style="margin-bottom: 48px;">
-        <h3 style="font-size: 18px; font-weight: 700; color: var(--text-headings); margin-bottom: 8px;">Security</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Two-factor authentication adds an extra layer of security to your account.</p>
+    <div class="mb-12">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Security</h3>
+        <p class="text-gray-400 text-sm mb-6">Two-factor authentication adds an extra layer of security to your account.</p>
         
-        <div class="saas-card">
-             <div style="display: flex; justify-content: space-between; align-items: center;">
-                 <div>
-                     <div style="font-weight: 700; color: var(--text-headings); font-size: 14px;">Two-factor Authentication</div>
-                     <div style="color: var(--text-muted); font-size: 13px;">Protect your account with an MFA app</div>
-                 </div>
-                 <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;">Enable MFA</button>
-             </div>
+        <div class="card">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="font-bold text-gray-900 text-sm">Two-factor Authentication</div>
+                    <div class="text-gray-400 text-[13px]">Protect your account with an MFA app</div>
+                </div>
+                <button class="btn-secondary !py-2 !px-4 !text-[13px]">Enable MFA</button>
+            </div>
         </div>
     </div>
 
     <!-- Danger Zone -->
-    <div style="margin-bottom: 48px;">
-        <h3 style="font-size: 18px; font-weight: 700; color: var(--status-failed); margin-bottom: 8px;">Danger Zone</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Irreversible actions for your account.</p>
+    <div class="mb-12">
+        <h3 class="text-lg font-bold text-red-600 mb-2">Danger Zone</h3>
+        <p class="text-gray-400 text-sm mb-6">Irreversible actions for your account.</p>
         
-        <div class="saas-card" style="border-color: rgba(220, 38, 38, 0.2); background: #fffafb;">
-             <div style="display: flex; justify-content: space-between; align-items: center;">
-                 <div>
-                     <div style="font-weight: 700; color: var(--text-headings); font-size: 14px;">Delete Account</div>
-                     <div style="color: var(--text-muted); font-size: 13px;">Transfer ownership of your teams first</div>
-                 </div>
-                 <button class="btn btn-secondary" style="color: var(--status-failed); border-color: rgba(220, 38, 38, 0.2); padding: 8px 16px; font-size: 13px;" disabled>Delete Account</button>
-             </div>
+        <div class="card !border-red-200 !bg-red-50/30">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="font-bold text-gray-900 text-sm">Delete Account</div>
+                    <div class="text-gray-400 text-[13px]">Transfer ownership of your teams first</div>
+                </div>
+                <button class="btn-secondary !py-2 !px-4 !text-[13px] !text-red-600 !border-red-200 cursor-not-allowed opacity-50" disabled>Delete Account</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Change Password Modal -->
-<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius: var(--radius-lg); border: none; box-shadow: var(--shadow-md);">
-      <form method="post" action="{% url 'change_password' %}">
-        {% csrf_token %}
-        <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 20px 24px;">
-          <h5 style="font-weight: 800; margin: 0; color: var(--text-headings);">Change Password</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" style="font-size: 10px;"></button>
+    <!-- Change Password Modal -->
+    <template x-if="showPasswordModal">
+        <div class="modal-backdrop" @click.self="showPasswordModal = false" x-transition.opacity>
+            <div class="modal-panel max-w-md" @click.stop>
+                <form method="post" action="{% url 'change_password' %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="font-extrabold text-gray-900">Change Password</h5>
+                        <button type="button" @click="showPasswordModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body space-y-4">
+                        <div>
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-input" name="old_password" placeholder="••••••••" required>
+                        </div>
+                        <div>
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-input" name="new_password1" placeholder="••••••••" required>
+                            <div class="text-[11px] text-gray-400 mt-1">Ensure it's at least 8 characters with a mix of letters and numbers.</div>
+                        </div>
+                        <div>
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-input" name="new_password2" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary flex-1" @click="showPasswordModal = false">Cancel</button>
+                        <button type="submit" class="btn-primary flex-[2]">Update Password</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="modal-body" style="padding: 32px 24px;">
-          <div class="form-group mb-3">
-            <label class="saas-label">Current Password</label>
-            <input type="password" class="saas-input" name="old_password" placeholder="••••••••" required>
-          </div>
-          <div class="form-group mb-3">
-            <label class="saas-label">New Password</label>
-            <input type="password" class="saas-input" name="new_password1" placeholder="••••••••" required>
-            <div style="font-size: 11px; color: var(--text-muted); mt-2;">Ensure it's at least 8 characters with a mix of letters and numbers.</div>
-          </div>
-          <div class="form-group">
-            <label class="saas-label">Confirm New Password</label>
-            <input type="password" class="saas-input" name="new_password2" placeholder="••••••••" required>
-          </div>
-        </div>
-        <div class="modal-footer" style="padding: 20px 24px; border-top: 1px solid var(--border); background: var(--bg-hover); border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="flex: 1;">Cancel</button>
-          <button type="submit" class="btn btn-primary" style="flex: 2;">Update Password</button>
-        </div>
-      </form>
-    </div>
-  </div>
+    </template>
 </div>
 {% endblock %}

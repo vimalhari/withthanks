@@ -4,25 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0037_donationjob_appeal_type'),
+        ("charity", "0037_donationjob_appeal_type"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_client_id',
-            field=models.CharField(blank=True, help_text='Blackbaud SKY API Client ID', max_length=255, null=True),
+            model_name="charity",
+            name="blackbaud_client_id",
+            field=models.CharField(
+                blank=True, help_text="Blackbaud SKY API Client ID", max_length=255, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_client_secret',
-            field=models.CharField(blank=True, help_text='Blackbaud SKY API Client Secret', max_length=255, null=True),
+            model_name="charity",
+            name="blackbaud_client_secret",
+            field=models.CharField(
+                blank=True, help_text="Blackbaud SKY API Client Secret", max_length=255, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_enabled',
+            model_name="charity",
+            name="blackbaud_enabled",
             field=models.BooleanField(default=False, help_text="Enable Raiser's Edge integration"),
         ),
     ]

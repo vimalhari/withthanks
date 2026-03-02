@@ -1,7 +1,8 @@
 import hashlib
+import logging
 import os
 from pathlib import Path
-import logging
+
 from django.conf import settings
 from elevenlabs.client import ElevenLabs
 
@@ -17,23 +18,26 @@ VOICE_ID = settings.ELEVENLABS_VOICE_ID
 client = ElevenLabs(api_key=API_KEY)
 
 # Cache directory for generated voiceovers
-VOICEOVER_CACHE_DIR = getattr(settings, "VOICEOVER_CACHE_DIR", Path(settings.MEDIA_ROOT) / "voiceover_cache")
+VOICEOVER_CACHE_DIR = getattr(
+    settings, "VOICEOVER_CACHE_DIR", Path(settings.MEDIA_ROOT) / "voiceover_cache"
+)
 if not VOICEOVER_CACHE_DIR.is_dir():
     try:
         os.makedirs(VOICEOVER_CACHE_DIR, exist_ok=True)
     except Exception as e:
         logger.warning(f"Failed to create voiceover cache directory {VOICEOVER_CACHE_DIR}: {e}")
 
-def generate_voiceover(text: str, file_name: str, voice_id: str = None) -> str:
+
+def generate_voiceover(text: str, file_name: str, voice_id: str | None = None) -> str:
     """
     Generate TTS audio from ElevenLabs and save as MP3, using a cache to avoid duplicate work.
     Returns the path to the saved MP3 file.
     """
     # Use provided voice_id or fallback to settings
     target_voice_id = voice_id or VOICE_ID
-    
+
     # Compute a deterministic hash based on the text and voice ID
-    hash_input = f"{target_voice_id}:{text}".encode("utf-8")
+    hash_input = f"{target_voice_id}:{text}".encode()
     text_hash = hashlib.sha256(hash_input).hexdigest()[:16]
     cache_file = Path(VOICEOVER_CACHE_DIR) / f"{text_hash}.mp3"
 
@@ -54,7 +58,7 @@ def generate_voiceover(text: str, file_name: str, voice_id: str = None) -> str:
             text=text,
             voice_id=target_voice_id,
             model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_128"
+            output_format="mp3_44100_128",
         )
 
         # Save MP3 file in chunks

@@ -7,41 +7,15 @@
 
 {% block layout_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-    .kpi-row {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 24px;
-        margin-bottom: 24px;
-    }
-    .kpi-card {
-        background: white;
-        padding: 24px;
-        border-radius: 16px;
-        border: 1px solid var(--border);
-    }
-    .kpi-val {
-        font-size: 28px;
-        font-weight: 800;
-        margin-top: 8px;
-    }
-    .chart-card {
-        background: white;
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        padding: 24px;
-        height: 450px;
-    }
-</style>
 {% endblock %}
 
 {% block page_content %}
 <div x-data="{ days: '30' }">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 style="font-size: 24px; font-weight: 800;">Video Engagement</h1>
-        <div class="d-flex gap-2">
-            <a href="{% url 'analytics_export_excel' %}?days={{ request.GET.days|default:'30' }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Export Excel</a>
-            <select class="form-select form-select-sm" x-model="days" @change="window.location.href='?days='+days">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-extrabold text-gray-900">Video Engagement</h1>
+        <div class="flex gap-2">
+            <a href="{% url 'analytics_export_excel' %}?days={{ request.GET.days|default:'30' }}" class="btn-secondary btn-sm"><i data-lucide="download" class="w-4 h-4"></i> Export Excel</a>
+            <select class="form-select w-[160px]" x-model="days" @change="window.location.href='?days='+days">
                 <option value="7">Last 7 Days</option>
                 <option value="30">Last 30 Days</option>
                 <option value="90">Last 90 Days</option>
@@ -50,74 +24,66 @@
     </div>
 
     <!-- KPIs -->
-    <div class="kpi-row">
-        <div class="kpi-card">
-            <div class="text-muted small fw-bold">TOTAL PLAYS</div>
-            <div class="kpi-val text-primary">{{ plays }}</div>
+    <div class="grid grid-cols-4 gap-6 mb-6">
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase">Total Plays</div>
+            <div class="text-3xl font-extrabold text-brand mt-2">{{ plays }}</div>
         </div>
-        <div class="stat-box kpi-card">
-            <div class="text-muted small fw-bold">COMPLETION RATE</div>
-            <div class="kpi-val text-success">{{ completion_rate }}%</div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase">Completion Rate</div>
+            <div class="text-3xl font-extrabold text-emerald-600 mt-2">{{ completion_rate }}%</div>
         </div>
-        <div class="kpi-card">
-            <div class="text-muted small fw-bold">AVG WATCH TIME</div>
-            <div class="kpi-val text-info">{{ avg_duration }}s</div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase">Avg Watch Time</div>
+            <div class="text-3xl font-extrabold text-blue-500 mt-2">{{ avg_duration }}s</div>
         </div>
-        <div class="kpi-card">
-            <div class="text-muted small fw-bold">VIEW RATE</div>
-            <div class="kpi-val">{{ play_rate|default:"0.0" }}%</div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase">View Rate</div>
+            <div class="text-3xl font-extrabold text-gray-900 mt-2">{{ play_rate|default:"0.0" }}%</div>
         </div>
     </div>
 
     <!-- Charts -->
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="chart-card">
-                <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 24px;">Completion Funnel</h3>
-                <canvas id="funnelChart"></canvas>
-            </div>
+    <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+        <div class="card p-6 h-[450px]">
+            <h3 class="text-base font-bold text-gray-900 mb-6">Completion Funnel</h3>
+            <canvas id="funnelChart"></canvas>
         </div>
-        <div class="col-lg-4">
-            <div class="chart-card">
-                <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 24px;">Retention Summary</h3>
-                <div class="mt-4">
-                    <p class="text-muted">High-level engagement drop-off across the viewing lifecycle.</p>
-                </div>
+        <div class="card p-6 h-[450px]">
+            <h3 class="text-base font-bold text-gray-900 mb-6">Retention Summary</h3>
+            <div class="mt-4">
+                <p class="text-gray-400">High-level engagement drop-off across the viewing lifecycle.</p>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const days = new URLSearchParams(window.location.search).get('days') || '30';
-        fetch(`/analytics/api/charts/engagement/?days=${days}`)
-            .then(res => res.json())
-            .then(data => {
-                const ctx = document.getElementById('funnelChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: 'Videos reached',
-                            data: data.values,
-                            backgroundColor: 'rgba(79, 70, 229, 0.2)',
-                            borderColor: 'rgb(79, 70, 229)',
-                            borderWidth: 2,
-                            borderRadius: 8
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { display: false }, beginAtZero: true },
-                            y: { grid: { display: false } }
-                        }
-                    }
-                });
+document.addEventListener('DOMContentLoaded', function() {
+    const days = new URLSearchParams(window.location.search).get('days') || '30';
+    fetch(`/analytics/api/charts/engagement/?days=${days}`)
+        .then(res => res.json())
+        .then(data => {
+            new Chart(document.getElementById('funnelChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Videos reached',
+                        data: data.values,
+                        backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                        borderColor: 'rgb(79, 70, 229)',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, beginAtZero: true }, y: { grid: { display: false } } }
+                }
             });
-    });
+        });
+});
 </script>
 {% endblock %}

@@ -5,20 +5,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0018_charity_account_manager_and_more'),
+        ("charity", "0018_charity_account_manager_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='donationbatch',
-            name='campaign',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='batches', to='charity.campaign'),
+            model_name="donationbatch",
+            name="campaign",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="batches",
+                to="charity.campaign",
+            ),
         ),
         migrations.AddField(
-            model_name='donationbatch',
-            name='campaign_name',
+            model_name="donationbatch",
+            name="campaign_name",
             field=models.CharField(blank=True, max_length=255),
         ),
     ]

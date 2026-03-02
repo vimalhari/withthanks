@@ -5,133 +5,169 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0013_packagecode_campaign_campaignfield'),
+        ("charity", "0013_packagecode_campaign_campaignfield"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='invoice',
-            name='billing_address',
+            model_name="invoice",
+            name="billing_address",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='billing_email',
+            model_name="invoice",
+            name="billing_email",
             field=models.EmailField(blank=True, max_length=254),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='discount_amount',
+            model_name="invoice",
+            name="discount_amount",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='discount_percent',
+            model_name="invoice",
+            name="discount_percent",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=5),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='flat_fee',
+            model_name="invoice",
+            name="flat_fee",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='invoice_type',
-            field=models.CharField(choices=[('single_batch', 'Single Batch'), ('multiple_batches', 'Multiple Batches'), ('date_range', 'Date Range')], default='single_batch', max_length=20),
+            model_name="invoice",
+            name="invoice_type",
+            field=models.CharField(
+                choices=[
+                    ("single_batch", "Single Batch"),
+                    ("multiple_batches", "Multiple Batches"),
+                    ("date_range", "Date Range"),
+                ],
+                default="single_batch",
+                max_length=20,
+            ),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='notes',
+            model_name="invoice",
+            name="notes",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='period_end',
+            model_name="invoice",
+            name="period_end",
             field=models.DateField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='period_start',
+            model_name="invoice",
+            name="period_start",
             field=models.DateField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='price_per_batch',
+            model_name="invoice",
+            name="price_per_batch",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=8),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='price_per_video',
+            model_name="invoice",
+            name="price_per_video",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=8),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='subtotal',
+            model_name="invoice",
+            name="subtotal",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='tax_amount',
+            model_name="invoice",
+            name="tax_amount",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='tax_percent',
+            model_name="invoice",
+            name="tax_percent",
             field=models.DecimalField(decimal_places=2, default=0.0, max_digits=5),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='total_batches',
+            model_name="invoice",
+            name="total_batches",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='total_clicks',
+            model_name="invoice",
+            name="total_clicks",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='total_unsubscribes',
+            model_name="invoice",
+            name="total_unsubscribes",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='total_videos',
+            model_name="invoice",
+            name="total_videos",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='total_views',
+            model_name="invoice",
+            name="total_views",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AlterField(
-            model_name='invoice',
-            name='invoice_number',
+            model_name="invoice",
+            name="invoice_number",
             field=models.CharField(max_length=50, unique=True),
         ),
         migrations.AlterField(
-            model_name='invoice',
-            name='status',
-            field=models.CharField(choices=[('Draft', 'Draft'), ('Sent', 'Sent'), ('Paid', 'Paid'), ('Overdue', 'Overdue'), ('Void', 'Void')], default='Draft', max_length=20),
+            model_name="invoice",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("Draft", "Draft"),
+                    ("Sent", "Sent"),
+                    ("Paid", "Paid"),
+                    ("Overdue", "Overdue"),
+                    ("Void", "Void"),
+                ],
+                default="Draft",
+                max_length=20,
+            ),
         ),
         migrations.CreateModel(
-            name='InvoiceBatch',
+            name="InvoiceBatch",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('videos_count', models.PositiveIntegerField(default=0)),
-                ('views_count', models.PositiveIntegerField(default=0)),
-                ('clicks_count', models.PositiveIntegerField(default=0)),
-                ('unsubscribes_count', models.PositiveIntegerField(default=0)),
-                ('campaign_name', models.CharField(blank=True, max_length=255)),
-                ('line_amount', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('batch', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='invoices', to='charity.donationbatch')),
-                ('invoice', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='invoice_batches', to='charity.invoice')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("videos_count", models.PositiveIntegerField(default=0)),
+                ("views_count", models.PositiveIntegerField(default=0)),
+                ("clicks_count", models.PositiveIntegerField(default=0)),
+                ("unsubscribes_count", models.PositiveIntegerField(default=0)),
+                ("campaign_name", models.CharField(blank=True, max_length=255)),
+                ("line_amount", models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
+                (
+                    "batch",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="invoices",
+                        to="charity.donationbatch",
+                    ),
+                ),
+                (
+                    "invoice",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="invoice_batches",
+                        to="charity.invoice",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['batch__created_at'],
-                'unique_together': {('invoice', 'batch')},
+                "ordering": ["batch__created_at"],
+                "unique_together": {("invoice", "batch")},
             },
         ),
     ]

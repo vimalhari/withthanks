@@ -6,244 +6,190 @@
 
 {% block layout_head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
 <style>
     .ts-control {
-        border: 1px solid var(--border) !important;
-        border-radius: var(--radius-md) !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 0.75rem !important;
         padding: 10px 14px !important;
         font-family: inherit !important;
         font-size: 14px !important;
         box-shadow: none !important;
-        background-color: var(--bg-app) !important;
+        background-color: #fff !important;
     }
-    .ts-control.focus {
-        border-color: var(--primary) !important;
-        box-shadow: 0 0 0 3px var(--primary-accent) !important;
-    }
-    .ts-dropdown {
-        border-radius: var(--radius-md) !important;
-        border: 1px solid var(--border) !important;
-        box-shadow: var(--shadow-md) !important;
-        font-size: 14px !important;
-    }
-    .ts-dropdown .option {
-        padding: 10px 14px !important;
-    }
-    .ts-dropdown .active {
-        background-color: var(--bg-hover) !important;
-        color: var(--text-headings) !important;
-    }
-    .flatpickr-calendar { border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); }
-    .flatpickr-day.selected { background: var(--primary) !important; border-color: var(--primary) !important; }
-    .placeholder-tag {
-        font-size: 11px;
-        font-weight: 700;
-        padding: 6px 10px;
-        background: var(--bg-hover);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        color: var(--primary);
-        cursor: default;
-    }
-    .placeholder-tag:hover {
-        background: var(--primary-accent);
-        border-color: var(--primary);
-    }
-    .asset-card {
-        background: #ffffff;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 24px;
-        height: 100%;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        flex-direction: column;
-    }
-    .asset-card:hover {
-        border-color: var(--primary);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-    .file-upload-wrapper {
-        position: relative;
-        margin-top: auto;
-    }
-    .saas-file-input {
-        opacity: 0;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        cursor: pointer;
-        z-index: 2;
-    }
-    .file-upload-design {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 14px;
-        background: var(--bg-app);
-        border: 2px dashed var(--border);
-        border-radius: var(--radius-md);
-        transition: all 0.2s;
-        color: var(--text-muted);
-    }
-    .saas-file-input:hover + .file-upload-design {
-        border-color: var(--primary);
-        background: var(--primary-accent);
-        color: var(--primary);
-    }
+    .ts-control.focus { border-color: #4f46e5 !important; box-shadow: 0 0 0 3px rgba(79,70,229,0.1) !important; }
+    .ts-dropdown { border-radius: 0.75rem !important; border: 1px solid #e5e7eb !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1) !important; font-size: 14px !important; }
+    .ts-dropdown .option { padding: 10px 14px !important; }
+    .ts-dropdown .active { background-color: #f9fafb !important; color: #111827 !important; }
+    .flatpickr-calendar { border-radius: 0.75rem; border: 1px solid #e5e7eb; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .flatpickr-day.selected { background: #4f46e5 !important; border-color: #4f46e5 !important; }
 </style>
 {% endblock %}
 
 {% block page_content %}
-<div style="max-width: 900px; margin: 0 auto;">
-    <div style="margin-bottom: 40px;">
-        <a href="{% url 'admin_campaigns' %}" style="color: var(--primary); text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-            <i class="bi bi-arrow-left"></i> Dashboard
+<div class="max-w-[900px] mx-auto">
+    <div class="mb-10">
+        <a href="{% url 'admin_campaigns' %}" class="text-brand font-semibold text-sm flex items-center gap-2 hover:underline">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Dashboard
         </a>
-        <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-top: 16px;">Campaign</h1>
-        <p style="color: var(--text-muted); font-size: 16px; margin-top: 4px;">Set up your donation goals, appeal tracking, and schedule.</p>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mt-4">Campaign</h1>
+        <p class="text-gray-400 text-base mt-1">Set up your donation goals, appeal tracking, and schedule.</p>
     </div>
 
     <form method="post" id="campaignForm" enctype="multipart/form-data">
         {% csrf_token %}
-        
-        <!-- Basic Info Card -->
-        <div class="saas-card">
-            <h2 class="form-section-title"><i class="bi bi-info-circle" style="color: var(--primary); margin-right: 8px;"></i> Basic Configuration</h2>
-            <div class="form-group">
-                <label class="saas-label">Campaign Title *</label>
-                <input name="title" required placeholder="Enter campaign name..." class="saas-input">
-            </div>
-            <div class="form-group">
-                <label class="saas-label">Client / Charity *</label>
-                <select name="client_id" required class="saas-select">
-                    <option value="">Select a Charity</option>
-                    {% for client in clients %}
-                    <option value="{{ client.id }}">{{ client.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="saas-label">Description</label>
-                <textarea name="description" rows="4" placeholder="Brief context for internal use..." class="saas-textarea"></textarea>
+
+        <!-- Basic Info -->
+        <div class="card mb-6">
+            <div class="card-body">
+                <h2 class="text-base font-bold text-gray-900 flex items-center gap-2 mb-6">
+                    <i data-lucide="info" class="w-4 h-4 text-brand"></i> Basic Configuration
+                </h2>
+                <div class="space-y-5">
+                    <div>
+                        <label class="form-label">Campaign Title *</label>
+                        <input name="title" required placeholder="Enter campaign name..." class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">Client / Charity *</label>
+                        <select name="client_id" required class="form-select">
+                            <option value="">Select a Charity</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Description</label>
+                        <textarea name="description" rows="4" placeholder="Brief context for internal use..." class="form-textarea"></textarea>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Appeal & Identity Card -->
-        <div class="saas-card">
-            <h2 class="form-section-title"><i class="bi bi-tag" style="color: var(--primary); margin-right: 8px;"></i> Appeal & Identity</h2>
-            <div class="form-group">
-                    <label class="saas-label">Appeal Code *</label>
-                    <input name="appeal_code" required placeholder="APL-001" class="saas-input">
-                </div>
-            <div class="form-group">
-                <select name="appeal_type" required class="saas-select">
-                    <option value="" disabled selected>Select Appeal Type</option>
-                    <option value="WithThanks">Thank you</option>
-                    <option value="VDM">Video Direct Mail (VDM)</option>
-                </select>
-                <div class="form-group" style="margin-top: 16px;">
-                    <label class="saas-label" style="display: flex; align-items: start; gap: 8px; cursor: pointer; text-transform: none; font-weight: 500;">
-                        <input type="checkbox" name="is_personalized" style="width: 16px; height: 16px; margin-top: 2px; accent-color: var(--primary);">
+        <!-- Appeal & Identity -->
+        <div class="card mb-6">
+            <div class="card-body">
+                <h2 class="text-base font-bold text-gray-900 flex items-center gap-2 mb-6">
+                    <i data-lucide="tag" class="w-4 h-4 text-brand"></i> Appeal & Identity
+                </h2>
+                <div class="space-y-5">
+                    <div>
+                        <label class="form-label">Appeal Code *</label>
+                        <input name="appeal_code" required placeholder="APL-001" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">Appeal Type</label>
+                        <select name="appeal_type" required class="form-select">
+                            <option value="" disabled selected>Select Appeal Type</option>
+                            <option value="WithThanks">Thank you</option>
+                            <option value="VDM">Video Direct Mail (VDM)</option>
+                        </select>
+                    </div>
+
+                    <label class="flex items-start gap-3 cursor-pointer p-4 rounded-xl border border-gray-200 hover:border-brand/30 transition-colors">
+                        <input type="checkbox" name="is_personalized" class="form-checkbox mt-0.5 accent-brand w-4 h-4">
                         <div>
-                            <span style="display: block; margin-bottom: 2px;">Is Personalized Video? (Thank you)</span>
-                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 400; line-height: 1.4;">
-                                Enables Voice Generation (TTS) + Stitching. <br>If unchecked, sends generic video (or card if deduped).
-                            </div>
+                            <span class="block text-sm font-medium text-gray-900">Is Personalized Video? (Thank you)</span>
+                            <span class="text-[11px] text-gray-400 leading-snug block mt-0.5">
+                                Enables Voice Generation (TTS) + Stitching.<br>If unchecked, sends generic video (or card if deduped).
+                            </span>
                         </div>
                     </label>
-                </div>
-                <div class="form-group" style="margin-top: 16px;">
-                    <label class="saas-label">Campaign Status</label>
-                    <div style="display: flex; gap: 12px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); flex: 1; transition: all 0.2s;" id="status-active-label">
-                            <input type="radio" name="campaign_status" value="active" style="accent-color: var(--primary);" onchange="updateStatusStyle()">
-                            <span style="font-size: 13px; font-weight: 600;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 6px;"></span>Active</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; border: 2px solid var(--primary); border-radius: var(--radius-md); flex: 1; background: var(--primary-accent); transition: all 0.2s;" id="status-inactive-label">
-                            <input type="radio" name="campaign_status" value="draft" checked style="accent-color: var(--primary);" onchange="updateStatusStyle()">
-                            <span style="font-size: 13px; font-weight: 600;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; margin-right: 6px;"></span>Inactive</span>
-                        </label>
-                    </div>
-                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">Inactive campaigns won't trigger any video sending or processing.</p>
-                </div>
-                <div class="form-group" style="margin-top: 16px;">
-                    <label class="saas-label">Email From Address</label>
-                    <input type="email" name="from_email" class="saas-input" placeholder="e.g. noreply@yourcharity.org">
-                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Override the default sender address for emails sent in this campaign. Leave blank to use the client default.</p>
-                </div>
-            </div>
 
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="saas-label">Appeal Start Date</label>
-                    <input type="text" name="appeal_start" required class="saas-input uk-date-field" placeholder="DD/MM/YYYY">
-                </div>
-                <div class="form-group">
-                    <label class="saas-label">Appeal End Date</label>
-                    <input type="text" name="appeal_end" required class="saas-input uk-date-field" placeholder="DD/MM/YYYY">
+                    <div x-data="{ status: 'draft' }">
+                        <label class="form-label">Campaign Status</label>
+                        <div class="flex gap-3">
+                            <label @click="status = 'active'"
+                                   :class="status === 'active' ? 'border-brand bg-brand-light' : 'border-gray-200'"
+                                   class="flex items-center gap-2 cursor-pointer px-4 py-2.5 border-2 rounded-xl flex-1 transition-all">
+                                <input type="radio" name="campaign_status" value="active" class="accent-brand">
+                                <span class="text-[13px] font-semibold"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span>Active</span>
+                            </label>
+                            <label @click="status = 'draft'"
+                                   :class="status === 'draft' ? 'border-brand bg-brand-light' : 'border-gray-200'"
+                                   class="flex items-center gap-2 cursor-pointer px-4 py-2.5 border-2 rounded-xl flex-1 transition-all">
+                                <input type="radio" name="campaign_status" value="draft" checked class="accent-brand">
+                                <span class="text-[13px] font-semibold"><span class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-1.5"></span>Inactive</span>
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-2">Inactive campaigns won't trigger any video sending or processing.</p>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Email From Address</label>
+                        <input type="email" name="from_email" class="form-input" placeholder="e.g. noreply@yourcharity.org">
+                        <p class="text-[11px] text-gray-400 mt-1.5">Override the default sender address. Leave blank to use the client default.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="form-label">Appeal Start Date</label>
+                            <input type="text" name="appeal_start" required class="form-input uk-date-field" placeholder="DD/MM/YYYY">
+                        </div>
+                        <div>
+                            <label class="form-label">Appeal End Date</label>
+                            <input type="text" name="appeal_end" required class="form-input uk-date-field" placeholder="DD/MM/YYYY">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Campaign Assets -->
-        <div class="saas-card">
-            <h2 class="form-section-title"><i class="bi bi-play-circle" style="color: var(--primary); margin-right: 8px;"></i> Campaign Assets</h2>
-            
-            <div class="grid-2" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
-                <!-- Charity Video (VDM) -->
-                <div class="form-group">
-                    <label class="saas-label">Charity Video</label>
-                    <div class="asset-card">
-                        <div class="file-upload-wrapper" style="min-width: 0;">
-                            <input type="file" name="charity_video" class="saas-file-input" accept="video/mp4,video/mov" onchange="var fileName = this.files[0] ? this.files[0].name : 'Upload Charity Video'; this.nextElementSibling.querySelector('.file-name').textContent = fileName; this.nextElementSibling.style.borderColor = 'var(--primary)'; this.nextElementSibling.style.color = 'var(--primary)';">
-                            <div class="file-upload-design" style="min-width: 0; overflow: hidden;">
-                                <i class="bi bi-plus-circle" style="font-size: 18px; flex-shrink: 0;"></i>
-                                <span class="file-name" style="font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Upload Charity Video</span>
-                            </div>
+        <div class="card mb-6">
+            <div class="card-body">
+                <h2 class="text-base font-bold text-gray-900 flex items-center gap-2 mb-6">
+                    <i data-lucide="play-circle" class="w-4 h-4 text-brand"></i> Campaign Assets
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <label class="form-label">Charity Video</label>
+                        <div class="border border-gray-200 rounded-xl p-6 hover:border-brand/30 transition-colors h-full flex flex-col">
+                            <label class="relative cursor-pointer mt-auto">
+                                <input type="file" name="charity_video" accept="video/mp4,video/mov" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 peer">
+                                <div class="flex items-center justify-center gap-2.5 py-3.5 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 peer-hover:border-brand peer-hover:bg-brand-light peer-hover:text-brand transition-all">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                    <span class="font-bold text-sm">Upload Charity Video</span>
+                                </div>
+                            </label>
+                            <p class="text-[11px] text-gray-400 mt-3.5 leading-relaxed">Main appeal video. MP4 or MOV recommended.</p>
                         </div>
-                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.5;">Main appeal video shown to donors. MP4 or MOV recommended.</p>
+                    </div>
+                    <div>
+                        <label class="form-label">Gratitude Video</label>
+                        <div class="border border-gray-200 rounded-xl p-6 hover:border-brand/30 transition-colors h-full flex flex-col">
+                            <label class="relative cursor-pointer mt-auto">
+                                <input type="file" name="gratitude_video" accept="video/mp4,video/mov" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 peer">
+                                <div class="flex items-center justify-center gap-2.5 py-3.5 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 peer-hover:border-brand peer-hover:bg-brand-light peer-hover:text-brand transition-all">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                                    <span class="font-bold text-sm">Upload Gratitude Video</span>
+                                </div>
+                            </label>
+                            <p class="text-[11px] text-gray-400 mt-3.5 leading-relaxed">Thank you video or gratitude card. Shown after donation.</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Gratitude Video (WithThanks) -->
-                <div class="form-group">
-                    <label class="saas-label">Gratitude Video</label>
-                    <div class="asset-card">
-                        <div class="file-upload-wrapper" style="min-width: 0;">
-                            <input type="file" name="gratitude_video" class="saas-file-input" accept="video/mp4,video/mov" onchange="var fileName = this.files[0] ? this.files[0].name : 'Upload Gratitude Video'; this.nextElementSibling.querySelector('.file-name').textContent = fileName; this.nextElementSibling.style.borderColor = 'var(--primary)'; this.nextElementSibling.style.color = 'var(--primary)';">
-                            <div class="file-upload-design" style="min-width: 0; overflow: hidden;">
-                                <i class="bi bi-plus-circle" style="font-size: 18px; flex-shrink: 0;"></i>
-                                <span class="file-name" style="font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Upload Gratitude Video</span>
-                            </div>
-                        </div>
-                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.5;">Thank you video or gratitude card. Shown after donation.</p>
+                <div class="mt-6">
+                    <label class="form-label">Voiceover Script Override</label>
+                    <textarea name="voiceover_script_override" class="form-textarea font-mono text-[13px]" rows="5" placeholder="Enter override script..."></textarea>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        {% verbatim %}
+                        <span class="text-[11px] font-bold px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md text-brand cursor-default hover:bg-brand-light hover:border-brand/30 transition-colors">{{ donor_name }}</span>
+                        <span class="text-[11px] font-bold px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md text-brand cursor-default hover:bg-brand-light hover:border-brand/30 transition-colors">{{ donation_amount }}</span>
+                        <span class="text-[11px] font-bold px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md text-brand cursor-default hover:bg-brand-light hover:border-brand/30 transition-colors">{{ organization_name }}</span>
+                        {% endverbatim %}
                     </div>
+                    <p class="text-[11px] text-gray-400 mt-2">Leave blank to use the client's default script.</p>
                 </div>
-            </div>
-            
-            <div class="form-group" style="margin-top: 24px;">
-                <label class="saas-label">Voiceover Script Override</label>
-                <textarea name="voiceover_script_override" class="saas-textarea" rows="5" placeholder="Enter override script..." style="font-family: monospace; font-size: 13px;"></textarea>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
-                    {% verbatim %}
-                    <span class="placeholder-tag">{{ donor_name }}</span>
-                    <span class="placeholder-tag">{{ donation_amount }}</span>
-                    <span class="placeholder-tag">{{ organization_name }}</span>
-                    {% endverbatim %}
-                </div>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">Leave blank to use the client's default script.</p>
             </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 16px; margin-bottom: 100px;">
-            <a href="{% url 'admin_campaigns' %}" class="btn btn-secondary" style="padding: 12px 32px;">Discard</a>
-            <button type="submit" class="btn btn-primary" style="padding: 12px 48px; font-size: 15px;">Launch Campaign</button>
+        <div class="flex justify-end gap-4 mb-24">
+            <a href="{% url 'admin_campaigns' %}" class="btn-secondary px-8 py-3">Discard</a>
+            <button type="submit" class="btn-primary px-12 py-3 text-[15px]">Launch Campaign</button>
         </div>
     </form>
 </div>
@@ -255,40 +201,15 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof flatpickr !== 'undefined') {
-        flatpickr(".uk-date-field", {
-            dateFormat: "d/m/Y",
-            allowInput: true,
-        });
+        flatpickr(".uk-date-field", { dateFormat: "d/m/Y", allowInput: true });
     }
-
     if (typeof TomSelect !== 'undefined') {
         new TomSelect('select[name="client_id"]', {
             create: false,
-            sortField: {
-                field: "text",
-                direction: "asc"
-            },
+            sortField: { field: "text", direction: "asc" },
             placeholder: "Select a Charity...",
         });
     }
 });
-
-function updateStatusStyle() {
-    const activeLabel = document.getElementById('status-active-label');
-    const inactiveLabel = document.getElementById('status-inactive-label');
-    const activeRadio = activeLabel.querySelector('input[type="radio"]');
-
-    if (activeRadio.checked) {
-        activeLabel.style.border = '2px solid var(--primary)';
-        activeLabel.style.background = 'var(--primary-accent)';
-        inactiveLabel.style.border = '1px solid var(--border)';
-        inactiveLabel.style.background = 'transparent';
-    } else {
-        inactiveLabel.style.border = '2px solid var(--primary)';
-        inactiveLabel.style.background = 'var(--primary-accent)';
-        activeLabel.style.border = '1px solid var(--border)';
-        activeLabel.style.background = 'transparent';
-    }
-}
 </script>
 {% endblock %}

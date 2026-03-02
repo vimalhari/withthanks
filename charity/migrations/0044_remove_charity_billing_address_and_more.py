@@ -4,48 +4,47 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0043_charity_billing_address_charity_billing_email'),
+        ("charity", "0043_charity_billing_address_charity_billing_email"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='charity',
-            name='billing_address',
+            model_name="charity",
+            name="billing_address",
         ),
         migrations.RemoveField(
-            model_name='charity',
-            name='billing_email',
+            model_name="charity",
+            name="billing_email",
         ),
         migrations.AddField(
-            model_name='charity',
-            name='address_line_1',
+            model_name="charity",
+            name="address_line_1",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='address_line_2',
+            model_name="charity",
+            name="address_line_2",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='company_number',
+            model_name="charity",
+            name="company_number",
             field=models.CharField(blank=True, max_length=50, null=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='contact_phone',
+            model_name="charity",
+            name="contact_phone",
             field=models.CharField(blank=True, max_length=20, null=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='county',
+            model_name="charity",
+            name="county",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='postcode',
+            model_name="charity",
+            name="postcode",
             field=models.CharField(blank=True, max_length=20, null=True),
         ),
     ]

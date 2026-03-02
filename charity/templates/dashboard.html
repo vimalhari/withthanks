@@ -2,299 +2,277 @@
 {% load static %}
 
 {% block title %}Dashboard - WithThanks{% endblock %}
-{% block breadcrumb_child %}Email Analytics{% endblock %}
+{% block breadcrumb_child %}Dashboard{% endblock %}
 
 {% block page_content %}
-<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
     <div>
-        <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-bottom: 8px;">Dashboard</h1>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
     </div>
-    <div style="display: flex; gap: 12px;">
+    <div class="flex gap-3">
         {% if request.session.active_charity_id and request.user.is_superuser %}
-        <a href="{% url 'clear_client_context' %}" class="btn btn-danger" style="display: flex; align-items: center; gap: 6px;">
-            <i class="bi bi-x-circle"></i> Exit {{ active_client.name }}
+        <a href="{% url 'clear_client_context' %}" class="btn-danger btn-sm">
+            <i data-lucide="x-circle" class="w-4 h-4"></i> Exit {{ active_client.name }}
         </a>
         {% endif %}
     </div>
 </div>
 
-
-
-
-<!-- Tabs (Pill Style) -->
-<div style="display: flex; gap: 8px; margin-bottom: 32px; padding: 4px; background: var(--bg-hover); border-radius: 10px; width: fit-content;">
-    <a href="?tab=sending" style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; {% if not request.GET.tab or request.GET.tab == 'sending' %}background: #ffffff; color: var(--primary); box-shadow: var(--shadow-soft);{% else %}color: var(--text-muted);{% endif %}">
+<!-- Tabs -->
+<div class="tab-pills mb-8" x-data="{ tab: '{{ request.GET.tab|default:"sending" }}' }">
+    <a href="?tab=sending"
+       class="tab-pill {% if not request.GET.tab or request.GET.tab == 'sending' %}active{% endif %}">
         Sending
     </a>
-    <a href="?tab=receiving" style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; {% if request.GET.tab == 'receiving' %}background: #ffffff; color: var(--primary); box-shadow: var(--shadow-soft);{% else %}color: var(--text-muted);{% endif %}">
+    <a href="?tab=receiving"
+       class="tab-pill {% if request.GET.tab == 'receiving' %}active{% endif %}">
         Receiving
     </a>
 </div>
 
 {% if request.GET.tab == 'sending' or not request.GET.tab %}
+
 <!-- Filter Bar -->
-<div class="saas-card" style="padding: 16px; margin-bottom: 24px;">
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+<div class="card mb-6">
+    <div class="p-4 flex flex-wrap gap-3 items-center">
         <!-- Search -->
-        <div style="flex: 1; min-width: 280px; position: relative;">
-            <i class="bi bi-search" style="position: absolute; left: 14px; top: 11px; color: var(--text-muted);"></i>
+        <div class="flex-1 min-w-[280px] relative">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
             <form method="get" id="searchForm">
                 <input type="hidden" name="tab" value="{{ request.GET.tab }}">
-                <input type="text" name="q" class="saas-input" placeholder="Search clients or campaigns..." value="{{ search_query }}" style="padding-left: 40px;" onchange="this.form.submit()">
+                <input type="text" name="q" class="form-input pl-10"
+                       placeholder="Search clients or campaigns..."
+                       value="{{ search_query }}"
+                       onchange="this.form.submit()">
             </form>
         </div>
 
-        <!-- Filters Form -->
-        <form method="get" id="filterForm" style="display: flex; gap: 12px; align-items: center;">
+        <!-- Filters -->
+        <form method="get" id="filterForm" class="flex gap-3 items-center">
             <input type="hidden" name="q" value="{{ search_query }}">
             <input type="hidden" name="tab" value="{{ request.GET.tab }}">
             <input type="hidden" name="view" value="{{ request.GET.view }}">
             <input type="hidden" name="client_id" value="{{ request.GET.client_id }}">
 
-            <select name="per_page" class="saas-select" style="width: 120px;" onchange="this.form.submit()">
+            <select name="per_page" class="form-select w-[120px]" onchange="this.form.submit()">
                 <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
                 <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
                 <option value="100" {% if per_page == 100 %}selected{% endif %}>100 / page</option>
             </select>
 
-            <select name="date_range" class="saas-select" style="width: 140px;" onchange="this.form.submit()">
+            <select name="date_range" class="form-select w-[140px]" onchange="this.form.submit()">
                 <option value="all" {% if date_range == 'all' %}selected{% endif %}>All Time</option>
                 <option value="today" {% if date_range == 'today' %}selected{% endif %}>Today</option>
                 <option value="7days" {% if date_range == '7days' %}selected{% endif %}>Last 7 Days</option>
                 <option value="15days" {% if date_range == '15days' %}selected{% endif %}>Last 15 Days</option>
                 <option value="30days" {% if date_range == '30days' %}selected{% endif %}>Last 30 Days</option>
             </select>
-            
-            <a href="{% url 'export_csv' %}?date_range={{ date_range }}" class="btn btn-secondary" style="padding: 10px 14px;" title="Download CSV">
-                <i class="bi bi-download"></i>
+
+            <a href="{% url 'export_csv' %}?date_range={{ date_range }}" class="btn-secondary btn-sm" title="Download CSV">
+                <i data-lucide="download" class="w-4 h-4"></i>
             </a>
         </form>
     </div>
 </div>
 
-<!-- View Mode Selector -->
-<div style="display: flex; gap: 24px; align-items: center; margin-bottom: 32px; border-bottom: 2px solid var(--border); padding-bottom: 12px;">
-    <div style="display: flex; gap: 20px;">
-        <a href="?tab=sending&view=campaigns" class="view-tab {% if view_mode == 'campaigns' %}active{% endif %}" style="text-decoration: none; color: {% if view_mode == 'campaigns' %}var(--primary){% else %}var(--text-muted){% endif %}; font-weight: 700; font-size: 14px; position: relative; padding: 4px 8px;">
+<!-- View Mode Tabs -->
+<div class="flex items-center gap-6 mb-8 border-b-2 border-gray-200 pb-3">
+    <div class="flex gap-5">
+        <a href="?tab=sending&view=campaigns"
+           class="relative font-bold text-sm pb-1 {% if view_mode == 'campaigns' %}text-brand{% else %}text-gray-400 hover:text-gray-600{% endif %}">
             Campaigns
-            {% if view_mode == 'campaigns' %}<div style="position: absolute; bottom: -14px; left: 0; right: 0; height: 2px; background: var(--primary);"></div>{% endif %}
+            {% if view_mode == 'campaigns' %}<div class="absolute -bottom-[13px] left-0 right-0 h-0.5 bg-brand"></div>{% endif %}
         </a>
-        <a href="?tab=sending&view=clients" class="view-tab {% if view_mode == 'clients' %}active{% endif %}" style="text-decoration: none; color: {% if view_mode == 'clients' %}var(--primary){% else %}var(--text-muted){% endif %}; font-weight: 700; font-size: 14px; position: relative; padding: 4px 8px;">
+        <a href="?tab=sending&view=clients"
+           class="relative font-bold text-sm pb-1 {% if view_mode == 'clients' %}text-brand{% else %}text-gray-400 hover:text-gray-600{% endif %}">
             Clients
-            {% if view_mode == 'clients' %}<div style="position: absolute; bottom: -14px; left: 0; right: 0; height: 2px; background: var(--primary);"></div>{% endif %}
+            {% if view_mode == 'clients' %}<div class="absolute -bottom-[13px] left-0 right-0 h-0.5 bg-brand"></div>{% endif %}
         </a>
     </div>
 
-    {% if view_mode == 'clients' %}
-        {% if request.user.is_superuser %}
-        <div style="margin-left: auto; display: flex; gap: 8px; background: var(--bg-hover); padding: 4px; border-radius: 8px;">
-            <a href="?tab=sending&view=clients&client_status=all" style="padding: 4px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.2s; {% if client_status_filter == 'all' %}background: #ffffff; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05);{% else %}color: var(--text-muted);{% endif %}">
-                All Systems
-            </a>
-            <a href="?tab=sending&view=clients&client_status=active" style="padding: 4px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.2s; {% if client_status_filter == 'active' %}background: #ffffff; color: var(--status-success); box-shadow: 0 2px 4px rgba(0,0,0,0.05);{% else %}color: var(--text-muted);{% endif %}">
-                Active
-            </a>
-            <a href="?tab=sending&view=clients&client_status=inactive" style="padding: 4px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.2s; {% if client_status_filter == 'inactive' %}background: #ffffff; color: var(--status-failed); box-shadow: 0 2px 4px rgba(0,0,0,0.05);{% else %}color: var(--text-muted);{% endif %}">
-                Inactive
-            </a>
+    {% if view_mode == 'clients' and request.user.is_superuser %}
+    <div class="ml-auto">
+        <div class="tab-pills">
+            <a href="?tab=sending&view=clients&client_status=all"
+               class="tab-pill text-xs {% if client_status_filter == 'all' %}active{% endif %}">All</a>
+            <a href="?tab=sending&view=clients&client_status=active"
+               class="tab-pill text-xs {% if client_status_filter == 'active' %}active{% endif %}">Active</a>
+            <a href="?tab=sending&view=clients&client_status=inactive"
+               class="tab-pill text-xs {% if client_status_filter == 'inactive' %}active{% endif %}">Inactive</a>
         </div>
-        {% endif %}
+    </div>
     {% endif %}
 </div>
 
-{% if view_mode == 'batches' and request.GET.client_id %}
-    <!-- BATCH VIEW (when client is selected) -->
-    <div class="mb-3">
-        <a href="?tab=sending&view=clients" class="text-muted text-decoration-none small">
-            <i class="bi bi-arrow-left me-1"></i> Back to Clients
-        </a>
-    </div>
-{% elif view_mode == 'campaigns' %}
-    <!-- CAMPAIGN VIEW -->
-    <div class="saas-card" style="padding: 0; overflow: hidden;">
-        <div style="overflow-x: auto;">
-            <table class="saas-table">
-                <thead style="position: sticky; top: 0; background: white; z-index: 10;">
-                    <tr>
-                        <th style="width: 25%;">Campaign Name</th>
-                        <th style="width: 20%;">Client</th>
-                        <th style="width: 12%; text-align: center;">Batches</th>
-                        <th style="width: 12%; text-align: center;">Reach</th>
-                        <th style="width: 15%;">Last Activity</th>
-                        <th style="width: 150px; text-align: right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for campaign in clients %}
-                    <tr style="transition: all 0.2s;">
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 40px; height: 40px; background: var(--primary-accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 18px; border: 1px solid rgba(79, 70, 229, 0.1);">
-                                    <i class="bi bi-megaphone-fill"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 700; color: var(--text-headings); font-size: 15px;">{{ campaign.name }}</div>
-                                    <div style="font-size: 11px; color: var(--text-muted);">CODE: {{ campaign.appeal_code }}</div>
-                                </div>
+{% if view_mode == 'campaigns' %}
+<!-- CAMPAIGNS TABLE -->
+<div class="table-container">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="w-1/4">Campaign Name</th>
+                    <th class="w-1/5">Client</th>
+                    <th class="w-[12%] text-center">Batches</th>
+                    <th class="w-[12%] text-center">Reach</th>
+                    <th class="w-[15%]">Last Activity</th>
+                    <th class="w-[150px] text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for campaign in clients %}
+                <tr>
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-brand-light text-brand flex items-center justify-center border border-brand/10">
+                                <i data-lucide="megaphone" class="w-5 h-5"></i>
                             </div>
-                        </td>
-                        <td>
-                            <span style="font-weight: 600; color: var(--text-body);">{{ campaign.client.name }}</span>
-                        </td>
-                        <td style="text-align: center; font-weight: 600; color: var(--text-headings);">
-                            {{ campaign.total_batches }}
-                        </td>
-                        <td style="text-align: center; font-weight: 600; color: var(--primary);">
-                            {{ campaign.total_videos }}
-                        </td>
-                        <td style="color: var(--text-muted); font-size: 13px;">
-                            {{ campaign.last_activity|default:"Never"|date:"M d, Y" }}
-                        </td>
-                        <td style="text-align: right;">
-                            <div style="display: flex; gap: 4px; justify-content: flex-end; align-items: center;">
-                                <a href="{% url 'send_email_wizard' %}?client_id={{ campaign.client.id }}&campaign_id={{ campaign.id }}&method=bulk&step=3" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; font-weight: 600;" title="Add Recipients (CSV)">
-                                    <i class="bi bi-file-earmark-plus"></i> Bulk
-                                </a>
-                                <a href="{% url 'send_email_wizard' %}?client_id={{ campaign.client.id }}&campaign_id={{ campaign.id }}&method=single&step=3" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px; font-weight: 600;" title="Send Single Email">
-                                    <i class="bi bi-person-plus"></i> Single
-                                </a>
-                                <a href="{% url 'analytics_unified' %}?charity_id={{ campaign.client.id }}&campaign_id={{ campaign.id }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #6366f1; border: none;" title="View Report">
-                                    <i class="bi bi-bar-chart-line me-1"></i> Report
-                                </a>
-                                <a href="{% url 'campaign_detail' campaign.id %}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 11px;" title="Campaign Settings">
-                                    <i class="bi bi-gear"></i>
-                                </a>
+                            <div>
+                                <div class="font-bold text-gray-900 text-[15px]">{{ campaign.name }}</div>
+                                <div class="text-[11px] text-gray-400">CODE: {{ campaign.appeal_code }}</div>
                             </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 100px 0; color: var(--text-muted);">
-                            <i class="bi bi-megaphone" style="font-size: 24px; display: block; margin-bottom: 12px; opacity: 0.5;"></i>
-                            No active campaigns found.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-
-
-{% else %}
-    <!-- CLIENT VIEW (default) -->
-    <div class="saas-card" style="padding: 0; overflow: hidden;">
-        <div style="overflow-x: auto;">
-            <table class="saas-table">
-                <thead style="position: sticky; top: 0; background: white; z-index: 10;">
-                    <tr>
-                        <th style="width: 25%;">Client Name</th>
-                        <th style="width: 15%;">Client Code</th>
-                        <th style="width: 12%; text-align: center;">Campaigns</th>
-                        <th style="width: 12%; text-align: center;">Batches</th>
-                        <th style="width: 12%; text-align: center;">Videos</th>
-                        <th style="width: 15%;">Last Activity</th>
-                        <th style="width: 150px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for client in clients %}
-                    <tr style="transition: all 0.2s; cursor: pointer;" onclick="window.location.href='?tab=sending&view=batches&client_id={{ client.id }}'">
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 700;">
-                                    {{ client.name|slice:":1"|upper }}
-                                </div>
-                                <div>
-                                    <p style="font-weight: 600; color: var(--text-headings); margin: 0;">{{ client.name }}</p>
-                                    {% if client.website %}
-                                    <p style="font-size: 12px; color: var(--text-muted); margin: 0;">{{ client.website }}</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </td>
-                        <td style="color: var(--text-body); font-family: 'Courier New', monospace; font-size: 13px;">
-                            {{ client.code|default:"—" }}
-                        </td>
-                        <td style="text-align: center; font-weight: 600; color: var(--text-headings);">
-                            {{ client.total_campaigns }}
-                        </td>
-                        <td style="text-align: center; font-weight: 600; color: var(--text-headings);">
-                            {{ client.total_batches }}
-                        </td>
-                        <td style="text-align: center; font-weight: 600; color: var(--text-headings);">
-                            {{ client.total_videos }}
-                        </td>
-                        <td style="color: var(--text-muted); font-size: 13px;">
-                            {% if client.last_activity %}
-                                {{ client.last_activity|timesince }} ago
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                        <td style="text-align: right;" onclick="event.stopPropagation();">
-                            <div style="display: flex; gap: 4px; justify-content: flex-end;">
-                                <a href="?tab=sending&view=batches&client_id={{ client.id }}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;" title="View Batches">
-                                    <i class="bi bi-list-ul"></i>
-                                </a>
-                                {% if request.user.is_superuser %}
-                                <a href="{% url 'switch_client' client.id %}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px; background: var(--primary); color: white; border: none;" title="Manage Client">
-                                    <i class="bi bi-box-arrow-in-right"></i>
-                                </a>
-                                <a href="{% url 'client_setup_edit' client.id %}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;" title="Client Settings">
-                                    <i class="bi bi-gear"></i>
-                                </a>
-                                {% endif %}
-                                <a href="{% url 'analytics_unified' %}?charity_id={{ client.id }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; background: #6366f1; border: none;" title="View Client Report">
-                                    <i class="bi bi-bar-chart-line me-1"></i> Report
-                                </a>
-                                <a href="{% url 'send_email_wizard' %}?client_id={{ client.id }}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;" title="Send Email">
-                                    <i class="bi bi-send"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 100px 0; color: var(--text-muted);">
-                            <i class="bi bi-inbox" style="font-size: 24px; display: block; margin-bottom: 12px; opacity: 0.5;"></i>
-                            No clients found. <a href="{% url 'client_setup' %}">Set up your first client</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-{% endif %}
-
-<!-- Premium Pagination -->
-<div style="display: flex; justify-content: space-between; align-items: center; padding-top: 24px;">
-    <p style="font-size: 13px; color: var(--text-muted); font-weight: 500;">
-        {% if view_mode == 'batches' %}
-            Showing batches for selected client
-        {% else %}
-            Showing <strong>{{ clients|length }}</strong> client{{ clients|length|pluralize }}
-        {% endif %}
-    </p>
-    
-    <div style="display: flex; gap: 8px;">
-        <!-- Pagination can be added here if needed -->
+                        </div>
+                    </td>
+                    <td>
+                        <span class="font-semibold text-gray-700">{{ campaign.client.name }}</span>
+                    </td>
+                    <td class="text-center font-semibold text-gray-900">{{ campaign.total_batches }}</td>
+                    <td class="text-center font-semibold text-brand">{{ campaign.total_videos }}</td>
+                    <td class="text-gray-400 text-[13px]">
+                        {{ campaign.last_activity|default:"Never"|date:"M d, Y" }}
+                    </td>
+                    <td class="text-right">
+                        <div class="flex gap-1 justify-end items-center">
+                            <a href="{% url 'send_email_wizard' %}?client_id={{ campaign.client.id }}&campaign_id={{ campaign.id }}&method=bulk&step=3"
+                               class="btn-secondary btn-xs" title="Bulk Upload">
+                                <i data-lucide="file-plus" class="w-3.5 h-3.5"></i> Bulk
+                            </a>
+                            <a href="{% url 'send_email_wizard' %}?client_id={{ campaign.client.id }}&campaign_id={{ campaign.id }}&method=single&step=3"
+                               class="btn-secondary btn-xs" title="Single Send">
+                                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Single
+                            </a>
+                            <a href="{% url 'analytics_unified' %}?charity_id={{ campaign.client.id }}&campaign_id={{ campaign.id }}"
+                               class="btn-primary btn-xs" title="Report">
+                                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Report
+                            </a>
+                            <a href="{% url 'campaign_detail' campaign.id %}"
+                               class="btn-secondary btn-xs" title="Settings">
+                                <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-24 text-gray-400">
+                        <i data-lucide="megaphone" class="w-6 h-6 mx-auto mb-3 opacity-50"></i>
+                        <p>No active campaigns found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 {% else %}
-<!-- RECEIVING TAB (unchanged) -->
-<div class="saas-card" style="padding: 0; overflow: hidden;">
-    <div style="overflow-x: auto;">
-        <table class="saas-table">
+<!-- CLIENTS TABLE -->
+<div class="table-container">
+    <div class="overflow-x-auto">
+        <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 30%;">Sender</th>
-                    <th style="width: 40%;">Subject</th>
-                    <th style="width: 20%;">Received</th>
-                    <th style="width: 10%;"></th>
+                    <th class="w-1/4">Client Name</th>
+                    <th class="w-[15%]">Client Code</th>
+                    <th class="w-[12%] text-center">Campaigns</th>
+                    <th class="w-[12%] text-center">Batches</th>
+                    <th class="w-[12%] text-center">Videos</th>
+                    <th class="w-[15%]">Last Activity</th>
+                    <th class="w-[150px]"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr class="cursor-pointer" onclick="window.location.href='?tab=sending&view=batches&client_id={{ client.id }}'">
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-indigo-700 text-white flex items-center justify-center text-base font-bold">
+                                {{ client.name|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-900">{{ client.name }}</p>
+                                {% if client.website %}
+                                <p class="text-xs text-gray-400">{{ client.website }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-gray-700 font-mono text-[13px]">{{ client.code|default:"—" }}</td>
+                    <td class="text-center font-semibold text-gray-900">{{ client.total_campaigns }}</td>
+                    <td class="text-center font-semibold text-gray-900">{{ client.total_batches }}</td>
+                    <td class="text-center font-semibold text-gray-900">{{ client.total_videos }}</td>
+                    <td class="text-gray-400 text-[13px]">
+                        {% if client.last_activity %}{{ client.last_activity|timesince }} ago{% else %}—{% endif %}
+                    </td>
+                    <td class="text-right" onclick="event.stopPropagation();">
+                        <div class="flex gap-1 justify-end">
+                            <a href="?tab=sending&view=batches&client_id={{ client.id }}" class="btn-secondary btn-xs" title="View Batches">
+                                <i data-lucide="list" class="w-3.5 h-3.5"></i>
+                            </a>
+                            {% if request.user.is_superuser %}
+                            <a href="{% url 'switch_client' client.id %}" class="btn-primary btn-xs" title="Manage">
+                                <i data-lucide="arrow-right-circle" class="w-3.5 h-3.5"></i>
+                            </a>
+                            <a href="{% url 'client_setup_edit' client.id %}" class="btn-secondary btn-xs" title="Settings">
+                                <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'analytics_unified' %}?charity_id={{ client.id }}" class="btn-primary btn-xs" title="Report">
+                                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Report
+                            </a>
+                            <a href="{% url 'send_email_wizard' %}?client_id={{ client.id }}" class="btn-secondary btn-xs" title="Send Email">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-24 text-gray-400">
+                        <i data-lucide="inbox" class="w-6 h-6 mx-auto mb-3 opacity-50"></i>
+                        <p>No clients found. <a href="{% url 'client_setup' %}" class="text-brand hover:underline">Set up your first client</a></p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+<div class="flex justify-between items-center pt-6">
+    <p class="text-[13px] text-gray-400 font-medium">
+        {% if view_mode == 'batches' %}
+            Showing batches for selected client
+        {% else %}
+            Showing <strong class="text-gray-700">{{ clients|length }}</strong> client{{ clients|length|pluralize }}
+        {% endif %}
+    </p>
+</div>
+
+{% else %}
+<!-- RECEIVING TAB -->
+<div class="table-container">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="w-[30%]">Sender</th>
+                    <th class="w-[40%]">Subject</th>
+                    <th class="w-[20%]">Received</th>
+                    <th class="w-[10%]"></th>
                 </tr>
             </thead>
             <tbody>
@@ -302,27 +280,27 @@
                     {% for email in received_emails %}
                     <tr>
                         <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="width: 32px; height: 32px; background: var(--bg-hover); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px;">
-                                    <i class="bi bi-envelope"></i>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                                    <i data-lucide="mail" class="w-4 h-4"></i>
                                 </div>
-                                <span style="font-weight: 600; color: var(--text-headings);">{{ email.sender }}</span>
+                                <span class="font-semibold text-gray-900">{{ email.sender }}</span>
                             </div>
                         </td>
-                        <td style="color: var(--text-body);">{{ email.subject }}</td>
-                        <td style="color: var(--text-muted); font-size: 13px;">{{ email.received_at|timesince }} ago</td>
-                        <td style="text-align: right;">
-                            <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;">
-                                <i class="bi bi-eye"></i>
+                        <td class="text-gray-700">{{ email.subject }}</td>
+                        <td class="text-gray-400 text-[13px]">{{ email.received_at|timesince }} ago</td>
+                        <td class="text-right">
+                            <button class="btn-secondary btn-xs">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                             </button>
                         </td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="4" style="text-align: center; padding: 100px 0; color: var(--text-muted);">
-                            <i class="bi bi-inbox" style="font-size: 24px; display: block; margin-bottom: 12px; opacity: 0.5;"></i>
-                            No received emails.
+                        <td colspan="4" class="text-center py-24 text-gray-400">
+                            <i data-lucide="inbox" class="w-6 h-6 mx-auto mb-3 opacity-50"></i>
+                            <p>No received emails.</p>
                         </td>
                     </tr>
                 {% endif %}
@@ -332,55 +310,50 @@
 </div>
 {% endif %}
 
-<!-- Send Email Modal -->
-<div class="modal fade" id="sendEmailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: var(--radius-lg); border: none; box-shadow: var(--shadow-md);">
-            <form method="post" action="{% url 'upload_csv' %}">
-                {% csrf_token %}
-                <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 20px 24px;">
-                    <h5 style="font-weight: 800; margin: 0; color: var(--text-headings);">Send Email Campaign</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="font-size: 10px;"></button>
-                </div>
-                <div class="modal-body" style="padding: 32px 24px;">
-                    <div class="form-group mb-3">
-                        <label class="saas-label">Target</label>
-                        <input type="text" class="saas-input" id="emailTarget" readonly>
+<!-- Send Email Modal (Alpine.js) -->
+<div x-data="{ showEmailModal: false, targetName: '' }"
+     @open-send-email.window="showEmailModal = true; targetName = $event.detail.name">
+
+    <template x-if="showEmailModal">
+        <div class="modal-backdrop" @click.self="showEmailModal = false">
+            <div class="modal-panel" @click.stop>
+                <form method="post" action="{% url 'upload_csv' %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h3 class="text-lg font-extrabold text-gray-900">Send Email Campaign</h3>
+                        <button type="button" @click="showEmailModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
                     </div>
-                    <div class="form-group mb-3">
-                        <label class="saas-label">Email Subject</label>
-                        <input type="text" class="saas-input" name="subject" placeholder="Thank You for Your Support" required>
+                    <div class="modal-body space-y-4">
+                        <div>
+                            <label class="form-label">Target</label>
+                            <input type="text" class="form-input bg-gray-50" x-model="targetName" readonly>
+                        </div>
+                        <div>
+                            <label class="form-label">Email Subject</label>
+                            <input type="text" class="form-input" name="subject" placeholder="Thank You for Your Support" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Email Template</label>
+                            <select class="form-select" name="template">
+                                <option>Thank You Template</option>
+                                <option>Donation Receipt</option>
+                                <option>Campaign Update</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">CTA URL (Optional)</label>
+                            <input type="url" class="form-input" name="cta_url" placeholder="https://example.com/donate">
+                        </div>
                     </div>
-                    <div class="form-group mb-3">
-                        <label class="saas-label">Email Template</label>
-                        <select class="saas-select" name="template">
-                            <option>Thank You Template</option>
-                            <option>Donation Receipt</option>
-                            <option>Campaign Update</option>
-                        </select>
+                    <div class="modal-footer bg-gray-50">
+                        <button type="button" @click="showEmailModal = false" class="btn-secondary flex-1">Cancel</button>
+                        <button type="submit" class="btn-primary flex-[2]">Send Now</button>
                     </div>
-                    <div class="form-group">
-                        <label class="saas-label">CTA URL (Optional)</label>
-                        <input type="url" class="saas-input" name="cta_url" placeholder="https://example.com/donate">
-                    </div>
-                </div>
-                <div class="modal-footer" style="padding: 20px 24px; border-top: 1px solid var(--border); background: var(--bg-hover); border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="flex: 1;">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="flex: 2;">Send Now</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
+    </template>
 </div>
-
-
-
-
-<script>
-function openSendEmailModal(targetName, targetId) {
-    document.getElementById('emailTarget').value = targetName;
-    var modal = new bootstrap.Modal(document.getElementById('sendEmailModal'));
-    modal.show();
-}
-</script>
 {% endblock %}

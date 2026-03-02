@@ -4,25 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0033_emailtracking_completion_time_and_more'),
+        ("charity", "0033_emailtracking_completion_time_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='emailtracking',
-            name='video_completed_at',
+            model_name="emailtracking",
+            name="video_completed_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='emailtracking',
-            name='video_started_at',
+            model_name="emailtracking",
+            name="video_started_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='emailtracking',
-            name='video_watch_duration',
-            field=models.IntegerField(default=0, help_text='Duration watched in seconds'),
+            model_name="emailtracking",
+            name="video_watch_duration",
+            field=models.IntegerField(default=0, help_text="Duration watched in seconds"),
         ),
     ]

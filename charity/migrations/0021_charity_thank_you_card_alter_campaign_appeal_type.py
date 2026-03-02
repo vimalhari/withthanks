@@ -4,20 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0020_donationbatch_media_type_donationbatch_text_template_and_more'),
+        ("charity", "0020_donationbatch_media_type_donationbatch_text_template_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='thank_you_card',
-            field=models.ImageField(blank=True, null=True, upload_to='thank_you_cards/'),
+            model_name="charity",
+            name="thank_you_card",
+            field=models.ImageField(blank=True, null=True, upload_to="thank_you_cards/"),
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='appeal_type',
-            field=models.CharField(choices=[('Donation', 'Donation'), ('Raffle', 'Raffle'), ('WithThanks', 'WithThanks'), ('Marketing', 'Marketing')], default='Donation', max_length=20),
+            model_name="campaign",
+            name="appeal_type",
+            field=models.CharField(
+                choices=[
+                    ("Donation", "Donation"),
+                    ("Raffle", "Raffle"),
+                    ("WithThanks", "WithThanks"),
+                    ("Marketing", "Marketing"),
+                ],
+                default="Donation",
+                max_length=20,
+            ),
         ),
     ]

@@ -5,34 +5,52 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0016_charity_gdpr_compliant_donationbatch_charity_and_more'),
+        ("charity", "0016_charity_gdpr_compliant_donationbatch_charity_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='receivedemail',
-            name='charity',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='received_emails', to='charity.charity'),
+            model_name="receivedemail",
+            name="charity",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="received_emails",
+                to="charity.charity",
+            ),
         ),
         migrations.AddField(
-            model_name='unsubscribeduser',
-            name='charity',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='unsubscribes', to='charity.charity'),
+            model_name="unsubscribeduser",
+            name="charity",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="unsubscribes",
+                to="charity.charity",
+            ),
         ),
         migrations.AlterField(
-            model_name='unsubscribeduser',
-            name='email',
+            model_name="unsubscribeduser",
+            name="email",
             field=models.EmailField(max_length=254),
         ),
         migrations.AlterField(
-            model_name='unsubscribeduser',
-            name='unsubscribed_from_job',
-            field=models.ForeignKey(blank=True, help_text='The donation job that triggered this unsubscribe', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='unsubscribes_triggered', to='charity.donationjob'),
+            model_name="unsubscribeduser",
+            name="unsubscribed_from_job",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="The donation job that triggered this unsubscribe",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="unsubscribes_triggered",
+                to="charity.donationjob",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='unsubscribeduser',
-            unique_together={('charity', 'email')},
+            name="unsubscribeduser",
+            unique_together={("charity", "email")},
         ),
     ]

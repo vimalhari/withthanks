@@ -5,38 +5,99 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0031_charity_gratitude_card'),
+        ("charity", "0031_charity_gratitude_card"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='campaign',
-            name='appeal_type',
-            field=models.CharField(choices=[('WithThanks', 'WithThanks'), ('VDM', 'VDM')], default='WithThanks', max_length=20),
+            model_name="campaign",
+            name="appeal_type",
+            field=models.CharField(
+                choices=[("WithThanks", "WithThanks"), ("VDM", "VDM")],
+                default="WithThanks",
+                max_length=20,
+            ),
         ),
         migrations.CreateModel(
-            name='EmailTracking',
+            name="EmailTracking",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('user_id', models.IntegerField(blank=True, help_text='Mapped to DonationJob ID for backwards compatibility URL params', null=True)),
-                ('appeal_type', models.CharField(choices=[('WithThanks', 'WithThanks'), ('VDM', 'VDM')], default='WithThanks', max_length=20)),
-                ('sent', models.BooleanField(default=True)),
-                ('opened', models.BooleanField(default=False)),
-                ('clicked', models.BooleanField(default=False)),
-                ('unsubscribed', models.BooleanField(default=False)),
-                ('vdm', models.BooleanField(default=False, help_text='If True, this user is flagged as Do Not Disturb/VDM Blocked')),
-                ('failed', models.BooleanField(default=False)),
-                ('open_time', models.DateTimeField(blank=True, null=True)),
-                ('click_time', models.DateTimeField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('batch', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='email_tracks', to='charity.donationbatch')),
-                ('campaign', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='email_tracks', to='charity.campaign')),
-                ('job', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='email_tracks', to='charity.donationjob')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "user_id",
+                    models.IntegerField(
+                        blank=True,
+                        help_text="Mapped to DonationJob ID for backwards compatibility URL params",
+                        null=True,
+                    ),
+                ),
+                (
+                    "appeal_type",
+                    models.CharField(
+                        choices=[("WithThanks", "WithThanks"), ("VDM", "VDM")],
+                        default="WithThanks",
+                        max_length=20,
+                    ),
+                ),
+                ("sent", models.BooleanField(default=True)),
+                ("opened", models.BooleanField(default=False)),
+                ("clicked", models.BooleanField(default=False)),
+                ("unsubscribed", models.BooleanField(default=False)),
+                (
+                    "vdm",
+                    models.BooleanField(
+                        default=False,
+                        help_text="If True, this user is flagged as Do Not Disturb/VDM Blocked",
+                    ),
+                ),
+                ("failed", models.BooleanField(default=False)),
+                ("open_time", models.DateTimeField(blank=True, null=True)),
+                ("click_time", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "batch",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="email_tracks",
+                        to="charity.donationbatch",
+                    ),
+                ),
+                (
+                    "campaign",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="email_tracks",
+                        to="charity.campaign",
+                    ),
+                ),
+                (
+                    "job",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="email_tracks",
+                        to="charity.donationjob",
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(fields=['campaign', 'batch'], name='charity_ema_campaig_c2e593_idx'), models.Index(fields=['job'], name='charity_ema_job_id_302feb_idx'), models.Index(fields=['appeal_type'], name='charity_ema_appeal__5c97b5_idx')],
+                "indexes": [
+                    models.Index(
+                        fields=["campaign", "batch"], name="charity_ema_campaig_c2e593_idx"
+                    ),
+                    models.Index(fields=["job"], name="charity_ema_job_id_302feb_idx"),
+                    models.Index(fields=["appeal_type"], name="charity_ema_appeal__5c97b5_idx"),
+                ],
             },
         ),
     ]

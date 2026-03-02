@@ -2,82 +2,78 @@
 {% load static %}
 
 {% block title %}Edit Client - {{ client.client_name }}{% endblock %}
-
 {% block breadcrumb_parent %}Clients{% endblock %}
 {% block breadcrumb_child %}Edit Settings{% endblock %}
 
 {% block page_content %}
-<div style="max-width: 800px; margin: 0 auto;">
+<div class="max-w-[800px] mx-auto">
     <!-- Page Header -->
-    <div style="margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div>
-            <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); margin: 0 0 8px 0; letter-spacing: -0.02em;">Client Settings</h1>
-            <p style="color: var(--text-muted); font-size: 15px; margin: 0; font-weight: 500;">Configure profile, media defaults, and voiceover settings for <strong>{{ client.client_name }}</strong>.</p>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Client Settings</h1>
+            <p class="text-gray-400 text-[15px] font-medium">Configure profile, media defaults, and voiceover settings for <strong>{{ client.client_name }}</strong>.</p>
         </div>
-        <a href="{% url 'clients' %}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i>
-            Back to List
+        <a href="{% url 'clients' %}" class="btn-secondary">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to List
         </a>
     </div>
 
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
-        
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="space-y-6">
             <!-- Profile Identity -->
-            <div class="saas-card" style="padding: 32px;">
-                <h4 style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 24px; border-bottom: 1px solid var(--primary-accent); padding-bottom: 8px;">
-                    <i class="bi bi-person-badge-fill" style="margin-right: 8px;"></i> Client Identity
-                </h4>
-                
-                <div style="display: flex; flex-direction: column; gap: 20px;">
-                    <div class="grid-2">
-                        <div>
-                            <label class="saas-label">Legal Client Name <span style="color: var(--status-failed);">*</span></label>
-                            <input type="text" name="client_name" class="saas-input" value="{{ client.client_name }}" required>
-                        </div>
-                        <div>
-                            <label class="saas-label">Administrative Email <span style="color: var(--status-failed);">*</span></label>
-                            <input type="email" name="contact_email" class="saas-input" value="{{ client.contact_email }}" required>
-                        </div>
-                    </div>
-
-                    <div class="grid-2">
-                        <div>
-                            <label class="saas-label">Contact Phone Number</label>
-                            <input type="text" name="contact_phone" class="saas-input" value="{{ client.contact_phone|default:'' }}" placeholder="e.g. +44 123 456 7890">
-                        </div>
-                        <div>
-                            <label class="saas-label">Company Number Field</label>
-                            <input type="text" name="company_number" class="saas-input" value="{{ client.company_number|default:'' }}" placeholder="e.g. 12345678">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="saas-label">Public Organization Name <span style="color: var(--status-failed);">*</span></label>
-                        <input type="text" name="organization_name" class="saas-input" value="{{ client.organization_name }}" placeholder="Visible in scripts and signatures" required>
-                    </div>
-
-                    <!-- Address Section -->
-                    <div style="margin-top: 8px;">
-                        <h4 style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">Address Details</h4>
-                        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="text-[11px] font-bold text-brand uppercase tracking-wider mb-6 pb-2 border-b border-brand-light flex items-center gap-2">
+                        <i data-lucide="user-circle" class="w-3.5 h-3.5 opacity-50"></i> Client Identity
+                    </h4>
+                    <div class="space-y-5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>
-                                <label class="saas-label">Address Line 1</label>
-                                <input type="text" name="address_line_1" class="saas-input" value="{{ client.address_line_1|default:'' }}" placeholder="Street address">
+                                <label class="form-label">Legal Client Name <span class="text-red-500">*</span></label>
+                                <input type="text" name="client_name" class="form-input" value="{{ client.client_name }}" required>
                             </div>
                             <div>
-                                <label class="saas-label">Address Line 2</label>
-                                <input type="text" name="address_line_2" class="saas-input" value="{{ client.address_line_2|default:'' }}" placeholder="Apartment, suite, unit, etc. (optional)">
+                                <label class="form-label">Administrative Email <span class="text-red-500">*</span></label>
+                                <input type="email" name="contact_email" class="form-input" value="{{ client.contact_email }}" required>
                             </div>
-                            <div class="grid-2">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div>
+                                <label class="form-label">Contact Phone</label>
+                                <input type="text" name="contact_phone" class="form-input" value="{{ client.contact_phone|default:'' }}" placeholder="e.g. +44 123 456 7890">
+                            </div>
+                            <div>
+                                <label class="form-label">Company Number</label>
+                                <input type="text" name="company_number" class="form-input" value="{{ client.company_number|default:'' }}" placeholder="e.g. 12345678">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Public Organization Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="organization_name" class="form-input" value="{{ client.organization_name }}" placeholder="Visible in scripts and signatures" required>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="mt-2">
+                            <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-4 pb-1.5 border-b border-gray-100">Address Details</h4>
+                            <div class="space-y-4">
                                 <div>
-                                    <label class="saas-label">County</label>
-                                    <input type="text" name="county" class="saas-input" value="{{ client.county|default:'' }}" placeholder="County/Region">
+                                    <label class="form-label">Address Line 1</label>
+                                    <input type="text" name="address_line_1" class="form-input" value="{{ client.address_line_1|default:'' }}" placeholder="Street address">
                                 </div>
                                 <div>
-                                    <label class="saas-label">Postcode</label>
-                                    <input type="text" name="postcode" class="saas-input" value="{{ client.postcode|default:'' }}" placeholder="Postal code">
+                                    <label class="form-label">Address Line 2</label>
+                                    <input type="text" name="address_line_2" class="form-input" value="{{ client.address_line_2|default:'' }}" placeholder="Apartment, suite, unit, etc.">
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="form-label">County</label>
+                                        <input type="text" name="county" class="form-input" value="{{ client.county|default:'' }}" placeholder="County/Region">
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Postcode</label>
+                                        <input type="text" name="postcode" class="form-input" value="{{ client.postcode|default:'' }}" placeholder="Postal code">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -86,100 +82,69 @@
             </div>
 
             <!-- Media & Voice Defaults -->
-            <div class="saas-card" style="padding: 32px;">
-                <h4 style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 24px; border-bottom: 1px solid var(--primary-accent); padding-bottom: 8px;">
-                    <i class="bi bi-play-circle-fill" style="margin-right: 8px;"></i> Media & Voiceover Defaults
-                </h4>
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="text-[11px] font-bold text-brand uppercase tracking-wider mb-6 pb-2 border-b border-brand-light flex items-center gap-2">
+                        <i data-lucide="play-circle" class="w-3.5 h-3.5 opacity-50"></i> Media & Voiceover Defaults
+                    </h4>
 
-                <!-- Integration Section -->
-                <div style="padding: 24px; background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 24px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="width: 32px; height: 32px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;">
-                                <img src="https://www.blackbaud.com/favicon.ico" alt="Blackbaud" style="width: 16px; height: 16px;">
+                    <!-- Blackbaud Integration -->
+                    <div class="p-6 bg-gray-50 border border-gray-200 rounded-xl mb-6" x-data="{ bbEnabled: {{ client.blackbaud_enabled|yesno:'true,false' }} }">
+                        <div class="flex items-center justify-between mb-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                                    <img src="https://www.blackbaud.com/favicon.ico" alt="Blackbaud" class="w-4 h-4">
+                                </div>
+                                <h4 class="text-sm font-bold text-gray-900">Blackbaud Raiser's Edge Integration</h4>
                             </div>
-                            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-headings); margin: 0;">Blackbaud Raiser's Edge Integration</h4>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="blackbaud_enabled" x-model="bbEnabled" class="form-checkbox accent-brand w-4 h-4">
+                                <span class="text-xs font-bold text-gray-400">Enable</span>
+                            </label>
                         </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="blackbaud_enabled" id="bb_enabled_edit" {% if client.blackbaud_enabled %}checked{% endif %}>
-                            <label class="form-check-label small fw-bold" for="bb_enabled_edit" style="color: var(--text-muted); margin-left: 8px;">Enable Integration</label>
-                        </div>
-                    </div>
-
-                    <div id="blackbaud_fields_edit" style="{% if not client.blackbaud_enabled %}display: none;{% else %}display: flex;{% endif %} flex-direction: column; gap: 16px; animation: slideDown 0.3s ease-out;">
-                        <div>
-                            <label class="saas-label">Application ID (OAuth client_id)</label>
-                            <input type="text" name="blackbaud_client_id" class="saas-input" value="{{ client.blackbaud_client_id|default:'' }}" placeholder="Enter your Blackbaud Client ID">
-                        </div>
-                        <div>
-                            <label class="saas-label">Application Secret (OAuth client_secret)</label>
-                            <input type="password" name="blackbaud_client_secret" class="saas-input" value="{{ client.blackbaud_client_secret|default:'' }}" placeholder="Enter your Blackbaud Client Secret">
-                        </div>
-                        <div style="font-size: 11px; color: var(--text-muted); background: #f1f5f9; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
-                            <i class="bi bi-info-circle-fill" style="color: var(--primary);"></i>
-                            Credentials are encrypted at rest and used only for SKY API communication.
+                        <div x-show="bbEnabled" x-cloak class="space-y-4">
+                            <div>
+                                <label class="form-label">Application ID (client_id)</label>
+                                <input type="text" name="blackbaud_client_id" class="form-input" value="{{ client.blackbaud_client_id|default:'' }}" placeholder="Blackbaud Client ID">
+                            </div>
+                            <div>
+                                <label class="form-label">Application Secret (client_secret)</label>
+                                <input type="password" name="blackbaud_client_secret" class="form-input" value="{{ client.blackbaud_client_secret|default:'' }}" placeholder="Blackbaud Client Secret">
+                            </div>
+                            <div class="text-[11px] text-gray-400 bg-gray-100 p-3 rounded-lg flex items-center gap-2">
+                                <i data-lucide="info" class="w-3.5 h-3.5 text-brand shrink-0"></i>
+                                Credentials are encrypted at rest and used only for SKY API communication.
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <script>
-                    document.getElementById('bb_enabled_edit').addEventListener('change', function() {
-                        const fields = document.getElementById('blackbaud_fields_edit');
-                        fields.style.display = this.checked ? 'flex' : 'none';
-                    });
-                </script>
-
-                <div style="padding: 16px; background: var(--bg-hover); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-                    <p style="font-size: 13px; color: var(--text-muted); margin: 0; display: flex; align-items: center; gap: 10px;">
-                        <i class="bi bi-info-circle" style="color: var(--primary);"></i>
-                        Media assets, Voice IDs, and Scripts are now managed exclusively at the <strong>Campaign level</strong>.
-                    </p>
+                    <div class="p-4 bg-gray-100 border border-dashed border-gray-200 rounded-xl">
+                        <p class="text-[13px] text-gray-400 flex items-center gap-2.5">
+                            <i data-lucide="info" class="w-4 h-4 text-brand shrink-0"></i>
+                            Media assets, Voice IDs, and Scripts are now managed exclusively at the <strong class="text-gray-700">Campaign level</strong>.
+                        </p>
+                    </div>
                 </div>
             </div>
 
             <!-- Submit Section -->
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 32px; background: white; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);">
-                <div style="display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 13px; font-weight: 500;">
-                    <i class="bi bi-info-circle-fill" style="color: var(--primary);"></i>
-                    Changes apply immediately to new campaigns.
-                </div>
-                <div style="display: flex; gap: 12px;">
-                    <a href="{% url 'clients' %}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary" style="padding: 10px 32px;">
-                        <i class="bi bi-check-lg" style="font-size: 18px;"></i>
-                        Save Updates
-                    </button>
+            <div class="card">
+                <div class="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 text-[13px] text-gray-400 font-medium">
+                        <i data-lucide="info" class="w-4 h-4 text-brand shrink-0"></i>
+                        Changes apply immediately to new campaigns.
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="{% url 'clients' %}" class="btn-secondary">Cancel</a>
+                        <button type="submit" class="btn-primary px-8">
+                            <i data-lucide="check" class="w-4 h-4"></i> Save Updates
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </form>
 </div>
 
-<style>
-.placeholder-tag {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 6px 10px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--primary);
-    cursor: default;
-}
-
-.placeholder-tag:hover {
-    background: var(--primary-accent);
-    border-color: var(--primary);
-}
-
-.saas-card h4 i {
-    opacity: 0.5;
-}
-
-@keyframes pulse {
-    0% { transform: scale(0.95); opacity: 0.5; }
-    50% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(0.95); opacity: 0.5; }
-}
-</style>
+<style>[x-cloak] { display: none !important; }</style>
 {% endblock %}

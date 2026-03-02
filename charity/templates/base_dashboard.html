@@ -1,351 +1,85 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Dashboard{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            --sidebar-width: 240px;
-            --bg-color: #ffffff;
-            --text-color: #111111;
-            --muted-color: #666666;
-            --border-color: #eaeaea;
-            --hover-color: #f5f5f5;
-            --sidebar-bg: #ffffff;
-            --accent-color: #000000; /* Black for primary actions in Resend style */
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --font-weight-body: 500; /* "Light fat" / Medium */
-        }
-
-        body {
-            font-family: var(--font-family);
-            font-weight: var(--font-weight-body);
-            color: var(--text-color);
-            background-color: var(--bg-color);
-            overflow-x: hidden;
-            font-size: 14px;
-        }
-
-        /* Sidebar Styling */
-        .sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            padding: 24px 16px;
-            display: flex;
-            flex-direction: column;
-            z-index: 1000;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            margin-bottom: 24px;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-        .user-profile:hover {
-            background-color: var(--hover-color);
-        }
-        .user-avatar {
-            width: 24px;
-            height: 24px;
-            background-color: #333;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            margin-right: 10px;
-        }
-
-        .nav-group {
-            margin-bottom: 24px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            color: var(--muted-color);
-            text-decoration: none;
-            border-radius: 6px;
-            margin-bottom: 2px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .nav-item:hover {
-            background-color: var(--hover-color);
-            color: var(--text-color);
-        }
-
-        .nav-item.active {
-            background-color: var(--hover-color);
-            color: var(--text-color);
-        }
-
-        .nav-item i {
-            margin-right: 12px;
-            font-size: 16px;
-            width: 16px; 
-            text-align: center;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 40px 60px;
-            min-height: 100vh;
-        }
-
-        /* Utility Classes for Resend Look */
-        .page-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 24px;
-        }
-
-        .btn-resend {
-            background-color: #000;
-            color: #fff;
-            border: 1px solid #000;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-            transition: opacity 0.2s;
-        }
-        .btn-resend:hover {
-            opacity: 0.8;
-            color: #fff;
-        }
-
-        .btn-resend-outline {
-            background-color: transparent;
-            color: #333;
-            border: 1px solid #ddd;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-        .btn-resend-outline:hover {
-            background-color: #f5f5f5;
-            color: #111;
-        }
-
-        /* Table Resend Style */
-        .table-custom {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .table-custom th {
-            text-align: left;
-            font-weight: 500;
-            color: var(--muted-color);
-            font-size: 12px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            background: #fafafa;
-        }
-        .table-custom td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-color);
-            font-size: 13px;
-            vertical-align: middle;
-        }
-        .table-custom tr:last-child td {
-            border-bottom: none;
-        }
-        .table-custom tr:hover td {
-            background-color: #fafafa;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        .status-success {
-            background-color: #ecfdf5;
-            color: #047857;
-        }
-        .status-pending {
-            background-color: #eff6ff;
-            color: #1d4ed8;
-        }
-        .status-failed {
-            background-color: #fef2f2;
-            color: #b91c1c;
-        }
-        .status-skipped {
-            background-color: #f3f4f6;
-            color: #374151;
-        }
-
-        /* Tabs */
-        .nav-tabs-custom {
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 24px;
-        }
-        .nav-tabs-custom .nav-link {
-            border: none;
-            color: var(--muted-color);
-            padding: 8px 16px;
-            font-weight: 500;
-            background: transparent;
-            margin-bottom: -1px;
-            border-bottom: 2px solid transparent;
-        }
-        .nav-tabs-custom .nav-link.active {
-            color: var(--text-color);
-            border-bottom: 2px solid #000;
-        }
-        .nav-tabs-custom .nav-link:hover {
-            color: var(--text-color);
-        }
-
-        /* Filter Bar */
-        .filter-bar {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            background: #f9f9f9;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-        .filter-input {
-            border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            outline: none;
-            min-width: 200px;
-        }
-        .filter-select {
-            border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            outline: none;
-            background-color: white;
-            color: var(--text-color);
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #ccc; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #999; 
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="text-gray-900 bg-white text-sm font-[Inter,system-ui,sans-serif] font-medium" x-data="{ sidebarOpen: true }">
 
     <!-- Sidebar -->
-    <div class="sidebar">
-        <!-- User Profile Dropdown Placeholder -->
-        <div class="dropdown mb-4">
-            <div class="user-profile" data-bs-toggle="dropdown" aria-expanded="false">
-                <div class="user-avatar">
+    <aside class="w-60 h-screen fixed top-0 left-0 bg-white border-r border-gray-200 px-4 py-6 flex flex-col z-50">
+        <!-- User Dropdown -->
+        <div class="mb-6" x-data="{ open: false }">
+            <button class="flex items-center gap-2.5 px-3 py-2 rounded-md w-full hover:bg-gray-100 transition" @click="open = !open">
+                <div class="w-6 h-6 bg-gray-800 text-white rounded-full flex items-center justify-center text-[10px]">
                     {{ user.username|slice:":1"|upper }}
                 </div>
-                <div style="font-weight: 500; font-size: 13px;">
-                    {{ user.username }}
-                </div>
-                <i class="bi bi-chevron-down ms-auto" style="font-size: 10px; color: #999;"></i>
+                <span class="text-[13px] font-medium">{{ user.username }}</span>
+                <i data-lucide="chevron-down" class="w-3 h-3 ml-auto text-gray-400"></i>
+            </button>
+            <div x-show="open" @click.away="open = false" x-transition class="dropdown-menu mt-1 min-w-[220px]">
+                <a class="dropdown-item" href="{% url 'profile' %}"><i data-lucide="user" class="w-4 h-4 mr-2 inline"></i> My profile</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item !text-red-600" href="{% url 'logout' %}"><i data-lucide="log-out" class="w-4 h-4 mr-2 inline"></i> Log out</a>
             </div>
-            <ul class="dropdown-menu shadow-sm" style="border: 1px solid #eaeaea; min-width: 220px;">
-                <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person me-2"></i> My profile</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i> Log out</a></li>
-            </ul>
         </div>
 
-        <nav class="nav flex-column">
-            <div class="nav-group">
-                <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'charity_home' %}active{% endif %}">
-                    <i class="bi bi-envelope"></i> Emails
+        <nav class="flex flex-col flex-1">
+            <div class="space-y-0.5 mb-6">
+                <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'charity_home' %}active{% endif %}">
+                    <i data-lucide="mail" class="w-4 h-4"></i> Emails
                 </a>
-                <a href="{% url 'admin_campaigns' %}" class="nav-item {% if 'campaigns' in request.path %}active{% endif %}">
-                    <i class="bi bi-megaphone"></i> Campaigns
+                <a href="{% url 'admin_campaigns' %}" class="nav-link {% if 'campaigns' in request.path %}active{% endif %}">
+                    <i data-lucide="megaphone" class="w-4 h-4"></i> Campaigns
                 </a>
-                <a href="{% url 'analytics_unified' %}" class="nav-item {% if '/analytics/unified/' in request.path %}active{% endif %}">
-
-                    <i class="bi bi-receipt"></i> Reports
+                <a href="{% url 'analytics_unified' %}" class="nav-link {% if '/analytics/unified/' in request.path %}active{% endif %}">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Reports
                 </a>
-                <a href="{% url 'invoices' %}" class="nav-item {% if request.resolver_match.url_name == 'invoices' %}active{% endif %}">
-                    <i class="bi bi-cash-coin"></i> Invoices
+                <a href="{% url 'invoices' %}" class="nav-link {% if request.resolver_match.url_name == 'invoices' %}active{% endif %}">
+                    <i data-lucide="wallet" class="w-4 h-4"></i> Invoices
                 </a>
-                <a href="#" class="nav-item disabled-link">
-                    <i class="bi bi-file-earmark-text"></i> Templates
-                </a>
-            </div>
-
-            <div class="nav-group">
-                <a href="#" class="nav-item disabled-link">
-                    <i class="bi bi-people"></i> Audience
-                </a>
-                <a href="#" class="nav-item disabled-link">
-                    <i class="bi bi-bar-chart"></i> Metrics
-                </a>
-                 <a href="{% url 'logs' %}" class="nav-item {% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
-                    <i class="bi bi-terminal"></i> Logs
+                <a href="#" class="nav-link opacity-40 cursor-not-allowed">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Templates
                 </a>
             </div>
 
-             <div class="nav-group">
-                 <a href="{% url 'client_setup' %}" class="nav-item {% if request.resolver_match.url_name == 'client_setup' %}active{% endif %}">
-                    <i class="bi bi-gear"></i> Client Setup
+            <div class="space-y-0.5 mb-6">
+                <a href="#" class="nav-link opacity-40 cursor-not-allowed">
+                    <i data-lucide="users" class="w-4 h-4"></i> Audience
+                </a>
+                <a href="#" class="nav-link opacity-40 cursor-not-allowed">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Metrics
+                </a>
+                <a href="{% url 'logs' %}" class="nav-link {% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
+                    <i data-lucide="terminal" class="w-4 h-4"></i> Logs
+                </a>
+            </div>
+
+            <div class="space-y-0.5 mb-6">
+                <a href="{% url 'client_setup' %}" class="nav-link {% if request.resolver_match.url_name == 'client_setup' %}active{% endif %}">
+                    <i data-lucide="settings" class="w-4 h-4"></i> Client Setup
                 </a>
             </div>
             
-             <a href="{% url 'logout' %}" class="nav-item mt-auto text-danger">
-                <i class="bi bi-box-arrow-right"></i> Logout
+            <a href="{% url 'logout' %}" class="nav-link !text-red-600 mt-auto">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Logout
             </a>
         </nav>
-    </div>
+    </aside>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="ml-60 min-h-screen px-15 py-10">
         {% if messages %}
-        <div class="container-fluid mt-3">
+        <div class="mb-4">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert-{{ message.tags }} mb-2">
                 {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             {% endfor %}
         </div>
@@ -355,7 +89,7 @@
         {% endblock %}
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>lucide.createIcons();</script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

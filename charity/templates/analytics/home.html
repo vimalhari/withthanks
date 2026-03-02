@@ -5,230 +5,141 @@
 {% block breadcrumb_parent %}Analytics{% endblock %}
 {% block breadcrumb_child %}Home{% endblock %}
 
-{% block layout_head %}
-<style>
-    .analytics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-        margin-top: 32px;
-    }
-
-    .report-card {
-        background: #ffffff;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 24px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        cursor: pointer;
-        text-decoration: none;
-        color: inherit;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .report-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--primary);
-    }
-
-    .report-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: var(--primary);
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-
-    .report-card:hover::before {
-        opacity: 1;
-    }
-
-    .report-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background: var(--bg-hover);
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-    }
-
-    .report-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--text-headings);
-        margin: 0;
-    }
-
-    .report-desc {
-        font-size: 14px;
-        color: var(--text-muted);
-        line-height: 1.5;
-        margin: 0;
-    }
-
-    .card-footer {
-        margin-top: auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--primary);
-    }
-
-    .hero-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px;
-        margin-bottom: 40px;
-    }
-
-    .stat-box {
-        background: var(--bg-hover);
-        border-radius: 16px;
-        padding: 24px;
-        border: 1px solid var(--border);
-    }
-
-    .stat-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-
-    .stat-value {
-        font-size: 32px;
-        font-weight: 800;
-        color: var(--text-headings);
-    }
-</style>
-{% endblock %}
-
 {% block page_content %}
-<div class="analytics-container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 style="font-size: 28px; font-weight: 800; color: var(--text-headings); margin-bottom: 8px;">Analytics & Reports</h1>
-            <p style="color: var(--text-muted); font-size: 15px;">Enterprise-grade tracking and engagement insights</p>
-        </div>
-        <div class="d-flex gap-3">
-            <select class="form-select" style="width: 200px; border-radius: 12px; height: 44px;">
-                <option value="30">Last 30 Days</option>
-                <option value="7">Last 7 Days</option>
-                <option value="90">Last 90 Days</option>
-            </select>
-        </div>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Analytics & Reports</h1>
+        <p class="text-gray-400 text-base">Enterprise-grade tracking and engagement insights</p>
     </div>
+    <select class="form-select w-[200px]">
+        <option value="30">Last 30 Days</option>
+        <option value="7">Last 7 Days</option>
+        <option value="90">Last 90 Days</option>
+    </select>
+</div>
 
-    <!-- Quick Insights -->
-    <div class="hero-stats">
-        <div class="stat-box">
-            <div class="stat-label">Total Emails Sent</div>
-            <div class="stat-value">{{ stats.total_sent }}</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-label">Total Opens</div>
-            <div class="stat-value text-primary">{{ stats.total_opened }}</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-label">Video Plays</div>
-            <div class="stat-value text-success">{{ stats.total_plays }}</div>
-        </div>
+<!-- Quick Insights -->
+<div class="grid grid-cols-3 gap-6 mb-10">
+    <div class="stat-card">
+        <div class="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Total Emails Sent</div>
+        <div class="text-3xl font-extrabold text-gray-900">{{ stats.total_sent }}</div>
     </div>
+    <div class="stat-card">
+        <div class="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Total Opens</div>
+        <div class="text-3xl font-extrabold text-brand">{{ stats.total_opened }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Video Plays</div>
+        <div class="text-3xl font-extrabold text-emerald-600">{{ stats.total_plays }}</div>
+    </div>
+</div>
 
-    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Select Report</h2>
+<h2 class="text-xl font-bold text-gray-900 mb-6">Select Report</h2>
 
-    <div class="analytics-grid">
-        <!-- Video Engagement -->
-        <a href="{% url 'analytics_video' %}" class="report-card">
-            <div class="report-icon"><i class="bi bi-play-btn"></i></div>
-            <h3 class="report-title">Video Engagement Report</h3>
-            <p class="report-desc">Analyze completion funnels, play rates, and viewer retention across your video campaigns.</p>
-            <div class="card-footer">
-                <span>View Dashboard</span>
-                <i class="bi bi-arrow-right"></i>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <a href="{% url 'analytics_video' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="play" class="w-6 h-6"></i>
             </div>
-        </a>
-
-        <!-- Delivery & Bounce -->
-        <a href="{% url 'analytics_delivery' %}" class="report-card">
-            <div class="report-icon"><i class="bi bi-mailbox"></i></div>
-            <h3 class="report-title">Delivery & Bounce Report</h3>
-            <p class="report-desc">Track email deliverability, bounce reasons, and provider response codes in real-time.</p>
-            <div class="card-footer">
+            <h3 class="text-lg font-bold text-gray-900">Video Engagement Report</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Analyze completion funnels, play rates, and viewer retention across your video campaigns.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
                 <span>View Dashboard</span>
-                <i class="bi bi-arrow-right"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </div>
-        </a>
+        </div>
+    </a>
 
-        <!-- Watch Duration -->
-        <a href="{% url 'analytics_video' %}" class="report-card">
-            <div class="report-icon"><i class="bi bi-clock-history"></i></div>
-            <h3 class="report-title">Watch Duration Report</h3>
-            <p class="report-desc">Deep dive into how long viewers stay engaged and average completion percentages.</p>
-            <div class="card-footer">
+    <a href="{% url 'analytics_delivery' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="mailbox" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Delivery & Bounce Report</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Track email deliverability, bounce reasons, and provider response codes in real-time.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
                 <span>View Dashboard</span>
-                <i class="bi bi-arrow-right"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </div>
-        </a>
+        </div>
+    </a>
 
-        <!-- Campaign Performance -->
-        <a href="{% url 'analytics_campaigns' %}" class="report-card">
-            <div class="report-icon"><i class="bi bi-megaphone"></i></div>
-            <h3 class="report-title">Campaign Performance</h3>
-            <p class="report-desc">Compare different campaigns to identify top-performing content and delivery strategies.</p>
-            <div class="card-footer">
+    <a href="{% url 'analytics_video' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="clock" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Watch Duration Report</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Deep dive into how long viewers stay engaged and average completion percentages.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
                 <span>View Dashboard</span>
-                <i class="bi bi-arrow-right"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </div>
-        </a>
+        </div>
+    </a>
 
-        <!-- User Engagement -->
-        <a href="{% url 'analytics_video' %}" class="report-card">
-            <div class="report-icon"><i class="bi bi-person-check"></i></div>
-            <h3 class="report-title">User Engagement Report</h3>
-            <p class="report-desc">Individual behavior tracking, repeat views, and click-through analysis per recipient.</p>
-            <div class="card-footer">
+    <a href="{% url 'analytics_campaigns' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="megaphone" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Campaign Performance</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Compare different campaigns to identify top-performing content and delivery strategies.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
                 <span>View Dashboard</span>
-                <i class="bi bi-arrow-right"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </div>
-        </a>
+        </div>
+    </a>
 
-        <!-- Failure & Error -->
-        <a href="{% url 'analytics_delivery' %}" class="report-card">
-            <div class="report-icon"><i class="bi bi-exclamation-triangle"></i></div>
-            <h3 class="report-title">Failure & Error Report</h3>
-            <p class="report-desc">Consolidated view of all video generation and delivery failures with detailed error logs.</p>
-            <div class="card-footer">
+    <a href="{% url 'analytics_video' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="user-check" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">User Engagement Report</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Individual behavior tracking, repeat views, and click-through analysis per recipient.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
                 <span>View Dashboard</span>
-                <i class="bi bi-arrow-right"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </div>
-        </a>
+        </div>
+    </a>
 
-        <!-- Executive Overview -->
-        <a href="{% url 'analytics_advanced' %}" class="report-card" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
-            <div class="report-icon" style="background: var(--bg-hover); color: var(--primary);"><i class="bi bi-shield-lock"></i></div>
-            <h3 class="report-title">Executive Overview</h3>
-            <p class="report-desc">Advanced high-level summary dashboards powered by Metabase BI for stakeholders.</p>
-            <div class="card-footer">
+    <a href="{% url 'analytics_delivery' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Failure & Error Report</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Consolidated view of all video generation and delivery failures with detailed error logs.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
+                <span>View Dashboard</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+        </div>
+    </a>
+
+    <a href="{% url 'analytics_advanced' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden bg-gradient-to-br from-white to-gray-50">
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
+                <i data-lucide="shield" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Executive Overview</h3>
+            <p class="text-sm text-gray-400 leading-relaxed">Advanced high-level summary dashboards powered by Metabase BI for stakeholders.</p>
+            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
                 <span>Open Advanced Module</span>
-                <i class="bi bi-arrow-right"></i>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </div>
-        </a>
-    </div>
+        </div>
+    </a>
 </div>
 {% endblock %}

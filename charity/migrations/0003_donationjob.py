@@ -4,24 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0002_charity_user_texttemplate_videotemplate'),
+        ("charity", "0002_charity_user_texttemplate_videotemplate"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DonationJob',
+            name="DonationJob",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=120)),
-                ('amount', models.CharField(max_length=50)),
-                ('email', models.EmailField(max_length=254)),
-                ('status', models.CharField(default='pending', max_length=20)),
-                ('video_path', models.TextField(blank=True, null=True)),
-                ('error_message', models.TextField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("name", models.CharField(max_length=120)),
+                ("amount", models.CharField(max_length=50)),
+                ("email", models.EmailField(max_length=254)),
+                ("status", models.CharField(default="pending", max_length=20)),
+                ("video_path", models.TextField(blank=True, null=True)),
+                ("error_message", models.TextField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
         ),
     ]

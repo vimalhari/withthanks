@@ -3,18 +3,18 @@ Cloudflare Stream integration.
 
 After FFmpeg generates a personalised video on disk, call
 ``upload_video_to_stream`` to push it to Cloudflare Stream and receive a
-hosted playback URL plus auto-generated thumbnail – both of which are stored
+hosted playback URL plus auto-generated thumbnail - both of which are stored
 on ``VideoSendLog`` and embedded in the donor e-mail instead of attaching
 the raw MP4.
 
 Required environment variables
 --------------------------------
-CLOUDFLARE_ACCOUNT_ID   – your Cloudflare account identifier
-CLOUDFLARE_STREAM_TOKEN – an API token with *Stream:Edit* permissions
+CLOUDFLARE_ACCOUNT_ID   - your Cloudflare account identifier
+CLOUDFLARE_STREAM_TOKEN - an API token with *Stream:Edit* permissions
 
 Optional
 --------
-CLOUDFLARE_STREAM_ENABLED – set to "false" to bypass Stream entirely and
+CLOUDFLARE_STREAM_ENABLED - set to "false" to bypass Stream entirely and
                              fall back to e-mail attachments (default: "true")
 """
 
@@ -41,8 +41,13 @@ class StreamUploadResult:
 
 def _credentials() -> tuple[str, str]:
     from django.conf import settings
-    account_id = getattr(settings, "CLOUDFLARE_ACCOUNT_ID", "") or os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
-    api_token = getattr(settings, "CLOUDFLARE_STREAM_TOKEN", "") or os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
+
+    account_id = getattr(settings, "CLOUDFLARE_ACCOUNT_ID", "") or os.environ.get(
+        "CLOUDFLARE_ACCOUNT_ID", ""
+    )
+    api_token = getattr(settings, "CLOUDFLARE_STREAM_TOKEN", "") or os.environ.get(
+        "CLOUDFLARE_STREAM_TOKEN", ""
+    )
     if not account_id or not api_token:
         raise RuntimeError(
             "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_TOKEN must be set in the environment."

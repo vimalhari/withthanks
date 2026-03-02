@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0022_donationjob_media_type_override'),
+        ("charity", "0022_donationjob_media_type_override"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='donationjob',
-            name='fake_clicks',
+            model_name="donationjob",
+            name="fake_clicks",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='donationjob',
-            name='real_clicks',
+            model_name="donationjob",
+            name="real_clicks",
             field=models.PositiveIntegerField(default=0),
         ),
     ]

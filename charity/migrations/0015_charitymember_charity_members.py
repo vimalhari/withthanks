@@ -6,30 +6,67 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0014_invoice_billing_address_invoice_billing_email_and_more'),
+        ("charity", "0014_invoice_billing_address_invoice_billing_email_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CharityMember',
+            name="CharityMember",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('role', models.CharField(choices=[('Admin', 'Admin'), ('Member', 'Member'), ('Viewer', 'Viewer')], default='Member', max_length=20)),
-                ('status', models.CharField(choices=[('ACTIVE', 'Active'), ('INACTIVE', 'Inactive'), ('PENDING', 'Pending')], default='ACTIVE', max_length=20)),
-                ('joined_at', models.DateTimeField(auto_now_add=True)),
-                ('charity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='charity.charity')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[("Admin", "Admin"), ("Member", "Member"), ("Viewer", "Viewer")],
+                        default="Member",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("ACTIVE", "Active"),
+                            ("INACTIVE", "Inactive"),
+                            ("PENDING", "Pending"),
+                        ],
+                        default="ACTIVE",
+                        max_length=20,
+                    ),
+                ),
+                ("joined_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "charity",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="charity.charity"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('charity', 'user')},
+                "unique_together": {("charity", "user")},
             },
         ),
         migrations.AddField(
-            model_name='charity',
-            name='members',
-            field=models.ManyToManyField(blank=True, related_name='charity_memberships', through='charity.CharityMember', to=settings.AUTH_USER_MODEL),
+            model_name="charity",
+            name="members",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="charity_memberships",
+                through="charity.CharityMember",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

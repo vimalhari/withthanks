@@ -2,1025 +2,432 @@
 {% load static %}
 
 {% block title %}Invoices - WithThanks{% endblock %}
-
 {% block breadcrumb_parent %}Management{% endblock %}
 {% block breadcrumb_child %}Invoices{% endblock %}
 
-{% block layout_head %}
-<style>
-    /* 
-       INVOICE DASHBOARD - STANDALONE PREMIUM CSS 
-       This CSS is designed to work even if Bootstrap is missing from the layout.
-    */
-    :root {
-        --fin-primary: #6366f1;
-        --fin-primary-dark: #4f46e5;
-        --fin-primary-light: #eef2ff;
-        --fin-border: #e2e8f0;
-        --fin-bg-soft: #f8fafc;
-        --fin-text-heading: #0f172a;
-        --fin-text-body: #475569;
-        --fin-text-muted: #94a3b8;
-    }
-
-    /* Table Base Overhaul */
-    table.saas-table {
-        width: 100% !important;
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-        margin: 0 !important;
-        table-layout: fixed !important;
-    }
-
-    table.saas-table thead th {
-        background: var(--fin-bg-soft) !important;
-        color: var(--fin-text-muted) !important;
-        font-weight: 600 !important;
-        font-size: 11px !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
-        padding: 14px 20px !important;
-        border-bottom: 1px solid var(--fin-border) !important;
-        text-align: left !important;
-    }
-
-    table.saas-table tbody td {
-        padding: 16px 20px !important;
-        vertical-align: middle !important;
-        border-bottom: 1px solid #f1f5f9 !important;
-        height: 72px !important;
-        color: var(--fin-text-body) !important;
-        font-size: 14px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        background: #ffffff !important;
-    }
-
-    table.saas-table tbody tr:hover td {
-        background-color: #fcfdfe !important;
-    }
-
-    /* Column Specifics with High Specificity */
-    table.saas-table td:nth-child(1) { width: 12% !important; color: var(--fin-primary) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700 !important; }
-    table.saas-table td:nth-child(2) { width: 18% !important; font-weight: 600 !important; color: var(--fin-text-heading) !important; }
-    table.saas-table td:nth-child(3) { width: 16% !important; color: var(--fin-text-muted) !important; font-size: 13px !important; }
-    table.saas-table td:nth-child(4) { width: 8% !important; text-align: center !important; font-weight: 600 !important; }
-    table.saas-table td:nth-child(5) { width: 8% !important; text-align: center !important; }
-    table.saas-table td:nth-child(6) { width: 10% !important; text-align: right !important; font-weight: 700 !important; color: var(--fin-text-heading) !important; }
-    table.saas-table td:nth-child(7) { width: 10% !important; text-align: center !important; }
-    table.saas-table td:nth-child(8) { width: 10% !important; color: var(--fin-text-muted) !important; font-size: 13px !important; }
-    table.saas-table td:nth-child(9) { width: 8% !important; text-align: right !important; }
-
-    /* Action Icon Row - Horizontal & Pro */
-    .actions-row {
-        display: flex !important;
-        gap: 4px !important;
-        justify-content: flex-end !important;
-        align-items: center !important;
-    }
-
-    .icon-btn {
-        width: 32px !important;
-        height: 32px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        color: #94a3b8 !important;
-        background: transparent !important;
-        border: none !important;
-        border-radius: 8px !important;
-        transition: all 0.2s !important;
-        text-decoration: none !important;
-        padding: 0 !important;
-        cursor: pointer !important;
-    }
-
-    .icon-btn:hover {
-        background: #f1f5f9 !important;
-        color: var(--fin-text-heading) !important;
-    }
-
-    .icon-btn.eye:hover { color: var(--fin-primary) !important; background: var(--fin-primary-light) !important; }
-
-    /* Standalone Dropdown Logic (CSS Only fallback / Clean overrides) */
-    .saas-dropdown {
-        position: relative !important;
-        display: inline-block !important;
-    }
-
-    .saas-dropdown-menu {
-        position: absolute !important;
-        top: 100% !important;
-        right: 0 !important;
-        z-index: 1000 !important;
-        display: none; /* Hidden by default */
-        min-width: 200px !important;
-        padding: 8px !important;
-        margin-top: 4px !important;
-        background-color: #fff !important;
-        border: 1px solid var(--fin-border) !important;
-        border-radius: 12px !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-        list-style: none !important;
-    }
-
-    /* Show dropdown when toggled or focused */
-    .saas-dropdown.is-open .saas-dropdown-menu,
-    .saas-dropdown:focus-within .saas-dropdown-menu {
-        display: block !important;
-    }
-
-    .saas-dropdown-item {
-        display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
-        padding: 10px 12px !important;
-        color: var(--fin-text-body) !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        text-decoration: none !important;
-        border-radius: 8px !important;
-        transition: background 0.2s !important;
-        width: 100% !important;
-        text-align: left !important;
-    }
-
-    .saas-dropdown-item:hover {
-        background-color: #f8fafc !important;
-        color: var(--fin-text-heading) !important;
-    }
-
-    .saas-dropdown-item i {
-        font-size: 16px !important;
-        color: var(--fin-text-muted) !important;
-    }
-
-    .saas-dropdown-divider {
-        height: 1px !important;
-        background: #f1f5f9 !important;
-        margin: 6px 0 !important;
-    }
-
-    .saas-dropdown-header {
-        padding: 8px 12px 4px !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: var(--fin-text-muted) !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
-    }
-
-    /* Status Badges - Standalone */
-    .pill {
-        display: inline-flex !important;
-        align-items: center !important;
-        padding: 2px 12px !important;
-        border-radius: 9999px !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        border: none !important;
-    }
-
-    .pill-success { background: #dcfce7 !important; color: #15803d !important; }
-    .pill-pending { background: #dbeafe !important; color: #1d4ed8 !important; }
-    .pill-error { background: #fee2e2 !important; color: #b91c1c !important; }
-    .pill-draft { background: #f1f5f9 !important; color: #475569 !important; }
-
-    /* Filters Refinement */
-    .filter-bar {
-        background: #fff !important;
-        border: 1px solid var(--fin-border) !important;
-        border-radius: 12px !important;
-        padding: 20px !important;
-        margin-bottom: 24px !important;
-    }
-
-    .filter-input {
-        border: 1px solid var(--fin-border) !important;
-        border-radius: 8px !important;
-        padding: 10px 14px !important;
-        font-size: 14px !important;
-        color: var(--fin-text-body) !important;
-        transition: border 0.2s !important;
-    }
-
-    .filter-input:focus {
-        border-color: var(--fin-primary) !important;
-        outline: none !important;
-    }
-
-    /* Reset default PDF icon in row */
-    .pdf-hidden { display: none !important; }
-</style>
-{% endblock %}
-
-
 {% block page_content %}
-<div class="invoice-dashboard" x-data="invoiceManager()" x-init="init()" x-cloak>
+<div x-data="invoiceManager()" x-init="init()" x-cloak>
     <!-- Page Header -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-10">
         <div>
-            <h1 style="font-size: 32px; font-weight: 800; color: var(--fin-text-heading); letter-spacing: -0.02em; margin-bottom: 8px;">Invoices</h1>
-            <p style="color: var(--fin-text-muted); font-size: 16px;">Manage billing, view payment status, and export records.</p>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Invoices</h1>
+            <p class="text-gray-400 text-base">Manage billing, view payment status, and export records.</p>
         </div>
-        <div style="display: flex; gap: 12px;">
-            <a href="{% url 'services_management' %}" class="btn btn-secondary" style="border-color: #e2e8f0; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
-                <i class="bi bi-tag-fill" style="color: var(--fin-primary);"></i> Manage Services
+        <div class="flex gap-3">
+            <a href="{% url 'services_management' %}" class="btn-secondary">
+                <i data-lucide="tag" class="w-4 h-4 text-brand"></i> Manage Services
             </a>
-            <a href="#" class="btn btn-secondary">
-                <i class="bi bi-download"></i> Export
-            </a>
-            <button @click="openDrawer = true; resetNewInvoice();" class="btn btn-primary" style="background: #7c3aed;">
-                <i class="bi bi-plus-lg"></i> Create Invoice
+            <a href="#" class="btn-secondary"><i data-lucide="download" class="w-4 h-4"></i> Export</a>
+            <button @click="openDrawer = true; resetNewInvoice();" class="btn-primary bg-violet-600 hover:bg-violet-700 border-violet-600">
+                <i data-lucide="plus" class="w-4 h-4"></i> Create Invoice
             </button>
         </div>
     </div>
 
-    <!-- Summary Cards Grid -->
-    <div class="grid-6" style="margin-bottom: 40px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;">
-        <div class="saas-card" style="padding: 20px; border-top: 4px solid #6366f1;">
-            <p class="saas-label" style="font-size: 11px; text-transform: uppercase; color: var(--fin-text-muted); margin-bottom: 8px; font-weight: 700;">This Month Billed</p>
-            <div style="font-size: 20px; font-weight: 800;" x-text="'£' + formatNumber(metrics.this_month_billed)">£0.00</div>
-        </div>
-        <div class="saas-card" style="padding: 20px; border-top: 4px solid #10b981;">
-            <p class="saas-label" style="font-size: 11px; text-transform: uppercase; color: var(--fin-text-muted); margin-bottom: 8px; font-weight: 700;">Paid This Month</p>
-            <div style="font-size: 20px; font-weight: 800; color: #059669;" x-text="'£' + formatNumber(metrics.paid_this_month)">£0.00</div>
-        </div>
-        <div class="saas-card" style="padding: 20px; border-top: 4px solid #3b82f6;">
-            <p class="saas-label" style="font-size: 11px; text-transform: uppercase; color: var(--fin-text-muted); margin-bottom: 8px; font-weight: 700;">Pending Amount</p>
-            <div style="font-size: 20px; font-weight: 800;" x-text="'£' + formatNumber(metrics.pending_amount)">£0.00</div>
-        </div>
-        <div class="saas-card" style="padding: 20px; border-top: 4px solid #ef4444;">
-            <p class="saas-label" style="font-size: 11px; text-transform: uppercase; color: var(--fin-text-muted); margin-bottom: 8px; font-weight: 700;">Overdue</p>
-            <div style="font-size: 20px; font-weight: 800; color: #dc2626;" x-text="'£' + formatNumber(metrics.overdue_amount)">£0.00</div>
-        </div>
-        <div class="saas-card" style="padding: 20px; border-top: 4px solid #8b5cf6;">
-            <p class="saas-label" style="font-size: 11px; text-transform: uppercase; color: var(--fin-text-muted); margin-bottom: 8px; font-weight: 700;">Collection Rate</p>
-            <div style="font-size: 20px; font-weight: 800;" x-text="metrics.collection_rate">0%</div>
-        </div>
-        <div class="saas-card" style="padding: 20px; border-top: 4px solid #f59e0b;">
-            <p class="saas-label" style="font-size: 11px; text-transform: uppercase; color: var(--fin-text-muted); margin-bottom: 8px; font-weight: 700;">Avg Invoice Value</p>
-            <div style="font-size: 20px; font-weight: 800;" x-text="'£' + formatNumber(metrics.avg_invoice_value)">£0.00</div>
-        </div>
-    </div>
-
-<!-- Filters -->
-<div class="filter-bar" style="margin-bottom: 24px;">
-    <form method="get" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 250px; position: relative;" x-data="{ 
-            open: false, 
-            search: '', 
-            selectedId: '{{ request.GET.client|default:'' }}',
-            get selectedName() {
-                if (!this.selectedId) return 'All Clients';
-                const c = clients.find(x => String(x.id) === String(this.selectedId));
-                return c ? c.name : 'All Clients';
-            },
-            get filtered() {
-                if (this.search === '') return clients;
-                return clients.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase()));
-            }
-        }" @click.away="open = false">
-            <input type="hidden" name="client" x-model="selectedId">
-            
-            <button type="button" @click="open = !open" class="filter-input" style="width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; background: white; height: 34px;">
-                <span x-text="selectedName" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">All Clients</span>
-                <i class="bi bi-chevron-down ms-2" style="color: var(--fin-text-muted); font-size: 10px; transition: transform 0.2s;" :style="open ? 'transform: rotate(180deg);' : ''"></i>
-            </button>
-
-            <div x-show="open" x-transition.opacity class="saas-dropdown-menu" style="position: absolute; top: calc(100% + 4px); left: 0; width: 100%; max-height: 350px; overflow-y: auto; z-index: 50; display: flex; flex-direction: column; padding: 0;">
-                <div style="padding: 8px; position: sticky; top: 0; background: white; z-index: 2; border-bottom: 1px solid var(--fin-border);">
-                    <input type="text" x-model="search" placeholder="Search clients..." class="filter-input" style="width: 100%; border-radius: 6px; padding: 6px 10px; height: 32px;" @click.stop @keydown.escape="open = false">
-                </div>
-                <ul style="list-style: none; margin: 0; padding: 4px;">
-                    <li @click="selectedId = ''; open = false" class="saas-dropdown-item" style="cursor: pointer; padding: 8px 12px; border-radius: 6px;" :style="selectedId === '' ? 'background: var(--fin-bg-soft); color: var(--fin-primary); font-weight: 700;' : ''">
-                        All Clients
-                    </li>
-                    <template x-for="c in filtered" :key="c.id">
-                        <li @click="selectedId = c.id; open = false" class="saas-dropdown-item" style="cursor: pointer; padding: 8px 12px; border-radius: 6px;" :style="selectedId == c.id ? 'background: var(--fin-bg-soft); color: var(--fin-primary); font-weight: 700;' : ''">
-                            <span x-text="c.name"></span>
-                        </li>
-                    </template>
-                    <li x-show="filtered.length === 0" style="padding: 12px; text-align: center; color: var(--fin-text-muted); font-size: 12px;">
-                        No clients found
-                    </li>
-                </ul>
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+        <div class="card border-t-4 border-t-brand">
+            <div class="p-5">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">This Month Billed</p>
+                <div class="text-xl font-extrabold" x-text="'£' + formatNumber(metrics.this_month_billed)">£0.00</div>
             </div>
         </div>
-        
-        <div style="width: 160px;">
-            <select name="status" class="filter-input" style="width: 100%;">
-                <option value="">All Status</option>
-                <option value="Draft" {% if request.GET.status == 'Draft' %}selected{% endif %}>Draft</option>
-                <option value="Sent" {% if request.GET.status == 'Sent' %}selected{% endif %}>Sent</option>
-                <option value="Paid" {% if request.GET.status == 'Paid' %}selected{% endif %}>Paid</option>
-                <option value="Overdue" {% if request.GET.status == 'Overdue' %}selected{% endif %}>Overdue</option>
-            </select>
+        <div class="card border-t-4 border-t-emerald-500">
+            <div class="p-5">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Paid This Month</p>
+                <div class="text-xl font-extrabold text-emerald-600" x-text="'£' + formatNumber(metrics.paid_this_month)">£0.00</div>
+            </div>
         </div>
-        
-        <div style="width: 160px;">
-            <input type="date" name="start_date" class="filter-input" placeholder="Start Date" value="{{ request.GET.start_date }}">
+        <div class="card border-t-4 border-t-blue-500">
+            <div class="p-5">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Pending Amount</p>
+                <div class="text-xl font-extrabold" x-text="'£' + formatNumber(metrics.pending_amount)">£0.00</div>
+            </div>
         </div>
-        
-        <div style="width: 160px;">
-            <input type="date" name="end_date" class="filter-input" placeholder="End Date" value="{{ request.GET.end_date }}">
+        <div class="card border-t-4 border-t-red-500">
+            <div class="p-5">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Overdue</p>
+                <div class="text-xl font-extrabold text-red-600" x-text="'£' + formatNumber(metrics.overdue_amount)">£0.00</div>
+            </div>
         </div>
-        
-        <div style="display: flex; gap: 8px;">
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <a href="{% url 'invoices' %}" class="btn btn-secondary">Clear</a>
+        <div class="card border-t-4 border-t-violet-500">
+            <div class="p-5">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Collection Rate</p>
+                <div class="text-xl font-extrabold" x-text="metrics.collection_rate">0%</div>
+            </div>
         </div>
-    </form>
-</div>
+        <div class="card border-t-4 border-t-amber-500">
+            <div class="p-5">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Avg Invoice Value</p>
+                <div class="text-xl font-extrabold" x-text="'£' + formatNumber(metrics.avg_invoice_value)">£0.00</div>
+            </div>
+        </div>
+    </div>
 
-<!-- Invoices Table -->
-<div class="saas-card" style="padding: 0; overflow: hidden; min-height: 400px;">
-    <div style="overflow-x: auto;">
-        <table class="saas-table">
-            <thead>
-                <tr>
-                    <th style="width: 12%;">Invoice #</th>
-                    <th style="width: 18%;">Client</th>
-                    <th style="width: 16%;">Campaign</th>
-                    <th style="text-align: center; width: 8%;">Status Details</th>
-                    <th style="text-align: center; width: 8%;">Videos</th>
-                    <th style="text-align: right; width: 10%;">Amount</th>
-                    <th style="text-align: center; width: 10%;">Status</th>
-                    <th style="width: 10%;">Issue Date</th>
-                    <th style="width: 8%;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if invoices %}
+    <!-- Filters -->
+    <div class="card mb-6">
+        <div class="p-5">
+            <form method="get" class="flex gap-3 items-center flex-wrap">
+                <div class="flex-1 min-w-[250px]" x-data="{ 
+                    open: false, search: '', selectedId: '{{ request.GET.client|default:'' }}',
+                    get selectedName() { if (!this.selectedId) return 'All Clients'; const c = clients.find(x => String(x.id) === String(this.selectedId)); return c ? c.name : 'All Clients'; },
+                    get filtered() { if (this.search === '') return clients; return clients.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())); }
+                }" @click.away="open = false">
+                    <input type="hidden" name="client" x-model="selectedId">
+                    <button type="button" @click="open = !open" class="form-input w-full text-left flex justify-between items-center">
+                        <span x-text="selectedName" class="truncate font-medium">All Clients</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="open" x-transition class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-[350px] overflow-y-auto">
+                        <div class="p-2 sticky top-0 bg-white z-10 border-b border-gray-100">
+                            <input type="text" x-model="search" placeholder="Search clients..." class="form-input text-sm" @click.stop @keydown.escape="open = false">
+                        </div>
+                        <ul class="p-1">
+                            <li @click="selectedId = ''; open = false" class="px-3 py-2 rounded-lg cursor-pointer text-sm hover:bg-gray-50" :class="selectedId === '' ? 'bg-gray-50 text-brand font-bold' : ''">All Clients</li>
+                            <template x-for="c in filtered" :key="c.id">
+                                <li @click="selectedId = c.id; open = false" class="px-3 py-2 rounded-lg cursor-pointer text-sm hover:bg-gray-50" :class="selectedId == c.id ? 'bg-gray-50 text-brand font-bold' : ''" x-text="c.name"></li>
+                            </template>
+                            <li x-show="filtered.length === 0" class="p-3 text-center text-gray-400 text-xs">No clients found</li>
+                        </ul>
+                    </div>
+                </div>
+                <select name="status" class="form-select w-[160px]">
+                    <option value="">All Status</option>
+                    <option value="Draft" {% if request.GET.status == 'Draft' %}selected{% endif %}>Draft</option>
+                    <option value="Sent" {% if request.GET.status == 'Sent' %}selected{% endif %}>Sent</option>
+                    <option value="Paid" {% if request.GET.status == 'Paid' %}selected{% endif %}>Paid</option>
+                    <option value="Overdue" {% if request.GET.status == 'Overdue' %}selected{% endif %}>Overdue</option>
+                </select>
+                <input type="date" name="start_date" class="form-input w-[160px]" value="{{ request.GET.start_date }}">
+                <input type="date" name="end_date" class="form-input w-[160px]" value="{{ request.GET.end_date }}">
+                <div class="flex gap-2">
+                    <button type="submit" class="btn-primary">Apply Filters</button>
+                    <a href="{% url 'invoices' %}" class="btn-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="card overflow-hidden min-h-[400px]">
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="w-[12%]">Invoice #</th>
+                        <th class="w-[18%]">Client</th>
+                        <th class="w-[16%]">Campaign</th>
+                        <th class="w-[8%] text-center">Details</th>
+                        <th class="w-[8%] text-center">Videos</th>
+                        <th class="w-[10%] text-right">Amount</th>
+                        <th class="w-[10%] text-center">Status</th>
+                        <th class="w-[10%]">Issue Date</th>
+                        <th class="w-[8%]"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if invoices %}
                     {% for invoice in invoices %}
-                    <tr x-data="{ open: false }" @click.away="open = false">
-                        <td style="font-weight: 700; color: var(--fin-primary); font-family: 'JetBrains Mono', monospace;">
-                            {{ invoice.invoice_number }}
-                        </td>
+                    <tr x-data="{ menuOpen: false }" @click.away="menuOpen = false">
+                        <td class="font-bold text-brand font-mono">{{ invoice.invoice_number }}</td>
+                        <td class="font-semibold text-gray-900">{{ invoice.charity.name }}</td>
                         <td>
-                            <div style="font-weight: 600; color: var(--fin-text-heading);">{{ invoice.charity.name }}</div>
-                        </td>
-                        <td>
-                            <div style="font-weight: 600; color: var(--fin-text-heading);">{{ invoice.campaign.name|default:"General Billing" }}</div>
-                            <div style="font-size: 11px; color: var(--fin-text-muted);">
-                                {% if invoice.period_start %}
-                                    {{ invoice.period_start|date:"M d, Y" }} - {{ invoice.period_end|date:"M d, Y" }}
-                                {% endif %}
+                            <div class="font-semibold text-gray-900">{{ invoice.campaign.name|default:"General Billing" }}</div>
+                            <div class="text-[11px] text-gray-400">
+                                {% if invoice.period_start %}{{ invoice.period_start|date:"M d, Y" }} - {{ invoice.period_end|date:"M d, Y" }}{% endif %}
                             </div>
                         </td>
-                        <td style="text-align: center;">
-                            <div style="font-weight: 600;">{{ invoice.total_batches }} Batches</div>
-                            <div style="font-size: 11px; color: var(--fin-text-muted);">{{ invoice.pricing_tier|title }} Tier</div>
+                        <td class="text-center">
+                            <div class="font-semibold">{{ invoice.total_batches }} Batches</div>
+                            <div class="text-[11px] text-gray-400">{{ invoice.pricing_tier|title }} Tier</div>
                         </td>
-                        <td style="text-align: center; font-weight: 600;">{{ invoice.total_videos }}</td>
-                        <td style="text-align: right; font-weight: 700; color: var(--fin-text-heading);">
-                            £{{ invoice.amount|floatformat:2 }}
+                        <td class="text-center font-semibold">{{ invoice.total_videos }}</td>
+                        <td class="text-right font-bold text-gray-900">£{{ invoice.amount|floatformat:2 }}</td>
+                        <td class="text-center">
+                            {% if invoice.status == 'Paid' %}<span class="badge badge-success">Paid</span>
+                            {% elif invoice.status == 'Sent' %}<span class="badge badge-brand">Sent</span>
+                            {% elif invoice.status == 'Overdue' %}<span class="badge badge-danger">Overdue</span>
+                            {% elif invoice.status == 'Void' %}<span class="badge badge-default">Void</span>
+                            {% else %}<span class="badge badge-default">{{ invoice.status }}</span>{% endif %}
                         </td>
-                        <td style="text-align: center;">
-                            {% if invoice.status == 'Paid' %}
-                                <span class="pill pill-success">Paid</span>
-                            {% elif invoice.status == 'Sent' %}
-                                <span class="pill pill-pending">Sent</span>
-                            {% elif invoice.status == 'Overdue' %}
-                                <span class="pill pill-error">Overdue</span>
-                            {% elif invoice.status == 'Void' %}
-                                <span class="pill pill-draft">Void</span>
-                            {% else %}
-                                <span class="pill pill-draft">{{ invoice.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td style="color: var(--fin-text-muted); font-size: 13px;">{{ invoice.issue_date|date:"M d, Y" }}</td>
+                        <td class="text-gray-400 text-[13px]">{{ invoice.issue_date|date:"M d, Y" }}</td>
                         <td>
-                            <div class="actions-row">
-                                <a href="{% url 'invoice_detail' invoice.id %}" class="icon-btn eye" title="View Invoice">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{% url 'invoice_edit' invoice.id %}" class="icon-btn" title="Edit Metadata">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                
-                                <div class="dropdown">
-                                    <button class="icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow">
-                                        <li><h6 class="dropdown-header">Exports</h6></li>
-                                        <li><a class="dropdown-item" href="{% url 'invoice_csv' invoice.id %}"><i class="bi bi-filetype-csv me-2"></i>Export CSV Data</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><h6 class="dropdown-header">Actions</h6></li>
+                            <div class="flex gap-1 justify-end items-center">
+                                <a href="{% url 'invoice_detail' invoice.id %}" class="btn-secondary btn-xs" title="View"><i data-lucide="eye" class="w-3.5 h-3.5"></i></a>
+                                <a href="{% url 'invoice_edit' invoice.id %}" class="btn-secondary btn-xs" title="Edit"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></a>
+                                <div class="relative">
+                                    <button @click="menuOpen = !menuOpen" class="btn-secondary btn-xs"><i data-lucide="more-vertical" class="w-3.5 h-3.5"></i></button>
+                                    <div x-show="menuOpen" x-transition class="dropdown-menu right-0">
+                                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-1.5">Exports</div>
+                                        <a href="{% url 'invoice_csv' invoice.id %}" class="dropdown-item"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export CSV</a>
+                                        <div class="dropdown-divider"></div>
+                                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-1.5">Actions</div>
                                         {% if invoice.status != 'Void' and invoice.status != 'Paid' %}
-                                        <li>
-                                            <form method="post" action="{% url 'invoice_void' invoice.id %}" onsubmit="return confirm('Void this invoice? This cannot be undone.');" style="margin: 0;">
-                                                {% csrf_token %}
-                                                <button type="submit" class="dropdown-item text-danger">
-                                                    <i class="bi bi-slash-circle me-2"></i>Void Invoice
-                                                </button>
-                                            </form>
-                                        </li>
+                                        <form method="post" action="{% url 'invoice_void' invoice.id %}" onsubmit="return confirm('Void this invoice?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="dropdown-item text-red-600 hover:bg-red-50"><i data-lucide="slash" class="w-4 h-4"></i> Void Invoice</button>
+                                        </form>
                                         {% endif %}
-                                        <li><a class="dropdown-item disabled" href="#"><i class="bi bi-envelope me-2"></i>Email Client (Soon)</a></li>
-                                    </ul>
+                                        <span class="dropdown-item opacity-50 cursor-not-allowed"><i data-lucide="mail" class="w-4 h-4"></i> Email Client (Soon)</span>
+                                    </div>
                                 </div>
                             </div>
                         </td>
                     </tr>
                     {% endfor %}
-                {% else %}
+                    {% else %}
                     <tr>
-                        <td colspan="9" style="text-align: center; padding: 100px 0;">
-                            <div style="width: 72px; height: 72px; background: var(--bg-hover); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--primary); font-size: 28px;">
-                                <i class="bi bi-receipt"></i>
+                        <td colspan="9" class="text-center py-24">
+                            <div class="w-[72px] h-[72px] bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-brand">
+                                <i data-lucide="receipt" class="w-7 h-7"></i>
                             </div>
-                            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text-headings);">No Invoices Found</h3>
-                            <p style="color: var(--text-muted); margin-bottom: 24px;">Create your first invoice to get started.</p>
-                            <a href="{% url 'create_invoice' %}" class="btn btn-primary">Create Invoice</a>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">No Invoices Found</h3>
+                            <p class="text-gray-400 mb-6">Create your first invoice to get started.</p>
+                            <a href="{% url 'create_invoice' %}" class="btn-primary">Create Invoice</a>
                         </td>
                     </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- === MODAL: CREATE INVOICE === -->
-<div 
-    x-show="openDrawer" 
-    class="modal-overlay"
-    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(6px); z-index: 99999; display: flex; justify-content: center; align-items: center; overflow: hidden;"
-    x-transition:enter="fade-in"
-    x-transition:leave="fade-out"
-    x-cloak
->
-    <div 
-        class="modal-panel"
-        @click.away="openDrawer = false"
-        style="width: calc(100vw - 32px); height: calc(100vh - 32px); background: #f1f5f9; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; overflow: hidden;"
-        x-transition:enter="slide-up"
-        x-transition:leave="slide-down"
-    >
-        <!-- Modal Header -->
-        <div style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
-            <div>
-                <h2 style="font-size: 20px; font-weight: 800; margin: 0; color: #1e293b;">Create New Invoice</h2>
-                <p style="margin: 0; font-size: 13px; color: #64748b;">Configure details on the left, preview the document on the right.</p>
-            </div>
-            <button @click="openDrawer = false" style="background: #f1f5f9; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
-        </div>
-
-        <div style="flex: 1; display: flex; overflow: hidden; min-height: 0;">
-            <!-- Left Panel: Controls (420px) -->
-            <div style="width: 420px; min-width: 420px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow-y: auto;">
-                <div style="padding: 30px; display: flex; flex-direction: column; gap: 32px;">
-                    <!-- Step 1: Client Selection -->
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                        <label style="display: block; font-size: 11px; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Step 1: Select Client</label>
-                        <select x-model="newInvoice.charity_id" class="filter-input" style="width: 100%; height: 42px;">
-                            <option value="">-- Choose a Client --</option>
-                            <template x-for="client in clients" :key="client.id">
-                                <option :value="client.id" x-text="client.name"></option>
-                            </template>
-                        </select>
-                        <div x-show="newInvoice.charity_id" style="margin-top: 8px; font-size: 11px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                            <i class="bi bi-check-circle-fill"></i> Client ready.
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Line Items Management -->
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;" :style="!newInvoice.charity_id ? 'opacity: 0.5; pointer-events: none;' : ''">
-                        <label style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
-                            <span>Step 2: Add Services</span>
-                            <a href="{% url 'services_management' %}" style="text-transform: none; color: #94a3b8; font-weight: 500; font-size: 10px; text-decoration: none;">
-                                <i class="bi bi-gear-fill"></i> Manage Catalog
-                            </a>
-                        </label>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <div style="position: relative; flex: 1;">
-                                    <select x-model="selectedServiceId" class="filter-input" style="width: 100%; height: 42px;" @change="addServiceFromSelection">
-                                        <option value="">Catalog services...</option>
-                                        <template x-for="service in activeServices" :key="service.id">
-                                            <option :value="service.id" x-text="service.name + ' (£' + service.unit_price + ')'"></option>
-                                        </template>
-                                    </select>
-                                </div>
-                                <button @click.prevent="loadServices()" class="btn btn-secondary" style="height: 42px; width: 42px; padding: 0; display: flex; align-items: center; justify-content: center;" title="Refresh Catalog">
-                                    <i class="bi bi-arrow-clockwise"></i>
-                                </button>
-                            </div>
-                            
-                            <div style="text-align: center;">
-                                <span style="font-size: 10px; color: #94a3b8; font-weight: 700;">OR ADD CUSTOM</span>
-                            </div>
-
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <input type="text" x-model="manualItem.description" placeholder="Description..." class="filter-input" style="height: 42px;">
-                                <div style="display: flex; gap: 8px;">
-                                    <div style="position: relative; flex: 1;">
-                                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #64748b;">£</span>
-                                        <input type="number" x-model.number="manualItem.unit_price" placeholder="0.00" class="filter-input" style="height: 42px; padding-left: 24px;">
-                                    </div>
-                                    <button @click="addManualItem" class="btn btn-primary" style="height: 42px; background: #4f46e5; border: none; padding: 0 16px;" :disabled="!manualItem.description">
-                                        <i class="bi bi-plus-lg"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Global Settings -->
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;" :style="!newInvoice.charity_id ? 'opacity: 0.5; pointer-events: none;' : ''">
-                        <label style="display: block; font-size: 11px; font-weight: 800; color: #6366f1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Step 3: Configurations</label>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div>
-                                <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">Tax Rate (%)</label>
-                                <input type="number" x-model.number="newInvoice.tax_percent" class="filter-input" style="width: 100%; height: 42px;">
-                            </div>
-                            <div>
-                                <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 4px;">Discount (%)</label>
-                                <input type="number" x-model.number="newInvoice.discount_percent" class="filter-input" style="width: 100%; height: 42px;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sticky Sidebar Footer -->
-                <div style="margin-top: auto; padding: 24px; border-top: 1px solid #e2e8f0; background: white;">
-                    <button 
-                        @click="submitInvoice" 
-                        id="generate-invoice-btn"
-                        class="btn btn-primary" 
-                        style="width: 100%; height: 52px; font-weight: 700; background: #4f46e5; border: none; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);"
-                        :style="(!newInvoice.charity_id || newInvoice.charity_id === 'all' || newInvoice.items.length === 0 || processing) ? 'opacity: 0.5; cursor: not-allowed; box-shadow: none;' : ''"
-                        :disabled="!newInvoice.charity_id || newInvoice.charity_id === 'all' || newInvoice.items.length === 0 || processing"
-                    >
-                        <span x-show="!processing">Generate & Send</span>
-                        <span x-show="processing">Sending...</span>
-                    </button>
-                    <p x-show="!newInvoice.charity_id" style="font-size: 11px; color: #ef4444; margin-top: 8px; text-align: center; font-weight: 600;">Selection required to proceed</p>
-                </div>
-            </div>
-
-            <!-- Right Panel: Professional A4 Preview (Scrollable) -->
-            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: #cbd5e1;">
-                <!-- Page Holder -->
-                <div style="background: white; width: 85%; max-width: 900px; min-height: 1100px; margin: 40px 0; padding: 60px; border-radius: 4px; box-shadow: 0 0 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; position: relative; flex-shrink: 0;">
-                
-                <!-- Branding Header -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
-                    <div>
-                        <img src="{% static 'charity/img/with_thanks_logo_header.png' %}" alt="Logo" style="height: 32px; width: auto; margin-bottom: 12px;">
-                        <div style="font-size: 11px; color: #64748b; line-height: 1.5;">
-                            <strong style="color: #1e293b;">WITH THANKS LIMITED</strong><br>
-                            Dene Glade Lower Road,Cookham,<br>
-                            Maidenhead, United Kingdom, SL6 9EL<br>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <h1 style="font-size: 32px; font-weight: 900; color: #4f46e5; margin: 0; letter-spacing: -1px;">INVOICE</h1>
-                    </div>
-                </div>
-
-                <!-- Client / Dates Row -->
-                <div style="display: flex; justify-content: space-between; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9;">
-                    <div style="width: 50%;">
-                        <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Bill To:</div>
-                        <div style="font-size: 15px; font-weight: 700; color: #1e293b;" x-text="selectedClientName"></div>
-                        <template x-if="selectedClientDetails">
-                            <div style="font-size: 11px; color: #64748b; line-height: 1.5; margin-top: 4px;">
-                                <template x-if="selectedClientDetails.billing_address">
-                                    <div x-text="selectedClientDetails.billing_address" style="white-space: pre-wrap;"></div>
-                                </template>
-                                <template x-if="!selectedClientDetails.billing_address && selectedClientDetails.address_line_1">
-                                    <div>
-                                        <span x-text="selectedClientDetails.address_line_1"></span><br>
-                                        <template x-if="selectedClientDetails.address_line_2"><span x-html="selectedClientDetails.address_line_2 + '<br>'"></span></template>
-                                        <template x-if="selectedClientDetails.county"><span x-html="selectedClientDetails.county + '<br>'"></span></template>
-                                        <template x-if="selectedClientDetails.postcode"><span x-text="selectedClientDetails.postcode"></span></template>
-                                    </div>
-                                </template>
-                                <div x-show="selectedClientDetails.email" x-text="selectedClientDetails.email" style="margin-top: 4px;"></div>
-                            </div>
-                        </template>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Issue Date:</div>
-                        <div style="font-size: 13px; color: #1e293b; font-weight: 600;">{% now "d F Y" %}</div>
-                    </div>
-                </div>
-
-                <!-- Professional A4-style Table for Line Items -->
-                <div style="margin-bottom: 30px;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                        <thead>
-                            <tr style="background: #4f46e5; color: white;">
-                                <th style="padding: 12px 16px; text-align: left; font-weight: 700; text-transform: uppercase; font-size: 10px; border-radius: 4px 0 0 0;">Description</th>
-                                <th style="padding: 12px 8px; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 10px;">Qty</th>
-                                <th style="padding: 12px 8px; text-align: right; font-weight: 700; text-transform: uppercase; font-size: 10px;">Price</th>
-                                <th style="padding: 12px 16px; text-align: right; font-weight: 700; text-transform: uppercase; font-size: 10px; border-radius: 0 4px 0 0;">Total</th>
-                                <th class="no-print-area" style="width: 40px; background: #fff;"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-if="newInvoice.items.length === 0">
-                                <tr>
-                                    <td colspan="5" style="padding: 60px; text-align: center; color: #94a3b8; font-style: italic; border-bottom: 1px solid #f1f5f9;">No items added to this invoice yet.</td>
-                                </tr>
-                            </template>
-                            <template x-for="(item, index) in newInvoice.items" :key="index">
-                                <tr style="border-bottom: 1px solid #f1f5f9;">
-                                    <td style="padding: 16px;">
-                                        <div style="font-weight: 600; color: #1e293b;" x-text="item.description"></div>
-                                        <div x-show="item.service_id" style="font-size: 11px; color: #94a3b8;">Standard Service</div>
-                                    </td>
-                                    <td style="padding: 16px 8px; text-align: center;">
-                                        <input type="number" x-model.number="item.quantity" min="1" class="filter-input" style="width: 50px; padding: 4px; text-align: center; font-size: 13px; border-color: #e2e8f0; background: #f8fafc;">
-                                    </td>
-                                    <td style="padding: 16px 8px; text-align: right; color: #475569;">
-                                        <div style="display: flex; align-items: center; justify-content: flex-end;">
-                                            <span style="margin-right: 2px;">£</span>
-                                            <input type="number" x-model.number="item.unit_price" step="0.01" class="filter-input" style="width: 70px; padding: 4px; text-align: right; font-size: 13px; border-color: transparent; background: transparent; font-weight: 500;" @focus="$el.style.borderColor = '#e2e8f0'; $el.style.background = '#white'" @blur="$el.style.borderColor = 'transparent'; $el.style.background = 'transparent'">
-                                        </div>
-                                    </td>
-                                    <td style="padding: 16px; text-align: right; font-weight: 700; color: #1e293b;">
-                                        £<span x-text="(item.quantity * item.unit_price).toFixed(2)"></span>
-                                    </td>
-                                    <td class="no-print-area" style="padding: 16px 8px; text-align: center;">
-                                        <button @click="removeItem(index)" style="background: none; border: none; color: #cbd5e1; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Professional Totals Section -->
-                <div style="display: flex; justify-content: flex-end;">
-                    <div style="width: 250px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #64748b;">
-                            <span>Subtotal</span>
-                            <span style="font-weight: 600; color: #1e293b;" x-text="'£' + subtotal.toFixed(2)">£0.00</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px; color: #64748b; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
-                            <span>Tax (20%)</span>
-                            <span style="font-weight: 600; color: #1e293b;" x-text="'£' + tax_amount.toFixed(2)">£0.00</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: #4f46e5; color: white; padding: 12px 16px; border-radius: 4px;">
-                            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Total Amount</span>
-                            <span style="font-size: 18px; font-weight: 900;" x-text="'£' + total.toFixed(2)">£0.00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 60px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 30px;">
-                    Thank you for your business! &mdash; WithThanks Limited
-                </div>
-            </div>
-        </div>
-
-                </div>
-            </div>
-        </div>
-
-<!-- === MODAL: GLOBAL SERVICE MANAGER === -->
-<div 
-    x-show="openServiceManager" 
-    class="modal-overlay"
-    style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px;"
-    x-transition:enter="fade-in"
-    x-cloak
->
-    <div 
-        class="modal-panel saas-card"
-        style="width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 0; background: #fff; margin: auto; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);"
-        @click.away="openServiceManager = false"
-    >
-        <div style="padding: 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #fff; position: sticky; top: 0; z-index: 10;">
-            <h2 style="font-size: 20px; font-weight: 800; margin: 0;">Service & Product Catalog</h2>
-            <button @click="openServiceManager = false" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer;">&times;</button>
-        </div>
-        
-        <div style="padding: 24px;">
-            <table class="saas-table" style="width: 100%;">
-                <thead>
-                    <tr>
-                        <th style="width: 35%;">Service Name</th>
-                        <th style="width: 25%;">Category</th>
-                        <th style="width: 20%; text-align: right;">Base Price</th>
-                        <th style="width: 20%; text-align: center;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <template x-for="service in services" :key="service.id">
-                        <tr>
-                            <td>
-                                <div style="font-weight: 600; color: var(--fin-text-heading);" x-text="service.name"></div>
-                                <div style="font-size: 12px; color: var(--fin-text-muted);" x-text="service.description"></div>
-                            </td>
-                            <td>
-                                <span class="pill pill-pending" style="font-size: 10px;" x-text="service.category"></span>
-                            </td>
-                            <td style="text-align: right; font-weight: 700;" x-text="'£' + service.unit_price"></td>
-                            <td style="text-align: center;">
-                                <button 
-                                    @click="addItemFromCatalog(service)" 
-                                    class="pill pill-success" 
-                                    style="cursor: pointer; border: none;"
-                                    title="Add to current invoice draft"
-                                >
-                                    + Add
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-        
-        <div style="padding: 24px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Create New Service</h4>
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px;">
-                <input type="text" x-model="newService.name" placeholder="Service Name" class="filter-input">
-                <select x-model="newService.category" class="filter-input">
-                    <option value="VDM">VDM</option>
-                    <option value="GRATITUDE">Gratitude</option>
-                    <option value="ADDITIONAL">Additional</option>
-                    <option value="VOLUME">Volume</option>
-                </select>
-                <input type="number" x-model="newService.unit_price" placeholder="Price" class="filter-input">
-                <button @click="submitNewService" class="btn btn-primary" :disabled="!newService.name || processing">Save Service</button>
+    </div>
+
+    <!-- CREATE INVOICE MODAL -->
+    <template x-if="openDrawer">
+        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[9999] flex justify-center items-center overflow-hidden" @click.self="openDrawer = false">
+            <div class="w-[calc(100vw-32px)] h-[calc(100vh-32px)] bg-gray-100 rounded-xl shadow-2xl flex flex-col overflow-hidden" @click.stop>
+                <!-- Modal Header -->
+                <div class="bg-white border-b border-gray-200 px-8 py-5 flex justify-between items-center shrink-0">
+                    <div>
+                        <h2 class="text-xl font-extrabold text-gray-900">Create New Invoice</h2>
+                        <p class="text-[13px] text-gray-400">Configure details on the left, preview the document on the right.</p>
+                    </div>
+                    <button @click="openDrawer = false" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 flex overflow-hidden min-h-0">
+                    <!-- Left Panel: Controls -->
+                    <div class="w-[420px] min-w-[420px] bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
+                        <div class="p-8 flex flex-col gap-8">
+                            <!-- Step 1 -->
+                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                <label class="block text-[11px] font-extrabold text-brand uppercase tracking-wider mb-3">Step 1: Select Client</label>
+                                <select x-model="newInvoice.charity_id" class="form-select w-full">
+                                    <option value="">-- Choose a Client --</option>
+                                    <template x-for="client in clients" :key="client.id">
+                                        <option :value="client.id" x-text="client.name"></option>
+                                    </template>
+                                </select>
+                                <div x-show="newInvoice.charity_id" class="mt-2 text-[11px] text-emerald-500 font-semibold flex items-center gap-1">
+                                    <i data-lucide="check-circle" class="w-3 h-3"></i> Client ready.
+                                </div>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200" :class="!newInvoice.charity_id ? 'opacity-50 pointer-events-none' : ''">
+                                <label class="flex justify-between items-center text-[11px] font-extrabold text-brand uppercase tracking-wider mb-3">
+                                    <span>Step 2: Add Services</span>
+                                    <a href="{% url 'services_management' %}" class="text-gray-400 font-medium text-[10px] normal-case">
+                                        <i data-lucide="settings" class="w-3 h-3 inline"></i> Manage Catalog
+                                    </a>
+                                </label>
+                                <div class="flex flex-col gap-3">
+                                    <div class="flex gap-2 items-center">
+                                        <select x-model="selectedServiceId" class="form-select flex-1" @change="addServiceFromSelection">
+                                            <option value="">Catalog services...</option>
+                                            <template x-for="service in activeServices" :key="service.id">
+                                                <option :value="service.id" x-text="service.name + ' (£' + service.unit_price + ')'"></option>
+                                            </template>
+                                        </select>
+                                        <button @click.prevent="loadServices()" class="btn-secondary w-[42px] h-[42px] p-0 flex items-center justify-center" title="Refresh">
+                                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <div class="text-center"><span class="text-[10px] text-gray-400 font-bold">OR ADD CUSTOM</span></div>
+                                    <div class="flex flex-col gap-2">
+                                        <input type="text" x-model="manualItem.description" placeholder="Description..." class="form-input">
+                                        <div class="flex gap-2">
+                                            <div class="relative flex-1">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">£</span>
+                                                <input type="number" x-model.number="manualItem.unit_price" placeholder="0.00" class="form-input pl-6">
+                                            </div>
+                                            <button @click="addManualItem" class="btn-primary h-[42px] px-4" :disabled="!manualItem.description">
+                                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="bg-gray-50 p-5 rounded-xl border border-gray-200" :class="!newInvoice.charity_id ? 'opacity-50 pointer-events-none' : ''">
+                                <label class="block text-[11px] font-extrabold text-brand uppercase tracking-wider mb-3">Step 3: Configurations</label>
+                                <div class="flex flex-col gap-3">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Tax Rate (%)</label>
+                                        <input type="number" x-model.number="newInvoice.tax_percent" class="form-input">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Discount (%)</label>
+                                        <input type="number" x-model.number="newInvoice.discount_percent" class="form-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sticky Footer -->
+                        <div class="mt-auto p-6 border-t border-gray-200 bg-white">
+                            <button @click="submitInvoice" class="btn-primary w-full h-[52px] text-base font-bold bg-brand shadow-lg shadow-brand/20"
+                                :class="(!newInvoice.charity_id || newInvoice.charity_id === 'all' || newInvoice.items.length === 0 || processing) ? 'opacity-50 cursor-not-allowed shadow-none' : ''"
+                                :disabled="!newInvoice.charity_id || newInvoice.charity_id === 'all' || newInvoice.items.length === 0 || processing">
+                                <span x-show="!processing">Generate & Send</span>
+                                <span x-show="processing">Sending...</span>
+                            </button>
+                            <p x-show="!newInvoice.charity_id" class="text-[11px] text-red-500 mt-2 text-center font-semibold">Selection required to proceed</p>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: A4 Preview -->
+                    <div class="flex-1 overflow-y-auto flex flex-col items-center bg-slate-300">
+                        <div class="bg-white w-[85%] max-w-[900px] min-h-[1100px] my-10 p-[60px] rounded shadow-2xl border border-gray-200 relative shrink-0">
+                            <!-- Branding Header -->
+                            <div class="flex justify-between items-start mb-10">
+                                <div>
+                                    <img src="{% static 'charity/img/with_thanks_logo_header.png' %}" alt="Logo" class="h-8 w-auto mb-3">
+                                    <div class="text-[11px] text-gray-500 leading-snug">
+                                        <strong class="text-gray-900">WITH THANKS LIMITED</strong><br>
+                                        Dene Glade Lower Road, Cookham,<br>
+                                        Maidenhead, United Kingdom, SL6 9EL<br>
+                                    </div>
+                                </div>
+                                <h1 class="text-[32px] font-black text-brand tracking-tighter">INVOICE</h1>
+                            </div>
+
+                            <!-- Client / Dates -->
+                            <div class="flex justify-between mb-10 pb-5 border-b border-gray-100">
+                                <div class="w-1/2">
+                                    <div class="text-[10px] font-extrabold text-gray-400 uppercase mb-2">Bill To:</div>
+                                    <div class="text-[15px] font-bold text-gray-900" x-text="selectedClientName"></div>
+                                    <template x-if="selectedClientDetails">
+                                        <div class="text-[11px] text-gray-500 leading-snug mt-1">
+                                            <template x-if="selectedClientDetails.billing_address"><div x-text="selectedClientDetails.billing_address" class="whitespace-pre-wrap"></div></template>
+                                            <template x-if="!selectedClientDetails.billing_address && selectedClientDetails.address_line_1">
+                                                <div>
+                                                    <span x-text="selectedClientDetails.address_line_1"></span><br>
+                                                    <template x-if="selectedClientDetails.address_line_2"><span x-html="selectedClientDetails.address_line_2 + '<br>'"></span></template>
+                                                    <template x-if="selectedClientDetails.county"><span x-html="selectedClientDetails.county + '<br>'"></span></template>
+                                                    <template x-if="selectedClientDetails.postcode"><span x-text="selectedClientDetails.postcode"></span></template>
+                                                </div>
+                                            </template>
+                                            <div x-show="selectedClientDetails.email" x-text="selectedClientDetails.email" class="mt-1"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[10px] font-extrabold text-gray-400 uppercase mb-2">Issue Date:</div>
+                                    <div class="text-[13px] text-gray-900 font-semibold">{% now "d F Y" %}</div>
+                                </div>
+                            </div>
+
+                            <!-- Line Items Table -->
+                            <div class="mb-8">
+                                <table class="w-full border-collapse text-[13px]">
+                                    <thead>
+                                        <tr class="bg-brand text-white">
+                                            <th class="p-3 pl-4 text-left font-bold uppercase text-[10px] rounded-l">Description</th>
+                                            <th class="p-3 text-center font-bold uppercase text-[10px]">Qty</th>
+                                            <th class="p-3 text-right font-bold uppercase text-[10px]">Price</th>
+                                            <th class="p-3 pr-4 text-right font-bold uppercase text-[10px] rounded-r">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-if="newInvoice.items.length === 0">
+                                            <tr><td colspan="4" class="p-16 text-center text-gray-400 italic border-b border-gray-100">No items added yet.</td></tr>
+                                        </template>
+                                        <template x-for="(item, index) in newInvoice.items" :key="index">
+                                            <tr class="border-b border-gray-100">
+                                                <td class="p-4">
+                                                    <div class="font-semibold text-gray-900" x-text="item.description"></div>
+                                                    <div x-show="item.service_id" class="text-[11px] text-gray-400">Standard Service</div>
+                                                </td>
+                                                <td class="p-4 text-center">
+                                                    <input type="number" x-model.number="item.quantity" min="1" class="w-[50px] p-1 text-center text-[13px] border border-gray-200 rounded bg-gray-50">
+                                                </td>
+                                                <td class="p-4 text-right text-gray-600">
+                                                    <span class="mr-0.5">£</span>
+                                                    <input type="number" x-model.number="item.unit_price" step="0.01" class="w-[70px] p-1 text-right text-[13px] border-0 bg-transparent font-medium focus:border-gray-200 focus:bg-white">
+                                                </td>
+                                                <td class="p-4 text-right font-bold text-gray-900">£<span x-text="(item.quantity * item.unit_price).toFixed(2)"></span></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Totals -->
+                            <div class="flex justify-end">
+                                <div class="w-[250px]">
+                                    <div class="flex justify-between mb-2 text-xs text-gray-500">
+                                        <span>Subtotal</span>
+                                        <span class="font-semibold text-gray-900" x-text="'£' + subtotal.toFixed(2)">£0.00</span>
+                                    </div>
+                                    <div class="flex justify-between mb-3 text-xs text-gray-500 pb-3 border-b border-gray-100">
+                                        <span>Tax (20%)</span>
+                                        <span class="font-semibold text-gray-900" x-text="'£' + tax_amount.toFixed(2)">£0.00</span>
+                                    </div>
+                                    <div class="flex justify-between items-center bg-brand text-white p-3 px-4 rounded">
+                                        <span class="text-[11px] font-extrabold uppercase tracking-wider">Total Amount</span>
+                                        <span class="text-lg font-black" x-text="'£' + total.toFixed(2)">£0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-16 text-center text-[11px] text-gray-400 border-t border-gray-100 pt-8">
+                                Thank you for your business! &mdash; WithThanks Limited
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div style="padding: 24px; border-top: 1px solid #e2e8f0; background: #fff; text-align: right;">
-            <button @click="openServiceManager = false" class="btn btn-secondary">Close Manager</button>
-        </div>
-    </div>
-</div>
+    </template>
 
-<style>
-    [x-cloak] { display: none !important; }
-    .slide-in-right { animation: slideIn 0.3s forwards; }
-    .slide-out-right { animation: slideOut 0.3s forwards; }
-    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    @keyframes slideOut { from { transform: translateX(0); } to { transform: translateX(100%); } }
-    .fade-in { animation: fadeIn 0.3s forwards; }
-    .fade-out { animation: fadeOut 0.3s forwards; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-</style>
+    <style>[x-cloak] { display: none !important; }</style>
 
-<script>
+    <script>
     function invoiceManager() {
         return {
             openDrawer: false,
-            openServiceManager: false,
             processing: false,
-            metrics: {
-                this_month_billed: 0,
-                paid_this_month: 0,
-                pending_amount: 0,
-                overdue_amount: 0,
-                collection_rate: '0%',
-                avg_invoice_value: 0
-            },
-            clients: [
-                {% for client in clients %}
-                { 
-                    id: '{{ client.id }}', 
-                    name: '{{ client.name|escapejs }}',
-                    billing_address: '{{ client.billing_address|escapejs }}',
-                    address_line_1: '{{ client.address_line_1|default:""|escapejs }}',
-                    address_line_2: '{{ client.address_line_2|default:""|escapejs }}',
-                    county: '{{ client.county|default:""|escapejs }}',
-                    postcode: '{{ client.postcode|default:""|escapejs }}',
-                    email: '{{ client.billing_email|default:client.contact_email|default:""|escapejs }}'
-                },
-                {% endfor %}
-            ],
+            metrics: { this_month_billed: 0, paid_this_month: 0, pending_amount: 0, overdue_amount: 0, collection_rate: '0%', avg_invoice_value: 0 },
+            clients: [{% for client in clients %}{ id: '{{ client.id }}', name: '{{ client.name|escapejs }}', billing_address: '{{ client.billing_address|escapejs }}', address_line_1: '{{ client.address_line_1|default:""|escapejs }}', address_line_2: '{{ client.address_line_2|default:""|escapejs }}', county: '{{ client.county|default:""|escapejs }}', postcode: '{{ client.postcode|default:""|escapejs }}', email: '{{ client.billing_email|default:client.contact_email|default:""|escapejs }}' },{% endfor %}],
             services: [],
             selectedServiceId: '',
-            newInvoice: {
-                charity_id: '',
-                tax_percent: 20,
-                discount_percent: 0,
-                items: [],
-                notes: ''
-            },
-            newService: {
-                name: '',
-                category: 'ADDITIONAL',
-                unit_price: 0,
-                description: ''
-            },
-            manualItem: {
-                description: '',
-                unit_price: 0
-            },
-            
-            get selectedClientName() {
-                if (!this.newInvoice || !this.newInvoice.charity_id) return 'No client selected';
-                const charId = String(this.newInvoice.charity_id);
-                const client = this.clients.find(c => String(c.id) === charId);
-                return client ? client.name : 'Selected Client';
-            },
-
-            get selectedClientDetails() {
-                if (!this.newInvoice || !this.newInvoice.charity_id) return null;
-                const charId = String(this.newInvoice.charity_id);
-                return this.clients.find(c => String(c.id) === charId) || null;
-            },
-
-            // Computed Getters for real-time preview
-            get subtotal() {
-                return this.roundToTwo(
-                    this.newInvoice.items.reduce((sum, item) => {
-                        return sum + (Number(item.quantity) * Number(item.unit_price));
-                    }, 0)
-                );
-            },
-
-            get tax_amount() {
-                return this.roundToTwo(this.subtotal * (this.newInvoice.tax_percent / 100));
-            },
-
-            get total() {
-                return this.roundToTwo(this.subtotal + this.tax_amount);
-            },
-
-            roundToTwo(num) {
-                return Math.round((num + Number.EPSILON) * 100) / 100;
-            },
-
-            async init() {
-                this.loadMetrics();
-                this.loadServices();
-            },
-
-            resetNewInvoice() {
-                this.newInvoice = {
-                    charity_id: '',
-                    items: [],
-                    tax_percent: 20,
-                    discount_percent: 0,
-                    notes: ''
-                };
-            },
-
-            async loadMetrics() {
-                try {
-                    const res = await fetch('/charity/api/revenue/');
-                    const data = await res.json();
-                    if (data.kpis) {
-                        this.metrics = data.kpis;
-                    }
-                } catch (e) { console.error('Metrics failed', e); }
-            },
-
-            async loadServices() {
-                try {
-                    const res = await fetch('/charity/api/billing/services/');
-                    const data = await res.json();
-                    this.services = data.services;
-                } catch (e) { console.error('Services failed', e); }
-            },
-
-            get activeServices() {
-                return this.services.filter(s => s.active);
-            },
-
-            addItemFromCatalog(service) {
-                this.addServiceToInvoice(service.id);
-            },
-
-            addServiceFromSelection() {
-                this.addServiceToInvoice(this.selectedServiceId);
-                this.selectedServiceId = '';
-            },
-
-            addServiceToInvoice(serviceId) {
-                if (!serviceId) return;
-                
-                const existing = this.newInvoice.items.find(item => item.service_id == serviceId);
-                if (existing) {
-                    existing.quantity++;
-                    return;
-                }
-
-                const service = this.services.find(s => s.id == serviceId);
-                if (service) {
-                    this.newInvoice.items.push({
-                        service_id: service.id,
-                        description: service.name,
-                        unit_price: service.unit_price,
-                        quantity: 1
-                    });
-                }
-            },
-
-            addManualItem() {
-                if (!this.manualItem.description) return;
-                this.newInvoice.items.push({
-                    service_id: null,
-                    description: this.manualItem.description,
-                    unit_price: this.manualItem.unit_price || 0,
-                    quantity: 1
-                });
-                this.manualItem = { description: '', unit_price: 0 };
-            },
-
-            removeItem(index) {
-                this.newInvoice.items.splice(index, 1);
-            },
-
-            getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            },
-
-            async submitInvoice() {
-                if (!this.newInvoice.charity_id || this.newInvoice.items.length === 0) return;
-                
-                this.processing = true;
-                try {
-                    const csrfToken = this.getCookie('csrftoken');
-                    const response = await fetch('/charity/api/billing/create/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: JSON.stringify(this.newInvoice)
-                    });
-                    
-                    const data = await response.json();
-                    if (response.ok && data.success) {
-                        this.openDrawer = false;
-                        this.resetNewInvoice();
-                        alert("Invoice created successfully!");
-                        window.location.reload();
-                    } else {
-                        alert("Error: " + (data.error || "Failed to create invoice"));
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert("System error. Please try again.");
-                } finally {
-                    this.processing = false;
-                }
-            },
-
-            async submitNewService() {
-                this.processing = true;
-                try {
-                    const csrfToken = this.getCookie('csrftoken');
-                    const res = await fetch('/charity/api/billing/services/', {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: JSON.stringify(this.newService)
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        await this.loadServices();
-                        this.newService = { name: '', category: 'ADDITIONAL', unit_price: 0, description: '' };
-                        this.openServiceManager = false;
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
-                } catch (e) {
-                    alert('Failed to save service');
-                } finally {
-                    this.processing = false;
-                }
-            },
-
-            formatNumber(num) {
-                if (!num) return '0.00';
-                return parseFloat(num).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            }
+            newInvoice: { charity_id: '', tax_percent: 20, discount_percent: 0, items: [], notes: '' },
+            newService: { name: '', category: 'ADDITIONAL', unit_price: 0, description: '' },
+            manualItem: { description: '', unit_price: 0 },
+            get selectedClientName() { if (!this.newInvoice?.charity_id) return 'No client selected'; const c = this.clients.find(x => String(x.id) === String(this.newInvoice.charity_id)); return c ? c.name : 'Selected Client'; },
+            get selectedClientDetails() { if (!this.newInvoice?.charity_id) return null; return this.clients.find(c => String(c.id) === String(this.newInvoice.charity_id)) || null; },
+            get subtotal() { return this.roundToTwo(this.newInvoice.items.reduce((s, i) => s + (Number(i.quantity) * Number(i.unit_price)), 0)); },
+            get tax_amount() { return this.roundToTwo(this.subtotal * (this.newInvoice.tax_percent / 100)); },
+            get total() { return this.roundToTwo(this.subtotal + this.tax_amount); },
+            roundToTwo(n) { return Math.round((n + Number.EPSILON) * 100) / 100; },
+            async init() { this.loadMetrics(); this.loadServices(); },
+            resetNewInvoice() { this.newInvoice = { charity_id: '', items: [], tax_percent: 20, discount_percent: 0, notes: '' }; },
+            async loadMetrics() { try { const r = await fetch('/charity/api/revenue/'); const d = await r.json(); if (d.kpis) this.metrics = d.kpis; } catch(e) {} },
+            async loadServices() { try { const r = await fetch('/charity/api/billing/services/'); const d = await r.json(); this.services = d.services; } catch(e) {} },
+            get activeServices() { return this.services.filter(s => s.active); },
+            addServiceFromSelection() { this.addServiceToInvoice(this.selectedServiceId); this.selectedServiceId = ''; },
+            addServiceToInvoice(sid) { if (!sid) return; const e = this.newInvoice.items.find(i => i.service_id == sid); if (e) { e.quantity++; return; } const s = this.services.find(x => x.id == sid); if (s) this.newInvoice.items.push({ service_id: s.id, description: s.name, unit_price: s.unit_price, quantity: 1 }); },
+            addManualItem() { if (!this.manualItem.description) return; this.newInvoice.items.push({ service_id: null, description: this.manualItem.description, unit_price: this.manualItem.unit_price || 0, quantity: 1 }); this.manualItem = { description: '', unit_price: 0 }; },
+            removeItem(i) { this.newInvoice.items.splice(i, 1); },
+            getCookie(n) { let v = null; if (document.cookie) { for (const c of document.cookie.split(';')) { const t = c.trim(); if (t.startsWith(n + '=')) { v = decodeURIComponent(t.substring(n.length + 1)); break; } } } return v; },
+            async submitInvoice() { if (!this.newInvoice.charity_id || this.newInvoice.items.length === 0) return; this.processing = true; try { const r = await fetch('/charity/api/billing/create/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCookie('csrftoken') }, body: JSON.stringify(this.newInvoice) }); const d = await r.json(); if (r.ok && d.success) { this.openDrawer = false; this.resetNewInvoice(); alert('Invoice created!'); window.location.reload(); } else { alert('Error: ' + (d.error || 'Failed')); } } catch(e) { alert('System error.'); } finally { this.processing = false; } },
+            formatNumber(n) { if (!n) return '0.00'; return parseFloat(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
         }
     }
-</script>
-
-</div> <!-- end x-data invoiceManager -->
-
+    </script>
+</div>
 {% endblock %}
-
-

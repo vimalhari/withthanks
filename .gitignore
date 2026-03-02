@@ -61,6 +61,12 @@ instance/
 # Temporary video processing artefacts
 /tmp/
 
+# Tailwind CLI binary (downloaded automatically)
+.django_tailwind_cli/
+
+# Tailwind compiled output (built from source)
+assets/dist/
+
 # Python coverage
 .coverage
 htmlcov/

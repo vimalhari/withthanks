@@ -1,156 +1,232 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WithThanks Dashboard{% endblock %}</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Icons & Typography -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Tailwind CSS (built by django-tailwind-cli) -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+
+    <!-- Icons: Lucide (lightweight SVG icon set) -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Enterprise SaaS CSS -->
-    <link rel="stylesheet" href="{% static 'charity/global_saas.css' %}">
-    
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     {% block layout_head %}{% endblock %}
-    
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
-<body>
-    <div class="app-container">
-        <!-- SaaS Sidebar -->
-        <aside class="sidebar" id="appSidebar">
-            <div class="sidebar-logo">
-    <img src="{% static 'charity/img/with_thanks_logo_header.png' %}"
-         alt="WithThanks Logo"
-         style="max-width: 140px; height: auto; display: block;">
-</div>
-            
-            <nav style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                <!-- Main Navigation -->
-                <div class="nav-group">
-                    <p class="nav-label">Main</p>
-                    <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'charity_home' %}active{% endif %}">
-                        <i class="bi bi-speedometer2"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    {% if request.user.is_superuser %}
-                    <a href="{% url 'clients' %}" class="nav-item {% if '/clients/' in request.path %}active{% endif %}">
-                        <i class="bi bi-people"></i>
-                        <span>Clients</span>
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'admin_campaigns' %}" class="nav-item {% if '/campaigns/' in request.path %}active{% endif %}">
-                        <i class="bi bi-megaphone"></i>
-                        <span>Campaigns</span>
-                    </a>
-                </div>
-                
-                <!-- Management Section -->
-                <div class="nav-group">
-                    <p class="nav-label">Management</p>
-                    <a href="{% url 'analytics_unified' %}" class="nav-item {% if '/analytics/unified/' in request.path %}active{% endif %}">
-                        <i class="bi bi-bar-chart-line"></i> 
-                        <span>Reports</span>
-                    </a>
-                    <a href="{% url 'invoices' %}" class="nav-item {% if '/invoices/' in request.path %}active{% endif %}">
-                        <i class="bi bi-receipt"></i> 
-                        <span>Invoices</span>
-                    </a>
+
+<body class="h-full bg-gray-50 font-[Inter]"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      x-data="{ sidebarOpen: true, mobileSidebarOpen: false }">
+
+    <div class="flex h-full">
+        <!-- ═══════════════ SIDEBAR ═══════════════ -->
+        <!-- Mobile overlay -->
+        <div x-show="mobileSidebarOpen"
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+             @click="mobileSidebarOpen = false"
+             x-cloak></div>
+
+        <aside :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+               class="fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] bg-white border-r border-gray-200
+                      flex flex-col transition-transform duration-200 ease-in-out
+                      lg:translate-x-0 lg:static lg:z-auto">
+
+            <!-- Logo -->
+            <div class="px-5 py-6 border-b border-gray-100">
+                <a href="{% url 'dashboard' %}" class="block">
+                    <img src="{% static 'charity/img/with_thanks_logo_header.png' %}"
+                         alt="WithThanks" class="h-8 w-auto">
+                </a>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+                <!-- Main -->
+                <div>
+                    <p class="nav-group-label">Main</p>
+                    <div class="mt-1 space-y-0.5">
+                        <a href="{% url 'dashboard' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'charity_home' %}active{% endif %}">
+                            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        {% if request.user.is_superuser %}
+                        <a href="{% url 'clients' %}"
+                           class="nav-link {% if '/clients/' in request.path %}active{% endif %}">
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                            <span>Clients</span>
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'admin_campaigns' %}"
+                           class="nav-link {% if '/campaigns/' in request.path %}active{% endif %}">
+                            <i data-lucide="megaphone" class="w-5 h-5"></i>
+                            <span>Campaigns</span>
+                        </a>
+                    </div>
                 </div>
 
-
+                <!-- Management -->
+                <div>
+                    <p class="nav-group-label">Management</p>
+                    <div class="mt-1 space-y-0.5">
+                        <a href="{% url 'analytics_unified' %}"
+                           class="nav-link {% if '/analytics/unified/' in request.path %}active{% endif %}">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                            <span>Reports</span>
+                        </a>
+                        <a href="{% url 'invoices' %}"
+                           class="nav-link {% if '/invoices/' in request.path %}active{% endif %}">
+                            <i data-lucide="receipt" class="w-5 h-5"></i>
+                            <span>Invoices</span>
+                        </a>
+                    </div>
+                </div>
             </nav>
-            
+
             <!-- Sidebar Footer -->
-            <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid var(--border);">
-                <a href="{% url 'logout' %}" class="nav-item" style="color: var(--status-failed);">
-                    <i class="bi bi-box-arrow-left"></i>
+            <div class="px-3 py-4 border-t border-gray-100">
+                <a href="{% url 'logout' %}" class="nav-link text-red-500 hover:text-red-700 hover:bg-red-50">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
                     <span>Logout</span>
                 </a>
             </div>
         </aside>
 
-        <!-- Main Content Viewport -->
-        <main class="main-content">
-            <!-- Sticky Header -->
-            <header class="top-header">
-                <div class="breadcrumbs">
-                    <a href="{% url 'dashboard' %}" style="text-decoration: none; color: inherit;"><span style="font-weight: 500; opacity: 0.7;">WithThanks</span></a>
-                    <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
-                    <span style="font-weight: 500; opacity: 0.7;">{% block breadcrumb_parent %}Campaigns{% endblock %}</span>
-                    <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
-                    <span style="font-weight: 600; color: var(--text-headings);">{% block breadcrumb_child %}Dashboard{% endblock %}</span>
+        <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+        <main class="flex-1 flex flex-col min-h-screen lg:ml-0">
+            <!-- Top Header -->
+            <header class="sticky top-0 z-30 h-[var(--header-height)] bg-white border-b border-gray-200
+                          flex items-center justify-between px-4 lg:px-8 shadow-[0_1px_2px_0_rgb(0,0,0,0.05)]">
+
+                <!-- Left: Mobile menu + Breadcrumbs -->
+                <div class="flex items-center gap-4">
+                    <!-- Mobile hamburger -->
+                    <button @click="mobileSidebarOpen = !mobileSidebarOpen"
+                            class="lg:hidden p-1.5 rounded-lg text-gray-500 hover:bg-gray-100">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+
+                    <div class="breadcrumb hidden sm:flex">
+                        <a href="{% url 'dashboard' %}">WithThanks</a>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        <span>{% block breadcrumb_parent %}Dashboard{% endblock %}</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        <span class="current">{% block breadcrumb_child %}Overview{% endblock %}</span>
+                    </div>
                 </div>
-                
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <!-- ACTIVE CONTEXT DISPLAY (For Super Admins) -->
+
+                <!-- Right: Context badge + User -->
+                <div class="flex items-center gap-4">
+                    <!-- Active client context (superadmin) -->
                     {% if request.user.is_superuser %}
                         {% if request.session.active_charity_id %}
-                            <div style="background: var(--bg-hover); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; color: var(--primary); border: 1px solid var(--primary-accent); display: flex; align-items: center; gap: 8px;">
-                                <i class="bi bi-shield-check"></i>
-                                <span>CLIENT CONTEXT: 
-                                    {% if current_charity %}{{ current_charity.name|upper }}{% else %}ID: {{ request.session.active_charity_id }}{% endif %}
-                                </span>
-                                <a href="{% url 'clear_client_context' %}" style="color: var(--status-failed); text-decoration: none;" title="Clear Context"><i class="bi bi-x-circle-fill"></i></a>
+                            <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold
+                                        text-brand bg-brand-light border border-brand/20">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                                <span>CLIENT: {% if current_charity %}{{ current_charity.name|upper }}{% else %}ID: {{ request.session.active_charity_id }}{% endif %}</span>
+                                <a href="{% url 'clear_client_context' %}" class="text-red-500 hover:text-red-700 ml-1">
+                                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                                </a>
                             </div>
                         {% else %}
-                            <div style="background: #f8fafc; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; color: #64748b; border: 1px solid #e2e8f0;">
-                                <i class="bi bi-globe"></i>
+                            <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold
+                                        text-gray-500 bg-gray-100 border border-gray-200">
+                                <i data-lucide="globe" class="w-3.5 h-3.5"></i>
                                 <span>GLOBAL VIEW</span>
                             </div>
                         {% endif %}
                     {% else %}
                         {% if current_charity %}
-                         <div style="background: var(--bg-hover); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; color: var(--primary); border: 1px solid var(--primary-accent);">
-                            <i class="bi bi-building"></i>
+                        <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold
+                                    text-brand bg-brand-light border border-brand/20">
+                            <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
                             <span>{{ current_charity.name|upper }}</span>
                         </div>
                         {% endif %}
                     {% endif %}
 
-                    <button style="background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer;"><i class="bi bi-bell"></i></button>
-                    
-                    <!-- User Dropdown Component -->
-                    <div class="dropdown">
-                        <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 8px; border-radius: 8px; transition: background 0.2s;" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div style="width: 32px; height: 32px; background: var(--primary-accent); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; border: 1px solid rgba(79, 70, 229, 0.1);">
+                    <!-- Notification bell -->
+                    <button class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </button>
+
+                    <!-- User Dropdown -->
+                    <div x-data="{ open: false }" class="relative">
+                        <button @click="open = !open"
+                                class="flex items-center gap-3 p-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-brand-light text-brand font-bold text-xs
+                                        flex items-center justify-center border border-brand/10">
                                 {{ request.user.username|slice:":2"|upper }}
                             </div>
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 12px; font-weight: 600; color: var(--text-headings);">{{ request.user.username }}</span>
-                                <span style="font-size: 10px; color: var(--text-muted);">{{ request.user.email }}</span>
+                            <div class="hidden sm:flex flex-col text-left">
+                                <span class="text-xs font-semibold text-gray-900">{{ request.user.username }}</span>
+                                <span class="text-[10px] text-gray-500">{{ request.user.email }}</span>
                             </div>
-                            <i class="bi bi-chevron-down" style="font-size: 10px; color: var(--text-muted);"></i>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 hidden sm:block"></i>
+                        </button>
+
+                        <div x-show="open"
+                             @click.outside="open = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="dropdown-menu"
+                             x-cloak>
+                            <a href="{% url 'profile' %}" class="dropdown-item flex items-center gap-2">
+                                <i data-lucide="user" class="w-4 h-4"></i> Profile
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'logout' %}" class="dropdown-item flex items-center gap-2 text-red-600">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                            </a>
                         </div>
-                        <ul class="dropdown-menu dropdown-menu-end" style="border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-md); padding: 8px;">
-                            <li><a class="dropdown-item" href="{% url 'profile' %}" style="border-radius: var(--radius-sm); font-size: 13px; padding: 6px 12px;"><i class="bi bi-person" style="margin-right: 8px;"></i>Profile</a></li>
-                            <li><hr class="dropdown-divider" style="margin: 6px 0;"></li>
-                            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}" style="border-radius: var(--radius-sm); font-size: 13px; padding: 6px 12px;"><i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i>Logout</a></li>
-                        </ul>
                     </div>
                 </div>
             </header>
 
-            <!-- Dynamic Page Content -->
-            <div class="page-wrapper">
+            <!-- Page Content -->
+            <div class="flex-1 p-6 lg:p-10 max-w-[1200px] w-full mx-auto">
+                <!-- Flash Messages -->
                 {% if messages %}
-                <div style="margin-bottom: 20px;">
+                <div class="mb-6 space-y-2">
                     {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+                    <div x-data="{ show: true }" x-show="show"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0"
+                         class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' or message.tags == 'danger' %}alert-error{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}">
                         {% if message.tags == 'success' %}
-                            <i class="bi bi-check-circle-fill"></i>
+                            <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
                         {% elif message.tags == 'error' or message.tags == 'danger' %}
-                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
                         {% else %}
-                            <i class="bi bi-info-circle-fill"></i>
+                            <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
                         {% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <span class="flex-1">{{ message }}</span>
+                        <button @click="show = false" class="ml-auto shrink-0 opacity-60 hover:opacity-100">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
                     </div>
                     {% endfor %}
                 </div>
@@ -161,8 +237,13 @@
         </main>
     </div>
 
-    <!-- Alpine.js / Standard JS Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Initialize Lucide icons -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); });
+        // Re-init icons after HTMX swaps
+        document.body.addEventListener('htmx:afterSettle', () => { lucide.createIcons(); });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

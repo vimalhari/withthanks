@@ -6,140 +6,140 @@
 {% block breadcrumb_child %}Delivery Report #{{ batch.batch_number }}{% endblock %}
 
 {% block page_content %}
-<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
-    <div>
-        <a href="{% url 'analytics_unified' %}" style="text-decoration: none; color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
-            <i class="bi bi-arrow-left"></i> Back to Analytics
-        </a>
-        <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-bottom: 8px;">Delivery Report #{{ batch.batch_number }}</h1>
-        <p style="color: var(--text-muted); font-size: 16px;">{{ batch.created_at|date:"F j, Y, P" }}</p>
-    </div>
-    <div style="display: flex; gap: 12px;">
-        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#simulationModal">
-            <i class="bi bi-magic me-2"></i> Add Simulation
-        </button>
-        <div class="dropdown">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-download me-2"></i> Export Report
+<div x-data="{ showSimModal: false, exportOpen: false }">
+    <div class="flex justify-between items-end mb-10">
+        <div>
+            <a href="{% url 'analytics_unified' %}" class="text-gray-400 text-sm flex items-center gap-1.5 mb-3 hover:text-gray-600 transition">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Analytics
+            </a>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Delivery Report #{{ batch.batch_number }}</h1>
+            <p class="text-gray-400 text-base">{{ batch.created_at|date:"F j, Y, P" }}</p>
+        </div>
+        <div class="flex gap-3">
+            <button type="button" class="btn-secondary" @click="showSimModal = true">
+                <i data-lucide="sparkles" class="w-4 h-4 mr-2 inline"></i> Add Simulation
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2" style="border-radius: 12px; min-width: 180px;">
-                <li><a class="dropdown-item p-2 px-3" href="?export=csv" style="border-radius: 6px;"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Export CSV</a></li>
-                <li><a class="dropdown-item p-2 px-3" href="?export=excel" style="border-radius: 6px;"><i class="bi bi-file-earmark-excel me-2 text-primary"></i>Export Excel</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item p-2 px-3 text-secondary" href="{% url 'dashboard' %}?batch_id={{ batch.id }}" style="border-radius: 6px; font-size: 11px;"><i class="bi bi-list-task me-2"></i>View Raw Jobs</a></li>
-            </ul>
+            <div class="relative" @click.away="exportOpen = false">
+                <button class="btn-primary" @click="exportOpen = !exportOpen">
+                    <i data-lucide="download" class="w-4 h-4 mr-2 inline"></i> Export Report
+                    <i data-lucide="chevron-down" class="w-3 h-3 ml-1 inline"></i>
+                </button>
+                <div x-show="exportOpen" x-transition class="dropdown-menu right-0 mt-2 min-w-[180px]">
+                    <a class="dropdown-item" href="?export=csv"><i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2 text-emerald-600 inline"></i>Export CSV</a>
+                    <a class="dropdown-item" href="?export=excel"><i data-lucide="file-text" class="w-4 h-4 mr-2 text-brand inline"></i>Export Excel</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item !text-gray-400 !text-[11px]" href="{% url 'dashboard' %}?batch_id={{ batch.id }}"><i data-lucide="list" class="w-3 h-3 mr-2 inline"></i>View Raw Jobs</a>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Simulation Modal -->
-<div class="modal fade" id="simulationModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
-            <div class="modal-header border-0 p-4 pb-0">
-                <h5 class="modal-title fw-800">Simulate Delivery Engagement</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="simulate_views">
-                <div class="modal-body p-4">
-                    <p class="text-muted small mb-4">This will generate simulated (fake) views and clicks for all jobs in this delivery run. This is useful for demonstration and performance testing.</p>
-                    
-                    <div class="row g-3 mb-4">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Minimum Views</label>
-                            <input type="number" name="min_views" class="form-control" value="100" min="0" style="border-radius: 10px;">
+    <!-- Simulation Modal -->
+    <template x-if="showSimModal">
+        <div class="modal-backdrop" @click.self="showSimModal = false" x-transition.opacity>
+            <div class="modal-panel max-w-md" @click.stop>
+                <div class="modal-header">
+                    <h5 class="font-extrabold text-gray-900">Simulate Delivery Engagement</h5>
+                    <button type="button" @click="showSimModal = false" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="simulate_views">
+                    <div class="modal-body space-y-4">
+                        <p class="text-gray-400 text-sm">This will generate simulated (fake) views and clicks for all jobs in this delivery run. Useful for demonstration and testing.</p>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label">Minimum Views</label>
+                                <input type="number" name="min_views" class="form-input" value="100" min="0">
+                            </div>
+                            <div>
+                                <label class="form-label">Maximum Views</label>
+                                <input type="number" name="max_views" class="form-input" value="1000" min="0">
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Maximum Views</label>
-                            <input type="number" name="max_views" class="form-control" value="1000" min="0" style="border-radius: 10px;">
+
+                        <div class="alert-info">
+                            <i data-lucide="info" class="w-4 h-4 mr-2 inline"></i> Existing simulated data will be randomized within this range.
                         </div>
                     </div>
-
-                    <div class="alert alert-info border-0" style="background: #eff6ff; color: #1e40af; border-radius: 12px;">
-                        <i class="bi bi-info-circle me-2"></i> Existing simulated data will be randomized within this range.
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" @click="showSimModal = false">Cancel</button>
+                        <button type="submit" class="btn-primary !py-2.5 !px-6">Generate Metrics</button>
                     </div>
-                </div>
-                <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius: 10px;">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="border-radius: 10px; padding: 10px 24px;">Generate Metrics</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
-</div>
+    </template>
 
-<div class="row g-4 mb-4">
-    <!-- Main Logistics Table -->
-    <div class="col-lg-12">
-        <div class="saas-card p-0" style="overflow: hidden;">
-            <div style="padding: 20px; border-bottom: 1px solid var(--border); background: #f8fafc;">
-                <h3 style="font-size: 16px; font-weight: 700; margin: 0;">Recipient Deep-Dive</h3>
-            </div>
-            <div style="overflow-x: auto;">
-                <table class="saas-table">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">Recipient</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Watch Time</th>
-                            <th class="text-center">Activity</th>
-                            <th class="pe-4 text-end">Video</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for job in jobs %}
-                        <tr>
-                            <td class="ps-4">
-                                <div style="font-weight: 600;">{{ job.donor_name }}</div>
-                                <div style="font-size: 11px; color: var(--text-muted);">{{ job.email }}</div>
-                            </td>
-                            <td>
-                                <span class="badge {% if job.appeal_type == 'VDM' %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %}" style="font-size: 10px;">
-                                    {{ job.appeal_type|default:"WithThanks" }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if job.status == 'success' %}
-                                    <span class="badge bg-success-subtle text-success">Delivered</span>
-                                {% elif job.status == 'failed' %}
-                                    <span class="badge bg-danger-subtle text-danger" title="{{ job.error_message }}">Failed</span>
-                                {% else %}
-                                    <span class="badge bg-light text-dark">{{ job.status|title }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div style="font-weight: 700; color: var(--navy-blue);">
-                                    {{ job.real_views }} <span class="text-muted" style="font-weight: 400;">/ {{ job.fake_views }}</span>
-                                </div>
-                                <div style="font-size: 10px; color: var(--text-muted);">Total: {{ job.real_views|add:job.fake_views }}</div>
-                            </td>
-                            <td class="text-center">
-                                <div style="display: flex; gap: 6px; justify-content: center;">
-                                    {% with track=job.email_tracks.first %}
-                                        <i class="bi bi-envelope{% if track.opened %}-open{% endif %} {% if track.opened %}text-primary{% else %}text-muted{% endif %}" title="Opened"></i>
-                                        <i class="bi bi-play-circle {% if track.video_played %}text-success{% else %}text-muted{% endif %}" title="Played"></i>
-                                        <i class="bi bi-check-circle {% if track.video_completed %}text-success{% else %}text-muted{% endif %}" title="Finished"></i>
-                                    {% endwith %}
-                                </div>
-                            </td>
-                            <td class="pe-4 text-end">
-                                {% if job.video_path %}
-                                    <a href="{{ job.video_url }}" target="_blank" class="btn btn-sm btn-light" style="font-size: 10px; padding: 2px 6px;">
-                                        <i class="bi bi-play-fill"></i>
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted small">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <!-- Recipient Table -->
+    <div class="card !p-0 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 bg-gray-50/80">
+            <h3 class="text-base font-bold">Recipient Deep-Dive</h3>
         </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="pl-4">Recipient</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Watch Time</th>
+                        <th class="text-center">Activity</th>
+                        <th class="pr-4 text-right">Video</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td class="pl-4">
+                            <div class="font-semibold">{{ job.donor_name }}</div>
+                            <div class="text-[11px] text-gray-400">{{ job.email }}</div>
+                        </td>
+                        <td>
+                            <span class="{% if job.appeal_type == 'VDM' %}badge-warning{% else %}badge-brand{% endif %} !text-[10px]">
+                                {{ job.appeal_type|default:"WithThanks" }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if job.status == 'success' %}
+                                <span class="badge-success">Delivered</span>
+                            {% elif job.status == 'failed' %}
+                                <span class="badge-danger" title="{{ job.error_message }}">Failed</span>
+                            {% else %}
+                                <span class="badge-default">{{ job.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="font-bold text-gray-900">
+                                {{ job.real_views }} <span class="text-gray-400 font-normal">/ {{ job.fake_views }}</span>
+                            </div>
+                            <div class="text-[10px] text-gray-400">Total: {{ job.real_views|add:job.fake_views }}</div>
+                        </td>
+                        <td class="text-center">
+                            <div class="flex gap-1.5 justify-center">
+                                {% with track=job.email_tracks.first %}
+                                    <i data-lucide="{% if track.opened %}mail-open{% else %}mail{% endif %}" class="w-4 h-4 {% if track.opened %}text-brand{% else %}text-gray-300{% endif %}"></i>
+                                    <i data-lucide="play-circle" class="w-4 h-4 {% if track.video_played %}text-emerald-500{% else %}text-gray-300{% endif %}"></i>
+                                    <i data-lucide="check-circle-2" class="w-4 h-4 {% if track.video_completed %}text-emerald-500{% else %}text-gray-300{% endif %}"></i>
+                                {% endwith %}
+                            </div>
+                        </td>
+                        <td class="pr-4 text-right">
+                            {% if job.video_path %}
+                                <a href="{{ job.video_url }}" target="_blank" class="btn-ghost !p-1">
+                                    <i data-lucide="play" class="w-4 h-4"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-gray-300 text-sm">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

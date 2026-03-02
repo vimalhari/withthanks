@@ -4,40 +4,39 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0010_receivedemail'),
+        ("charity", "0010_receivedemail"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='campaign_name',
+            model_name="charity",
+            name="campaign_name",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='domain',
-            field=models.CharField(blank=True, help_text='e.g. mycharity.org', max_length=255),
+            model_name="charity",
+            name="domain",
+            field=models.CharField(blank=True, help_text="e.g. mycharity.org", max_length=255),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='email_api_key',
+            model_name="charity",
+            name="email_api_key",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='logo',
-            field=models.ImageField(blank=True, null=True, upload_to='charity_logos/'),
+            model_name="charity",
+            name="logo",
+            field=models.ImageField(blank=True, null=True, upload_to="charity_logos/"),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='reply_to_email',
+            model_name="charity",
+            name="reply_to_email",
             field=models.EmailField(blank=True, max_length=254),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='sender_email',
+            model_name="charity",
+            name="sender_email",
             field=models.EmailField(blank=True, max_length=254),
         ),
     ]

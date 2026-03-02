@@ -153,7 +153,7 @@ def _build_personalized_video(
 
     output_path = stitch_voice_and_overlay(
         input_video=input_video,
-        tts_wav=voiceover_path,
+        tts_mp3=voiceover_path,
         overlay_text=text,
         out_filename=f"{file_base}.mp4",
         output_dir=settings.VIDEO_OUTPUT_DIR,
@@ -233,11 +233,11 @@ def dispatch_donation_video(
         try:
             stream_result = upload_video_to_stream(
                 video_path,
-                meta_name=f"{charity.name} – {donor.email}",
+                meta_name=f"{charity.name} - {donor.email}",
             )
-        except Exception as stream_exc:  # noqa: BLE001
+        except Exception as stream_exc:
             logger.warning(
-                "Cloudflare Stream upload failed for %s – falling back to attachment: %s",
+                "Cloudflare Stream upload failed for %s - falling back to attachment: %s",
                 donor.email,
                 stream_exc,
             )
@@ -246,8 +246,10 @@ def dispatch_donation_video(
         provider_resp = send_video_email(
             to_email=donor.email,
             file_path=video_path,
-            playback_url=stream_result.playback_url if stream_result else "",
-            thumbnail_url=stream_result.thumbnail_url if stream_result else "",
+            job_id=str(donation.id),
+            donor_name=donor.full_name or donor.email,
+            donation_amount=str(amount),
+            organization_name=charity.name,
         )
         message_id = provider_resp.get("id", "") if isinstance(provider_resp, dict) else ""
         log = VideoSendLog.objects.create(

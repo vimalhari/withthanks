@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0029_alter_donationjob_campaign_and_more'),
+        ("charity", "0029_alter_donationjob_campaign_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='campaign',
-            name='is_personalized',
-            field=models.BooleanField(default=False, help_text='Use TTS and personalized stitching (WithThanks only)'),
+            model_name="campaign",
+            name="is_personalized",
+            field=models.BooleanField(
+                default=False, help_text="Use TTS and personalized stitching (WithThanks only)"
+            ),
         ),
     ]

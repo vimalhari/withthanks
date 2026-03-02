@@ -1,23 +1,25 @@
-<!-- templates/charity/stitched_video.html -->
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stitched Video</title>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
   </head>
-  <body>
-    <h1>Stitched Video</h1>
-
-    <video width="640" height="360" controls>
-      <source src="{{ video_url }}" type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
-
-    <p>
-      <a href="{{ video_url }}" download>Download Video</a>
-    </p>
-
-    <p>
-      <a href="{% url 'list_voiceovers' %}">Back to Voiceovers</a>
-    </p>
+  <body class="min-h-screen bg-gray-50 flex items-center justify-center p-8 font-sans">
+    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-lg overflow-hidden">
+      <video width="640" height="360" controls class="w-full block">
+        <source src="{{ video_url }}" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <div class="p-6 text-center space-y-3">
+        <h1 class="text-xl font-extrabold text-gray-900">Stitched Video</h1>
+        <div class="flex justify-center gap-3">
+          <a href="{{ video_url }}" download class="inline-block py-2 px-4 rounded-lg text-sm font-semibold bg-brand text-white hover:bg-brand/90 transition">Download Video</a>
+          <a href="#" onclick="history.back()" class="inline-block py-2 px-4 rounded-lg text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition">Back to Voiceovers</a>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

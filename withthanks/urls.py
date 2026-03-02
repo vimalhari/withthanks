@@ -32,36 +32,31 @@ urlpatterns = [
     # Health check (used by Coolify / container orchestrators)
     path("health/", health_check, name="health_check"),
     path("meta.json", health_check),  # Prevent /meta.json 404
-
     # Admin
     path("admin/", admin.site.urls),
-
     # JWT auth
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-
     # REST API (DRF) — disabled until serializers are reconciled with stage3 models
     # path("api/", include("charity.api.urls")),
-
     # Analytics
     path("analytics/", include("charity.analytics_urls")),
-
     # Charity frontend (dashboard, campaigns, clients, invoices, etc.)
     path("charity/", include("charity.urls")),
-
     # Root → dashboard (login_required in the view handles auth)
     path("", charity_views.dashboard_view, name="home"),
-
     # Static assets
     path("favicon.ico", charity_views.favicon_view),
     path("robots.txt", charity_views.robots_view),
-
     # Swagger / ReDoc (AllowAny in DEBUG; IsAdminUser in production)
-    re_path(r"^swagger(?P<format>\.json|\.yaml)$", schema_view.without_ui(cache_timeout=0), name="schema-json"),
+    re_path(
+        r"^swagger(?P<format>\.json|\.yaml)$",
+        schema_view.without_ui(cache_timeout=0),
+        name="schema-json",
+    ),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

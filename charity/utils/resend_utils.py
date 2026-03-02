@@ -1,10 +1,10 @@
-import os
-import time
 import base64
 import logging
-from pathlib import Path
-from typing import Optional, Dict, Any
+import os
+import time
 from email.utils import parseaddr
+from pathlib import Path
+from typing import Any
 
 import resend
 from django.conf import settings
@@ -39,7 +39,7 @@ def _normalize_email(email: str) -> str:
     if not email:
         raise ValueError("Email address cannot be empty.")
 
-    name, addr = parseaddr(email.strip())
+    _, addr = parseaddr(email.strip())
     if addr and "@" in addr:
         return addr
 
@@ -101,25 +101,25 @@ def _normalize_email(email: str) -> str:
 #             <p>Dear supporter,</p>
 #             <p>We deeply appreciate your contribution. We've created a personalized video message
 #             to express our heartfelt gratitude for your support.</p>
-            
+
 #             <div style="text-align: center; margin: 30px 0;">
-#                 <a href="{video_url}" 
-#                    style="background-color: #2c5aa0; 
-#                           color: white; 
-#                           padding: 15px 30px; 
-#                           text-decoration: none; 
-#                           border-radius: 5px; 
+#                 <a href="{video_url}"
+#                    style="background-color: #2c5aa0;
+#                           color: white;
+#                           padding: 15px 30px;
+#                           text-decoration: none;
+#                           border-radius: 5px;
 #                           font-weight: bold;
 #                           display: inline-block;">
 #                     🎥 View Your Thank You Video
 #                 </a>
 #             </div>
-            
+
 #             <p style="font-size: 12px; color: #666;">
 #                 If the button doesn't work, copy and paste this link into your browser:<br>
 #                 <a href="{video_url}" style="color: #2c5aa0;">{video_url}</a>
 #             </p>
-            
+
 #             <p>Warm regards,<br><strong>The Charity Team</strong></p>
 #         </div>
 #         """
@@ -144,16 +144,16 @@ def _normalize_email(email: str) -> str:
 
 def send_video_email(
     to_email: str,
-    file_path: Optional[str],
+    file_path: str | None,
     job_id: str,
     donor_name: str = "Donor",
     donation_amount: str = "0",
     organization_name: str = "WithThanks",
-    subject: Optional[str] = None,
-    html: Optional[str] = None,
-    from_email: Optional[str] = None,
+    subject: str | None = None,
+    html: str | None = None,
+    from_email: str | None = None,
     is_card_only: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
 
     _ensure_api_key()
 
@@ -162,7 +162,7 @@ def send_video_email(
         raise RuntimeError("No sender configured — set DEFAULT_FROM_EMAIL or pass 'from_email'.")
 
     recipient = _normalize_email(to_email)
-    
+
     file = None
     if file_path:
         file = Path(file_path)
@@ -178,38 +178,38 @@ def send_video_email(
     video_url = ""
     if file:
         try:
-             # Calculate relative path from MEDIA_ROOT to support any subdirectory (outputs, clients, etc)
-             rel_path = os.path.relpath(file, settings.MEDIA_ROOT)
-             clean_rel_path = rel_path.replace("\\", "/")
-             video_url = f"{server_url}{settings.MEDIA_URL}{clean_rel_path}".replace("//", "/")
-             
-             # Double check server_url doesn't double slash with MEDIA_URL if MEDIA_URL is just /media/
-             # Simple robust construction:
-             s_url = server_url.rstrip("/")
-             m_url = settings.MEDIA_URL.strip("/")
-             video_url = f"{s_url}/{m_url}/{clean_rel_path}"
+            # Calculate relative path from MEDIA_ROOT to support any subdirectory (outputs, clients, etc)
+            rel_path = os.path.relpath(file, settings.MEDIA_ROOT)
+            clean_rel_path = rel_path.replace("\\", "/")
+            video_url = f"{server_url}{settings.MEDIA_URL}{clean_rel_path}".replace("//", "/")
+
+            # Double check server_url doesn't double slash with MEDIA_URL if MEDIA_URL is just /media/
+            # Simple robust construction:
+            s_url = server_url.rstrip("/")
+            m_url = settings.MEDIA_URL.strip("/")
+            video_url = f"{s_url}/{m_url}/{clean_rel_path}"
         except ValueError:
-             # Fallback if file is not inside MEDIA_ROOT (e.g. temp dir)
-             video_url = f"{server_url}/media/outputs/{file.name}"
+            # Fallback if file is not inside MEDIA_ROOT (e.g. temp dir)
+            video_url = f"{server_url}/media/outputs/{file.name}"
 
     tracking_pixel_url = f"{server_url}/track/email/{job_id}/"
     unsubscribe_url = f"{server_url}/charity/unsubscribe/{job_id}/"
 
     # SIMPLE SaaS TEMPLATE
     subject = subject or ("Thank You Card" if is_card_only else "Personalized thank-you message")
-    
+
     if not html:
         # CTA Logic (Only if HTML is NOT provided)
         if is_card_only:
             is_image = False
             filename = file.name.lower() if file else ""
-            if filename.endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            if filename.endswith((".png", ".jpg", ".jpeg", ".gif")):
                 is_image = True
 
             if is_image:
-                 # Image: Embed via public URL if available, or just as attachment.
-                 # For simplicity, if we have a public URL, we use it in the IMG tag.
-                 email_cta = f"""
+                # Image: Embed via public URL if available, or just as attachment.
+                # For simplicity, if we have a public URL, we use it in the IMG tag.
+                email_cta = f"""
                 <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 8px;">
                     <p style="font-size: 16px; font-weight: bold; color: #333;">A Special Thank You ❤️</p>
                     <p style="font-size: 14px; color: #666; line-height: 1.5;">
@@ -221,12 +221,12 @@ def send_video_email(
                 </div>
                 """
             else:
-                 # Video or No File
+                # Video or No File
                 email_cta = f"""
                 <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 8px;">
                     <p style="font-size: 16px; font-weight: bold; color: #333;">Thank You Card ❤️</p>
                     <p style="font-size: 14px; color: #666; line-height: 1.5;">
-                        We deeply appreciate your recent contribution. Since we sent you a personalized video message very recently, 
+                        We deeply appreciate your recent contribution. Since we sent you a personalized video message very recently,
                         please accept this digital thank-you card for your continued generosity.
                     </p>
                     <div style="font-size: 48px; margin: 20px 0;">📬✨</div>
@@ -238,7 +238,7 @@ def send_video_email(
         else:
             email_cta = f"""
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{video_url}" 
+                <a href="{video_url}"
                    style="background-color: #000; color: #fff; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                     🎥 View Your Video
                 </a>
@@ -254,12 +254,12 @@ def send_video_email(
             <p><strong>Organization:</strong> {organization_name}</p>
             <p><strong>Donation Amount:</strong> {donation_amount}</p>
             <p>We deeply appreciate your support.</p>
-            
+
             {email_cta}
 
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
                 <p style="font-size: 11px; color: #999;">
-                    If you no longer wish to receive these emails, you can 
+                    If you no longer wish to receive these emails, you can
                     <a href="{unsubscribe_url}" style="color: #999;">unsubscribe here</a>.
                 </p>
             </div>
@@ -283,56 +283,61 @@ def send_video_email(
                 file_content = base64.b64encode(f.read()).decode("utf-8")
             # Check if this file is being used as an image in the HTML logic we added (or template)
             # If the filename matches what we expect or we want to force inline:
-            # For simplicity, if it's an image, let's treat it as inline if possible, 
+            # For simplicity, if it's an image, let's treat it as inline if possible,
             # BUT we need to update the HTML to reference 'cid:filename'.
-            
-            is_image_ext = file.name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))
+
+            is_image_ext = file.name.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))
             if is_image_ext and html and video_url in html:
-                 # The HTML references the video_url. We should swap it for cid:
-                 # This makes localhost testing work perfectly as the image is embedded.
-                 cid_id = f"image-{file.name}"
-                 params["html"] = html.replace(video_url, f"cid:{cid_id}")
-                 
-                 params["attachments"] = [
+                # The HTML references the video_url. We should swap it for cid:
+                # This makes localhost testing work perfectly as the image is embedded.
+                cid_id = f"image-{file.name}"
+                params["html"] = html.replace(video_url, f"cid:{cid_id}")
+
+                params["attachments"] = [
                     {
                         "filename": file.name,
                         "content": file_content,
-                        "content_id": cid_id, # This makes it inline!
+                        "content_id": cid_id,  # This makes it inline!
                     }
-                 ]
+                ]
             else:
-                 # Standard attachment (Video or Image not in body)
-                 params["attachments"] = [
+                # Standard attachment (Video or Image not in body)
+                params["attachments"] = [
                     {
                         "filename": file.name,
                         "content": file_content,
                     }
-                 ]
+                ]
         else:
-            logger.info(f"Skipping attachment for {file.name} ({file_size} bytes) - too large for Resend. Link only.")
+            logger.info(
+                f"Skipping attachment for {file.name} ({file_size} bytes) - too large for Resend. Link only."
+            )
 
     try:
-        # Increase timeout or add retry logic if needed. 
-        # resend-python doesn't expose timeout easily in the top-level send call, 
+        # Increase timeout or add retry logic if needed.
+        # resend-python doesn't expose timeout easily in the top-level send call,
         # but we can wrap it in a retry loop.
-        
+
         max_retries = 3
         last_error = None
-        
+
         for attempt in range(max_retries):
             try:
                 response = resend.Emails.send(params)
                 logger.info(
                     "📩 Email sent to %s | Video: %s | Pixel: %s (Attempt %s)",
-                    recipient, video_url, tracking_pixel_url, attempt + 1
+                    recipient,
+                    video_url,
+                    tracking_pixel_url,
+                    attempt + 1,
                 )
                 return response
             except Exception as exc:
                 last_error = exc
                 logger.warning(f"Resend attempt {attempt + 1} failed: {exc}")
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt) # Exponential backoff
-        
+                    time.sleep(2**attempt)  # Exponential backoff
+
         raise last_error
 
     except Exception as e:
@@ -344,15 +349,15 @@ def send_invoice_email(
     to_email: str,
     invoice_pdf_bytes: bytes,
     invoice_number: str,
-    invoice_id: Optional[str] = None,
-    subject: Optional[str] = None,
-    html: Optional[str] = None,
-    from_email: Optional[str] = None,
-    filename: str = "invoice.pdf"
-) -> Dict[str, Any]:
+    invoice_id: str | None = None,
+    subject: str | None = None,
+    html: str | None = None,
+    from_email: str | None = None,
+    filename: str = "invoice.pdf",
+) -> dict[str, Any]:
     """
     Send an invoice PDF via email.
-    
+
     Args:
         to_email: Recipient email address.
         invoice_pdf_bytes: The PDF content as bytes.
@@ -362,7 +367,7 @@ def send_invoice_email(
         html: Optional custom HTML body.
         from_email: Optional sender address.
         filename: Filename for the attachment.
-        
+
     Returns:
         Resend API response.
     """
@@ -373,11 +378,11 @@ def send_invoice_email(
         raise RuntimeError("No sender configured — set DEFAULT_FROM_EMAIL or pass 'from_email'.")
 
     recipient = _normalize_email(to_email)
-    
+
     # Default Subject
     if not subject:
         subject = f"Invoice {invoice_number} from WithThanks"
-        
+
     # Default HTML
     if not html:
         tracking_pixel_url = ""
@@ -391,16 +396,16 @@ def send_invoice_email(
             <p>Hello,</p>
             <p>Please find attached invoice <strong>{invoice_number}</strong>.</p>
             <p>Thank you for your business.</p>
-            
+
             <p>Warm regards,<br><strong>WithThanks Team</strong></p>
-            {f'<img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />' if tracking_pixel_url else ''}
+            {f'<img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />' if tracking_pixel_url else ""}
         </div>
         """
 
     # Prepare Attachment
     # Encode bytes to base64 string
     pdf_b64 = base64.b64encode(invoice_pdf_bytes).decode("utf-8")
-    
+
     params = {
         "from": sender,
         "to": recipient,
@@ -411,12 +416,17 @@ def send_invoice_email(
                 "filename": filename,
                 "content": pdf_b64,
             }
-        ]
+        ],
     }
 
     try:
         response = resend.Emails.send(params)
-        logger.info("✅ Sent invoice %s to %s [Resend ID: %s]", invoice_number, recipient, response.get("id"))
+        logger.info(
+            "✅ Sent invoice %s to %s [Resend ID: %s]",
+            invoice_number,
+            recipient,
+            response.get("id"),
+        )
         return response
     except Exception as e:
         logger.exception("❌ Failed to send invoice to %s: %s", recipient, e)

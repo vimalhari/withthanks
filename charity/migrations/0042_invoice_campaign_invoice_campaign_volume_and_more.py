@@ -5,35 +5,53 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0041_invoiceservice_invoicelineitem'),
+        ("charity", "0041_invoiceservice_invoicelineitem"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='invoice',
-            name='campaign',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='invoices', to='charity.campaign'),
+            model_name="invoice",
+            name="campaign",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="invoices",
+                to="charity.campaign",
+            ),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='campaign_volume',
+            model_name="invoice",
+            name="campaign_volume",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='invoice',
-            name='pricing_tier',
-            field=models.CharField(choices=[('standard', 'Standard'), ('premium', 'Premium')], default='standard', max_length=20),
+            model_name="invoice",
+            name="pricing_tier",
+            field=models.CharField(
+                choices=[("standard", "Standard"), ("premium", "Premium")],
+                default="standard",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='invoice',
-            name='invoice_type',
-            field=models.CharField(choices=[('campaign_wise', 'Campaign Wise'), ('single_batch', 'Single Batch'), ('multiple_batches', 'Multiple Batches'), ('date_range', 'Date Range')], default='single_batch', max_length=20),
+            model_name="invoice",
+            name="invoice_type",
+            field=models.CharField(
+                choices=[
+                    ("campaign_wise", "Campaign Wise"),
+                    ("single_batch", "Single Batch"),
+                    ("multiple_batches", "Multiple Batches"),
+                    ("date_range", "Date Range"),
+                ],
+                default="single_batch",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='invoice',
-            name='tax_percent',
+            model_name="invoice",
+            name="tax_percent",
             field=models.DecimalField(decimal_places=2, default=20.0, max_digits=5),
         ),
     ]

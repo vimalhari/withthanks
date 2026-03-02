@@ -26,6 +26,7 @@ _local_commands = {
     "createsuperuser",
     "collectstatic",
     "seed_services",
+    "tailwind",
 }
 _is_local_command = any(cmd in sys.argv for cmd in _local_commands)
 _debug_env = os.environ.get("DJANGO_DEBUG")
@@ -37,7 +38,7 @@ if not _secret_key:
     else:
         raise RuntimeError(
             "DJANGO_SECRET_KEY environment variable must be set. "
-            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+            'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(50))"'
         )
 SECRET_KEY = _secret_key
 
@@ -64,6 +65,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_yasg",
+    "django_tailwind_cli",
     # Local
     "charity",
 ]
@@ -200,7 +202,15 @@ SWAGGER_SETTINGS = {
 # Static and media
 # ------------------------------------------------------------
 STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "assets" / "dist"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# ------------------------------------------------------------
+# Tailwind CSS (django-tailwind-cli)
+# ------------------------------------------------------------
+TAILWIND_CLI_AUTOMATIC_DOWNLOAD = True
+TAILWIND_CLI_SRC_CSS = "assets/src/styles.css"
+TAILWIND_CLI_DIST_CSS = "css/tailwind.css"
 
 MEDIA_URL = "/media/"
 # In Docker the MEDIA_ROOT env-var is set to /app/media (volume mount).
@@ -217,7 +227,7 @@ VIDEO_OUTPUT_DIR = MEDIA_ROOT / "videos"
 try:
     VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 except Exception as _e:
-    print(f"⚠️ Could not create VIDEO_OUTPUT_DIR: {_e}")  # noqa: T201
+    print(f"⚠️ Could not create VIDEO_OUTPUT_DIR: {_e}")
 
 # ------------------------------------------------------------
 # Cloudflare Stream
@@ -227,7 +237,7 @@ CLOUDFLARE_STREAM_TOKEN = os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
 CLOUDFLARE_STREAM_ENABLED = os.environ.get("CLOUDFLARE_STREAM_ENABLED", "true").lower() == "true"
 
 # ------------------------------------------------------------
-# Cloudflare R2 (optional – install the r2 extra: uv sync --extra r2)
+# Cloudflare R2 (optional - install the r2 extra: uv sync --extra r2)
 # Compatible with Django Storages S3 backend.
 # ------------------------------------------------------------
 CLOUDFLARE_R2_ACCESS_KEY_ID = os.environ.get("CLOUDFLARE_R2_ACCESS_KEY_ID", "")
@@ -321,7 +331,9 @@ LOGGING = {
 # ------------------------------------------------------------
 # CSRF Trusted Origins
 # ------------------------------------------------------------
-_csrf_origins = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+_csrf_origins = [
+    o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
@@ -374,4 +386,4 @@ try:
     (MEDIA_ROOT / "outputs").mkdir(parents=True, exist_ok=True)
     (MEDIA_ROOT / "voiceover_cache").mkdir(parents=True, exist_ok=True)
 except Exception as _e:
-    print(f"⚠️ Could not ensure media folders exist: {_e}")  # noqa: T201
+    print(f"⚠️ Could not ensure media folders exist: {_e}")

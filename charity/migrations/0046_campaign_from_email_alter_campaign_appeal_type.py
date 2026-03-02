@@ -4,20 +4,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0045_remove_campaign_appeal_reference'),
+        ("charity", "0045_remove_campaign_appeal_reference"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='campaign',
-            name='from_email',
-            field=models.EmailField(blank=True, help_text='Override sender email address for this campaign', max_length=254, null=True),
+            model_name="campaign",
+            name="from_email",
+            field=models.EmailField(
+                blank=True,
+                help_text="Override sender email address for this campaign",
+                max_length=254,
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='appeal_type',
-            field=models.CharField(choices=[('WithThanks', 'Thank you'), ('VDM', 'Video Direct Mail (VDM)')], default='WithThanks', max_length=20),
+            model_name="campaign",
+            name="appeal_type",
+            field=models.CharField(
+                choices=[("WithThanks", "Thank you"), ("VDM", "Video Direct Mail (VDM)")],
+                default="WithThanks",
+                max_length=20,
+            ),
         ),
     ]

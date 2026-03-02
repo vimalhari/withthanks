@@ -7,28 +7,14 @@
 
 {% block layout_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-    .kpi-row {
-        display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px;
-    }
-    .kpi-card {
-        background: white; padding: 24px; border-radius: 16px; border: 1px solid var(--border);
-    }
-    .kpi-val {
-        font-size: 28px; font-weight: 800; margin-top: 8px;
-    }
-    .chart-card {
-        background: white; border-radius: 16px; border: 1px solid var(--border); padding: 24px; height: 350px;
-    }
-</style>
 {% endblock %}
 
 {% block page_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 style="font-size: 24px; font-weight: 800;">Delivery & Bounce</h1>
-    <div class="d-flex gap-2">
-        <a href="{% url 'analytics_export_csv' %}?days={{ request.GET.days|default:'30' }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Export CSV</a>
-        <select class="form-select form-select-sm" onchange="window.location.href='?days='+this.value">
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-extrabold text-gray-900">Delivery & Bounce</h1>
+    <div class="flex gap-2">
+        <a href="{% url 'analytics_export_csv' %}?days={{ request.GET.days|default:'30' }}" class="btn-secondary btn-sm"><i data-lucide="download" class="w-4 h-4"></i> Export CSV</a>
+        <select class="form-select w-[160px]" onchange="window.location.href='?days='+this.value">
             <option value="7">Last 7 Days</option>
             <option value="30" selected>Last 30 Days</option>
             <option value="90">Last 90 Days</option>
@@ -36,69 +22,62 @@
     </div>
 </div>
 
-<div class="kpi-row">
-    <div class="kpi-card">
-        <div class="text-muted small fw-bold">EMAILS SENT</div>
-        <div class="kpi-val text-primary">{{ sent }}</div>
+<div class="grid grid-cols-4 gap-6 mb-6">
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase">Emails Sent</div>
+        <div class="text-3xl font-extrabold text-brand mt-2">{{ sent }}</div>
     </div>
-    <div class="kpi-card">
-        <div class="text-muted small fw-bold">DELIVERY RATE</div>
-        <div class="kpi-val text-success">{{ delivery_rate }}%</div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase">Delivery Rate</div>
+        <div class="text-3xl font-extrabold text-emerald-600 mt-2">{{ delivery_rate }}%</div>
     </div>
-    <div class="kpi-card">
-        <div class="text-muted small fw-bold">BOUNCE RATE</div>
-        <div class="kpi-val text-danger">{{ bounce_rate }}%</div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase">Bounce Rate</div>
+        <div class="text-3xl font-extrabold text-red-600 mt-2">{{ bounce_rate }}%</div>
     </div>
-    <div class="kpi-card">
-        <div class="text-muted small fw-bold">OPEN RATE</div>
-        <div class="kpi-val text-info">{{ open_rate }}%</div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase">Open Rate</div>
+        <div class="text-3xl font-extrabold text-blue-500 mt-2">{{ open_rate }}%</div>
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-lg-6">
-        <div class="chart-card">
-            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 24px;">Delivery Breakdown</h3>
-            <canvas id="deliveryPie"></canvas>
-        </div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-6 h-[350px]">
+        <h3 class="text-base font-bold text-gray-900 mb-6">Delivery Breakdown</h3>
+        <canvas id="deliveryPie"></canvas>
     </div>
-    <div class="col-lg-6">
-        <div class="chart-card">
-            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 24px;">Top Provider Errors</h3>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead><tr><th>Error Code</th><th>Occurrences</th></tr></thead>
-                    <tbody>
-                        {% for err in errors %}
-                        <tr><td><code>{{ err.error_code }}</code></td><td><strong>{{ err.count }}</strong></td></tr>
-                        {% empty %}
-                        <tr><td colspan="2" class="text-center text-muted">No delivery errors found.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="card p-6 h-[350px]">
+        <h3 class="text-base font-bold text-gray-900 mb-6">Top Provider Errors</h3>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead><tr><th>Error Code</th><th>Occurrences</th></tr></thead>
+                <tbody>
+                    {% for err in errors %}
+                    <tr><td><code class="text-sm bg-gray-100 px-2 py-0.5 rounded">{{ err.error_code }}</code></td><td class="font-bold">{{ err.count }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="text-center py-8 text-gray-400">No delivery errors found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const days = new URLSearchParams(window.location.search).get('days') || '30';
-        fetch(`/analytics/api/charts/delivery/?days=${days}`)
-            .then(res => res.json())
-            .then(data => {
-                new Chart(document.getElementById('deliveryPie'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            data: data.values,
-                            backgroundColor: ['#10b981', '#ef4444', '#f59e0b']
-                        }]
-                    },
-                    options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
-                });
+document.addEventListener('DOMContentLoaded', function() {
+    const days = new URLSearchParams(window.location.search).get('days') || '30';
+    fetch(`/analytics/api/charts/delivery/?days=${days}`)
+        .then(res => res.json())
+        .then(data => {
+            new Chart(document.getElementById('deliveryPie'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{ data: data.values, backgroundColor: ['#10b981', '#ef4444', '#f59e0b'] }]
+                },
+                options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
             });
-    });
+        });
+});
 </script>
 {% endblock %}

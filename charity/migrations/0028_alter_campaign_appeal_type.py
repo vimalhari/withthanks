@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0027_remove_campaign_campaign_manager_email_and_more'),
+        ("charity", "0027_remove_campaign_campaign_manager_email_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='campaign',
-            name='appeal_type',
-            field=models.CharField(choices=[('WithThanks', 'WithThanks'), ('VDM', 'VDM')], default='Donation', max_length=20),
+            model_name="campaign",
+            name="appeal_type",
+            field=models.CharField(
+                choices=[("WithThanks", "WithThanks"), ("VDM", "VDM")],
+                default="Donation",
+                max_length=20,
+            ),
         ),
     ]

@@ -6,537 +6,325 @@
 {% block breadcrumb_parent %}Invoices{% endblock %}
 {% block breadcrumb_child %}New Invoice{% endblock %}
 
-{% block layout_head %}
-<style>
-    :root {
-        --fin-primary: #6366f1;
-        --fin-primary-dark: #4f46e5;
-        --fin-primary-light: #eef2ff;
-        --fin-border: #e2e8f0;
-        --fin-bg-soft: #f8fafc;
-        --fin-text-heading: #0f172a;
-        --fin-text-body: #475569;
-        --fin-text-muted: #94a3b8;
-        --fin-radius: 12px;
-    }
-
-    .wizard-container {
-        display: grid;
-        grid-template-columns: 1fr 340px;
-        gap: 32px;
-        align-items: start;
-    }
-
-    @media (max-width: 1024px) {
-        .wizard-container { grid-template-columns: 1fr; }
-    }
-
-    /* Step Indicator */
-    .step-progress {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 48px;
-        position: relative;
-        padding: 0 60px;
-    }
-
-    .step-progress::before {
-        content: '';
-        position: absolute;
-        top: 16px;
-        left: 60px;
-        right: 60px;
-        height: 2px;
-        background: var(--fin-border);
-        z-index: 1;
-    }
-
-    .step-node {
-        position: relative;
-        z-index: 2;
-        background: #fff;
-        padding: 0 12px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .step-circle {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #fff;
-        border: 2px solid var(--fin-border);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--fin-text-muted);
-        transition: all 0.3s;
-    }
-
-    .step-node.active .step-circle {
-        border-color: var(--fin-primary);
-        background: var(--fin-primary);
-        color: #fff;
-        box-shadow: 0 0 0 4px var(--fin-primary-light);
-    }
-
-    .step-node.completed .step-circle {
-        border-color: #10b981;
-        background: #10b981;
-        color: #fff;
-    }
-
-    .step-label {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--fin-text-muted);
-    }
-
-    .step-node.active .step-label { color: var(--fin-primary); }
-
-    /* Card & Components */
-    .wizard-card {
-        background: #fff;
-        border: 1px solid var(--fin-border);
-        border-radius: var(--fin-radius);
-        padding: 32px;
-        margin-bottom: 24px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    }
-
-    .wizard-title {
-        font-size: 20px;
-        font-weight: 800;
-        color: var(--fin-text-heading);
-        margin-bottom: 24px;
-        letter-spacing: -0.02em;
-    }
-
-    /* Form Elements */
-    .fin-group { margin-bottom: 20px; }
-    
-    .fin-label {
-        display: block;
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--fin-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 4px;
-    }
-
-    .fin-input, .fin-select, .fin-textarea {
-        width: 100% !important;
-        padding: 12px 16px !important;
-        border: 1px solid var(--fin-border) !important;
-        border-radius: 8px !important;
-        font-size: 14px !important;
-        color: var(--fin-text-body) !important;
-        transition: all 0.2s !important;
-        background: #fff !important;
-    }
-
-    .fin-input:focus, .fin-select:focus, .fin-textarea:focus {
-        border-color: var(--fin-primary) !important;
-        outline: none !important;
-        box-shadow: 0 0 0 3px var(--fin-primary-light) !important;
-    }
-
-    /* Pricing Slab Display */
-    .slab-display {
-        background: var(--fin-primary-light);
-        border: 1px solid var(--fin-primary);
-        border-radius: 8px;
-        padding: 16px;
-        margin-top: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .slab-price {
-        font-size: 24px;
-        font-weight: 800;
-        color: var(--fin-primary);
-    }
-
-    /* Package Selection */
-    .pkg-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .pkg-card {
-        border: 1px solid var(--fin-border);
-        border-radius: 12px;
-        padding: 20px;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .pkg-card:hover { border-color: var(--fin-primary); }
-    .pkg-card.selected {
-        border-color: var(--fin-primary);
-        background: var(--fin-primary-light);
-        box-shadow: 0 0 0 3px var(--fin-primary-light);
-    }
-
-    /* Buttons */
-    .fin-btn {
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        border: 1px solid transparent;
-        text-decoration: none;
-    }
-
-    .fin-btn-primary { background: var(--fin-primary); color: #fff; }
-    .fin-btn-primary:hover { background: var(--fin-primary-dark); }
-    
-    .fin-btn-secondary { background: #fff; border-color: var(--fin-border); color: var(--fin-text-body); }
-    .fin-btn-secondary:hover { background: var(--fin-bg-soft); }
-
-    /* Review Table */
-    .review-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .review-table th {
-        text-align: left;
-        font-size: 11px;
-        color: var(--fin-text-muted);
-        text-transform: uppercase;
-        padding: 12px;
-        border-bottom: 1px solid var(--fin-border);
-    }
-
-    .review-table td {
-        padding: 16px 12px;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 14px;
-    }
-</style>
-{% endblock %}
-
 {% block page_content %}
-<div style="max-width: 1200px; margin: 0 auto; padding-bottom: 100px;">
+<div class="max-w-[1200px] mx-auto pb-24">
 
     <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+    <div class="flex justify-between items-end mb-10">
         <div>
-            <h1 style="font-size: 32px; font-weight: 800; color: var(--fin-text-heading); letter-spacing: -0.02em; margin-bottom: 8px;">Create Invoice</h1>
-            <p style="color: var(--fin-text-muted); font-size: 16px;">Campaign-based automated billing generation.</p>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Create Invoice</h1>
+            <p class="text-gray-400 text-base">Campaign-based automated billing generation.</p>
         </div>
-        <a href="{% url 'invoices' %}" class="fin-btn fin-btn-secondary">
-            <i class="bi bi-x-lg"></i> Cancel
+        <a href="{% url 'invoices' %}" class="btn-secondary">
+            <i data-lucide="x" class="w-4 h-4"></i> Cancel
         </a>
     </div>
 
     <!-- Step Progress -->
-    <div class="step-progress">
-        <div class="step-node {% if step == 1 %}active{% elif step > 1 %}completed{% endif %}">
-            <div class="step-circle">{% if step > 1 %}<i class="bi bi-check-lg"></i>{% else %}1{% endif %}</div>
-            <div class="step-label">Details</div>
+    <div class="relative flex justify-between items-center mb-12 px-16">
+        <div class="absolute top-4 left-16 right-16 h-0.5 bg-gray-200 z-0"></div>
+        <div class="relative z-10 bg-white px-3 flex flex-col items-center gap-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                {% if step == 1 %}border-2 border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]
+                {% elif step > 1 %}border-2 border-emerald-500 bg-emerald-500 text-white
+                {% else %}border-2 border-gray-200 text-gray-400{% endif %}">
+                {% if step > 1 %}<i data-lucide="check" class="w-4 h-4"></i>{% else %}1{% endif %}
+            </div>
+            <span class="text-[11px] font-bold uppercase tracking-wider {% if step == 1 %}text-brand{% else %}text-gray-400{% endif %}">Details</span>
         </div>
-        <div class="step-node {% if step == 2 %}active{% elif step > 2 %}completed{% endif %}">
-            <div class="step-circle">{% if step > 2 %}<i class="bi bi-check-lg"></i>{% else %}2{% endif %}</div>
-            <div class="step-label">Services</div>
+        <div class="relative z-10 bg-white px-3 flex flex-col items-center gap-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                {% if step == 2 %}border-2 border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]
+                {% elif step > 2 %}border-2 border-emerald-500 bg-emerald-500 text-white
+                {% else %}border-2 border-gray-200 text-gray-400{% endif %}">
+                {% if step > 2 %}<i data-lucide="check" class="w-4 h-4"></i>{% else %}2{% endif %}
+            </div>
+            <span class="text-[11px] font-bold uppercase tracking-wider {% if step == 2 %}text-brand{% else %}text-gray-400{% endif %}">Services</span>
         </div>
-        <div class="step-node {% if step == 3 %}active{% endif %}">
-            <div class="step-circle">3</div>
-            <div class="step-label">Review</div>
+        <div class="relative z-10 bg-white px-3 flex flex-col items-center gap-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                {% if step == 3 %}border-2 border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]
+                {% else %}border-2 border-gray-200 text-gray-400{% endif %}">
+                3
+            </div>
+            <span class="text-[11px] font-bold uppercase tracking-wider {% if step == 3 %}text-brand{% else %}text-gray-400{% endif %}">Review</span>
         </div>
     </div>
 
     <form method="post" id="invoiceForm">
         {% csrf_token %}
-        <div class="wizard-container">
-            
-            <div class="wizard-main">
-                <div class="wizard-card" style="min-height: 500px;">
-                    
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+
+            <!-- Main Column -->
+            <div>
+                <div class="card p-8 min-h-[500px] mb-6">
+
                     {% if step == 1 %}
-                        <h2 class="wizard-title">Billing Details</h2>
+                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight mb-6">Billing Details</h2>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                            <div class="fin-group" style="grid-column: span 2;">
-                                <label class="fin-label">Client</label>
-                                {{ form.client }}
-                            </div>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="col-span-2">
+                            <label class="form-label">Client</label>
+                            {{ form.client }}
+                        </div>
+                        <div>
+                            <label class="form-label">Billing Start Date</label>
+                            {{ form.billing_start_date }}
+                        </div>
+                        <div>
+                            <label class="form-label">Billing End Date</label>
+                            {{ form.billing_end_date }}
+                        </div>
+                        <div>
+                            <label class="form-label">Payment Due Within (Days)</label>
+                            {{ form.payment_due_days }}
+                        </div>
+                    </div>
 
-                            <div class="fin-group">
-                                <label class="fin-label">Billing Start Date</label>
-                                {{ form.billing_start_date }}
-                            </div>
-                            <div class="fin-group">
-                                <label class="fin-label">Billing End Date</label>
-                                {{ form.billing_end_date }}
-                            </div>
-
-                            <div class="fin-group">
-                                <label class="fin-label">Payment Due Within (Days)</label>
-                                {{ form.payment_due_days }}
+                    <div class="mt-5">
+                        <div class="flex gap-6 items-center mb-6">
+                            <label class="form-label mb-0">Pricing Tier</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                                    <input type="radio" name="pricing_tier" value="standard" {% if form.pricing_tier.value == 'standard' %}checked{% endif %} class="accent-brand"> Standard
+                                </label>
+                                <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                                    <input type="radio" name="pricing_tier" value="premium" {% if form.pricing_tier.value == 'premium' %}checked{% endif %} class="accent-brand"> Premium
+                                </label>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="fin-group" style="margin-top: 12px;">
-                            <div style="display: flex; gap: 24px; align-items: center; margin-bottom: 24px;">
-                                <label class="fin-label" style="margin-bottom: 0;">Pricing Tier</label>
-                                <div style="display: flex; gap: 16px;">
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
-                                        <input type="radio" name="pricing_tier" value="standard" {% if form.pricing_tier.value == 'standard' %}checked{% endif %} class="tier-radio"> Standard
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
-                                        <input type="radio" name="pricing_tier" value="premium" {% if form.pricing_tier.value == 'premium' %}checked{% endif %} class="tier-radio"> Premium
-                                    </label>
-                                </div>
-                            </div>
+                    <div class="grid grid-cols-2 gap-6 mt-3 pt-6 border-t border-dashed border-gray-200">
+                        <div>
+                            <label class="form-label">Billing Email (Recipient)</label>
+                            {{ form.billing_email }}
+                            <div class="text-[11px] text-gray-400 mt-1">Defaults to client contact email.</div>
                         </div>
+                        <div>
+                            <label class="form-label">Billing Address</label>
+                            {{ form.billing_address }}
+                        </div>
+                    </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 12px; padding-top: 24px; border-top: 1px dashed var(--fin-border);">
-                            <div class="fin-group">
-                                <label class="fin-label">Billing Email (Recipient)</label>
-                                {{ form.billing_email }}
-                                <div style="font-size: 11px; color: var(--fin-text-muted); margin-top: 4px;">Defaults to client contact email.</div>
-                            </div>
-                            <div class="fin-group">
-                                <label class="fin-label">Billing Address</label>
-                                {{ form.billing_address }}
-                            </div>
+                    <div id="slabPreview" class="bg-brand/5 border border-brand rounded-lg p-4 mt-3 flex justify-between items-center">
+                        <div>
+                            <div class="text-[11px] font-bold text-gray-700 uppercase">Estimated Unit Price</div>
+                            <div class="text-sm text-gray-400">Based on volume slab pricing</div>
                         </div>
-
-                        <div id="slabPreview" class="slab-display">
-                            <div>
-                                <div style="font-size: 11px; font-weight: 700; color: var(--fin-text-body); text-transform: uppercase;">Estimated Unit Price</div>
-                                <div style="font-size: 13px; color: var(--fin-text-muted);">Based on volume slab pricing</div>
-                            </div>
-                            <div id="unitPriceDisplay" class="slab-price">£{{ base_campaign_price|default:"0.00" }}</div>
-                        </div>
+                        <div id="unitPriceDisplay" class="text-2xl font-extrabold text-brand">£{{ base_campaign_price|default:"0.00" }}</div>
+                    </div>
 
                     {% elif step == 2 %}
-                        <h2 class="wizard-title">Services & Add-Ons</h2>
+                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight mb-6">Services & Add-Ons</h2>
 
-                        <!-- Group 1: CORE CAMPAIGN UPGRADES -->
-                        <div style="margin-bottom: 32px;">
-                            <label class="fin-label">Core Campaign Upgrades</label>
-                            <div class="pkg-grid">
-                                <label class="pkg-card {% if form.vdm_package.value == 'none' %}selected{% endif %}">
-                                    <input type="radio" name="vdm_package" value="none" style="position: absolute; opacity: 0;" class="pkg-radio" {% if form.vdm_package.value == 'none' %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Basic Campaign</div>
-                                    <div style="font-size: 12px; color: var(--fin-text-muted);">Standard features only</div>
-                                </label>
-                                <label class="pkg-card {% if form.vdm_package.value == 'standard' %}selected{% endif %}">
-                                    <input type="radio" name="vdm_package" value="standard" style="position: absolute; opacity: 0;" class="pkg-radio" {% if form.vdm_package.value == 'standard' %}checked{% endif %}>
-                                    <div style="font-weight: 700;">VDM Package (£575)</div>
-                                    <div style="font-size: 12px; color: var(--fin-text-muted);">Full outreach solution</div>
-                                </label>
-                                <label class="pkg-card {% if form.vdm_package.value == 'client_supplied' %}selected{% endif %}">
-                                    <input type="radio" name="vdm_package" value="client_supplied" style="position: absolute; opacity: 0;" class="pkg-radio" {% if form.vdm_package.value == 'client_supplied' %}checked{% endif %}>
-                                    <div style="font-weight: 700;">VDM (Supplied) (£450)</div>
-                                    <div style="font-size: 12px; color: var(--fin-text-muted);">Client supplies media</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_gratitude_card.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_gratitude_card" value="true" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_gratitude_card.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Gratitud-E Card (£250)</div>
-                                    <div style="font-size: 12px; color: var(--fin-text-muted);">Interactive digital card</div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Group 2: MANUAL & TECHNICAL SERVICES -->
-                        <div style="margin-bottom: 32px;">
-                            <label class="fin-label">Technical & Creative Services</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <label class="pkg-card {% if form.enable_qr_generation.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_qr_generation" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_qr_generation.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">QR Generation (£150)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Campaign-wide QR codes</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_batch_processing.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_batch_processing" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_batch_processing.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Batch Processing (£200)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Multi-batch automation</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_email_sign_off.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_email_sign_off" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_email_sign_off.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Email Sign Off (£50)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Custom sign-off review</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_pers_vo_amends.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_pers_vo_amends" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_pers_vo_amends.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">VO Amends (£55)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Voiceover script changes</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_text_amends.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_text_amends" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_text_amends.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Text Amends (£30)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Landing page text changes</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_re_proof.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_re_proof" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_re_proof.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">RE-proof (£30)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Second stage proofing</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_add_programming.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_add_programming" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_add_programming.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Add. Programming (£120)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Custom logic requests</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_data_cleaning.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_data_cleaning" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_data_cleaning.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Data Cleaning (£60)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Formatting & cleansing</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_audio_cleanup.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_audio_cleanup" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_audio_cleanup.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Audio Cleanup (£65)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Client audio optimization</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_analytics_report.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_analytics_report" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_analytics_report.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Analytics Report (£30)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Full insight breakdown</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_bounce_log.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_bounce_log" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_bounce_log.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Bounce Log (£30)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Error tracking report</div>
-                                </label>
-                                <label class="pkg-card {% if form.enable_add_donate_page.value %}selected{% endif %}">
-                                    <input type="checkbox" name="enable_add_donate_page" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_add_donate_page.value %}checked{% endif %}>
-                                    <div style="font-weight: 700;">Donate Page (£50)</div>
-                                    <div style="font-size: 11px; color: var(--fin-text-muted);">Additional landing page</div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Group 3: VOLUME & STOCK COSTS -->
-                        <div style="margin-bottom: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                            <div class="fin-group">
-                                <label class="fin-label">Set up costs (£)</label>
-                                {{ form.setup_costs }}
-                            </div>
-                            <div class="fin-group">
-                                <label class="fin-label">CSV File Quantity (£10/file)</label>
-                                {{ form.csv_file_qty }}
-                            </div>
-                            <div class="fin-group">
-                                <label class="fin-label">Video Stock Cost (£)</label>
-                                {{ form.video_stock_cost }}
-                            </div>
-                            <div class="fin-group">
-                                <label class="fin-label">Audio Stock Cost (£)</label>
-                                {{ form.audio_stock_cost }}
-                            </div>
-                            <label class="pkg-card {% if form.enable_bounce_foc.value %}selected{% endif %}" style="grid-column: span 2;">
-                                <input type="checkbox" name="enable_bounce_foc" style="position: absolute; opacity: 0;" class="svc-chk" {% if form.enable_bounce_foc.value %}checked{% endif %}>
-                                <div style="font-weight: 700;">Bounce back email - Free (FOC)</div>
-                                <div style="font-size: 11px; color: var(--fin-text-muted);">No additional charge for follow-up emails</div>
+                    <!-- Core Campaign Upgrades -->
+                    <div class="mb-8">
+                        <label class="form-label">Core Campaign Upgrades</label>
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.vdm_package.value == 'none' %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
+                                <input type="radio" name="vdm_package" value="none" class="sr-only pkg-radio" {% if form.vdm_package.value == 'none' %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Basic Campaign</div>
+                                <div class="text-xs text-gray-400">Standard features only</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.vdm_package.value == 'standard' %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
+                                <input type="radio" name="vdm_package" value="standard" class="sr-only pkg-radio" {% if form.vdm_package.value == 'standard' %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">VDM Package (£575)</div>
+                                <div class="text-xs text-gray-400">Full outreach solution</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.vdm_package.value == 'client_supplied' %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
+                                <input type="radio" name="vdm_package" value="client_supplied" class="sr-only pkg-radio" {% if form.vdm_package.value == 'client_supplied' %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">VDM (Supplied) (£450)</div>
+                                <div class="text-xs text-gray-400">Client supplies media</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_gratitude_card.value %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
+                                <input type="checkbox" name="enable_gratitude_card" value="true" class="sr-only svc-chk" {% if form.enable_gratitude_card.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Gratitud-E Card (£250)</div>
+                                <div class="text-xs text-gray-400">Interactive digital card</div>
                             </label>
                         </div>
+                    </div>
+
+                    <!-- Technical & Creative Services -->
+                    <div class="mb-8">
+                        <label class="form-label">Technical & Creative Services</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            {% with services="enable_qr_generation:QR Generation:£150:Campaign-wide QR codes,enable_batch_processing:Batch Processing:£200:Multi-batch automation,enable_email_sign_off:Email Sign Off:£50:Custom sign-off review,enable_pers_vo_amends:VO Amends:£55:Voiceover script changes,enable_text_amends:Text Amends:£30:Landing page text changes,enable_re_proof:RE-proof:£30:Second stage proofing,enable_add_programming:Add. Programming:£120:Custom logic requests,enable_data_cleaning:Data Cleaning:£60:Formatting & cleansing,enable_audio_cleanup:Audio Cleanup:£65:Client audio optimization,enable_analytics_report:Analytics Report:£30:Full insight breakdown,enable_bounce_log:Bounce Log:£30:Error tracking report,enable_add_donate_page:Donate Page:£50:Additional landing page" %}
+                            {% for svc in services|make_list %}{% endfor %}
+                            {% endwith %}
+
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_qr_generation.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_qr_generation" class="sr-only svc-chk" {% if form.enable_qr_generation.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">QR Generation (£150)</div>
+                                <div class="text-[11px] text-gray-400">Campaign-wide QR codes</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_batch_processing.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_batch_processing" class="sr-only svc-chk" {% if form.enable_batch_processing.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Batch Processing (£200)</div>
+                                <div class="text-[11px] text-gray-400">Multi-batch automation</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_email_sign_off.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_email_sign_off" class="sr-only svc-chk" {% if form.enable_email_sign_off.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Email Sign Off (£50)</div>
+                                <div class="text-[11px] text-gray-400">Custom sign-off review</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_pers_vo_amends.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_pers_vo_amends" class="sr-only svc-chk" {% if form.enable_pers_vo_amends.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">VO Amends (£55)</div>
+                                <div class="text-[11px] text-gray-400">Voiceover script changes</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_text_amends.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_text_amends" class="sr-only svc-chk" {% if form.enable_text_amends.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Text Amends (£30)</div>
+                                <div class="text-[11px] text-gray-400">Landing page text changes</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_re_proof.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_re_proof" class="sr-only svc-chk" {% if form.enable_re_proof.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">RE-proof (£30)</div>
+                                <div class="text-[11px] text-gray-400">Second stage proofing</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_add_programming.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_add_programming" class="sr-only svc-chk" {% if form.enable_add_programming.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Add. Programming (£120)</div>
+                                <div class="text-[11px] text-gray-400">Custom logic requests</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_data_cleaning.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_data_cleaning" class="sr-only svc-chk" {% if form.enable_data_cleaning.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Data Cleaning (£60)</div>
+                                <div class="text-[11px] text-gray-400">Formatting & cleansing</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_audio_cleanup.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_audio_cleanup" class="sr-only svc-chk" {% if form.enable_audio_cleanup.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Audio Cleanup (£65)</div>
+                                <div class="text-[11px] text-gray-400">Client audio optimization</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_analytics_report.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_analytics_report" class="sr-only svc-chk" {% if form.enable_analytics_report.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Analytics Report (£30)</div>
+                                <div class="text-[11px] text-gray-400">Full insight breakdown</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_bounce_log.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_bounce_log" class="sr-only svc-chk" {% if form.enable_bounce_log.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Bounce Log (£30)</div>
+                                <div class="text-[11px] text-gray-400">Error tracking report</div>
+                            </label>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_add_donate_page.value %}border-brand bg-brand/5{% endif %}">
+                                <input type="checkbox" name="enable_add_donate_page" class="sr-only svc-chk" {% if form.enable_add_donate_page.value %}checked{% endif %}>
+                                <div class="font-bold text-gray-900">Donate Page (£50)</div>
+                                <div class="text-[11px] text-gray-400">Additional landing page</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Volume & Stock Costs -->
+                    <div class="mb-8 grid grid-cols-2 gap-6">
+                        <div>
+                            <label class="form-label">Set up costs (£)</label>
+                            {{ form.setup_costs }}
+                        </div>
+                        <div>
+                            <label class="form-label">CSV File Quantity (£10/file)</label>
+                            {{ form.csv_file_qty }}
+                        </div>
+                        <div>
+                            <label class="form-label">Video Stock Cost (£)</label>
+                            {{ form.video_stock_cost }}
+                        </div>
+                        <div>
+                            <label class="form-label">Audio Stock Cost (£)</label>
+                            {{ form.audio_stock_cost }}
+                        </div>
+                        <label class="col-span-2 pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_bounce_foc.value %}border-brand bg-brand/5{% endif %}">
+                            <input type="checkbox" name="enable_bounce_foc" class="sr-only svc-chk" {% if form.enable_bounce_foc.value %}checked{% endif %}>
+                            <div class="font-bold text-gray-900">Bounce back email - Free (FOC)</div>
+                            <div class="text-[11px] text-gray-400">No additional charge for follow-up emails</div>
+                        </label>
+                    </div>
 
                     {% elif step == 3 %}
-                        <h2 class="wizard-title">Review & Finalize</h2>
-                        
-                        <div style="background: var(--fin-bg-soft); border: 1px dashed var(--fin-border); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                            <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--fin-border); padding-bottom: 12px; margin-bottom: 12px;">
-                                <div>
-                                    <div style="font-weight: 800; color: var(--fin-text-heading); font-size: 18px;">{{ wizard_charity.name }}</div>
-                                    <div style="font-size: 13px; color: var(--fin-text-muted);">Campaign: {{ wizard_data.campaign_name|default:wizard_data.campaign_id }}</div>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="font-weight: 700; color: var(--fin-primary);">PREVIEW</div>
-                                    <div style="font-size: 12px; color: var(--fin-text-muted);">Due in {{ wizard_data.due_days }} days</div>
-                                </div>
+                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight mb-6">Review & Finalize</h2>
+
+                    <div class="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-6 mb-6">
+                        <div class="flex justify-between border-b-2 border-gray-200 pb-3 mb-3">
+                            <div>
+                                <div class="text-lg font-extrabold text-gray-900">{{ wizard_charity.name }}</div>
+                                <div class="text-sm text-gray-400">Campaign: {{ wizard_data.campaign_name|default:wizard_data.campaign_id }}</div>
                             </div>
-
-                            <table class="review-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item Description</th>
-                                        <th style="text-align: center;">Qty</th>
-                                        <th style="text-align: right;">Unit Price</th>
-                                        <th style="text-align: right;">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in line_items %}
-                                    <tr>
-                                        <td>
-                                            <div style="font-weight: 600;">{{ item.description }}</div>
-                                            <input type="hidden" name="item_name[]" value="{{ item.description }}">
-                                        </td>
-                                        <td style="text-align: center;">
-                                            {{ item.quantity }}
-                                            <input type="hidden" name="item_qty[]" value="{{ item.quantity }}">
-                                        </td>
-                                        <td style="text-align: right;">
-                                            £{{ item.unit_price|floatformat:2 }}
-                                            <input type="hidden" name="item_unit[]" value="{{ item.unit_price }}">
-                                        </td>
-                                        <td style="text-align: right; font-weight: 700;">£{{ item.total|floatformat:2 }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-
-                            <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--fin-border); text-align: right;">
-                                <div style="display: flex; justify-content: flex-end; gap: 40px; margin-bottom: 8px;">
-                                    <div style="color: var(--fin-text-muted);">Subtotal</div>
-                                    <div style="font-weight: 700; color: var(--fin-text-heading); width: 100px;">£{{ total_amount|floatformat:2 }}</div>
-                                </div>
-                                <div style="display: flex; justify-content: flex-end; gap: 40px; margin-bottom: 16px;">
-                                    <div style="color: var(--fin-text-muted);">Tax (20%)</div>
-                                    <div style="font-weight: 700; color: var(--fin-text-heading); width: 100px;">£{{ tax_amount|floatformat:2 }}</div>
-                                </div>
-                                <div style="font-size: 14px; color: var(--fin-text-muted);">Total Invoice Amount</div>
-                                <div style="font-size: 36px; font-weight: 800; color: var(--fin-text-heading);">£{{ grand_total|floatformat:2 }}</div>
+                            <div class="text-right">
+                                <div class="font-bold text-brand">PREVIEW</div>
+                                <div class="text-xs text-gray-400">Due in {{ wizard_data.due_days }} days</div>
                             </div>
                         </div>
 
-                        <div class="fin-group">
-                            <label class="fin-label">Internal Invoice Notes</label>
-                            <textarea name="notes" class="fin-textarea" rows="3" placeholder="Add any internal notes here...">{{ wizard_data.notes|default:'' }}</textarea>
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr>
+                                    <th class="text-left text-[11px] text-gray-400 uppercase p-3 border-b border-gray-200">Item Description</th>
+                                    <th class="text-center text-[11px] text-gray-400 uppercase p-3 border-b border-gray-200">Qty</th>
+                                    <th class="text-right text-[11px] text-gray-400 uppercase p-3 border-b border-gray-200">Unit Price</th>
+                                    <th class="text-right text-[11px] text-gray-400 uppercase p-3 border-b border-gray-200">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in line_items %}
+                                <tr>
+                                    <td class="p-4 border-b border-gray-100">
+                                        <div class="font-semibold text-gray-900">{{ item.description }}</div>
+                                        <input type="hidden" name="item_name[]" value="{{ item.description }}">
+                                    </td>
+                                    <td class="p-4 text-center border-b border-gray-100">
+                                        {{ item.quantity }}
+                                        <input type="hidden" name="item_qty[]" value="{{ item.quantity }}">
+                                    </td>
+                                    <td class="p-4 text-right border-b border-gray-100">
+                                        £{{ item.unit_price|floatformat:2 }}
+                                        <input type="hidden" name="item_unit[]" value="{{ item.unit_price }}">
+                                    </td>
+                                    <td class="p-4 text-right font-bold border-b border-gray-100">£{{ item.total|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <div class="mt-6 pt-6 border-t-2 border-gray-200 text-right">
+                            <div class="flex justify-end gap-10 mb-2">
+                                <div class="text-gray-400">Subtotal</div>
+                                <div class="font-bold text-gray-900 w-[100px]">£{{ total_amount|floatformat:2 }}</div>
+                            </div>
+                            <div class="flex justify-end gap-10 mb-4">
+                                <div class="text-gray-400">Tax (20%)</div>
+                                <div class="font-bold text-gray-900 w-[100px]">£{{ tax_amount|floatformat:2 }}</div>
+                            </div>
+                            <div class="text-sm text-gray-400">Total Invoice Amount</div>
+                            <div class="text-4xl font-extrabold text-gray-900">£{{ grand_total|floatformat:2 }}</div>
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Internal Invoice Notes</label>
+                        <textarea name="notes" class="form-textarea" rows="3" placeholder="Add any internal notes here...">{{ wizard_data.notes|default:'' }}</textarea>
+                    </div>
                     {% endif %}
 
                 </div>
 
                 <!-- Navigation -->
-                <div style="display: flex; justify-content: space-between; margin-top: 32px;">
+                <div class="flex justify-between mt-8">
                     <div>
                         {% if step > 1 %}
-                        <button type="submit" name="action" value="back" class="fin-btn fin-btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Previous Step
+                        <button type="submit" name="action" value="back" class="btn-secondary">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Previous Step
                         </button>
                         {% endif %}
                     </div>
-                    <div style="display: flex; gap: 12px;">
+                    <div class="flex gap-3">
                         {% if step < 3 %}
-                        <button type="submit" name="action" value="next" class="fin-btn fin-btn-primary" style="width: 160px; height: 50px;">
-                            Continue <i class="bi bi-arrow-right"></i>
+                        <button type="submit" name="action" value="next" class="btn-primary w-[160px] h-[50px]">
+                            Continue <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </button>
                         {% else %}
-                        <button type="submit" name="action" value="finalize" class="fin-btn fin-btn-primary" style="background: #10b981; width: 180px; height: 50px;">
-                            Create Invoice <i class="bi bi-check-circle"></i>
+                        <button type="submit" name="action" value="finalize" class="btn-primary bg-emerald-500 hover:bg-emerald-600 border-emerald-500 w-[180px] h-[50px]">
+                            Create Invoice <i data-lucide="check-circle" class="w-4 h-4"></i>
                         </button>
                         {% endif %}
                     </div>
@@ -544,43 +332,42 @@
             </div>
 
             <!-- Sidebar -->
-            <aside class="sidebar-summary">
-                <div class="wizard-card" style="padding: 24px;">
-                    <h3 class="fin-label" style="margin-bottom: 20px;">Configuration</h3>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                            <span style="color: var(--fin-text-muted);">Step</span>
-                            <span style="font-weight: 700;">{{ step }} of 3</span>
+            <aside>
+                <div class="card p-6">
+                    <h3 class="form-label mb-5">Configuration</h3>
+
+                    <div class="flex flex-col gap-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Step</span>
+                            <span class="font-bold text-gray-900">{{ step }} of 3</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                            <span style="color: var(--fin-text-muted);">Client</span>
-                            <span style="font-weight: 700;">{{ wizard_charity.name|default:"Not Selected" }}</span>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Client</span>
+                            <span class="font-bold text-gray-900">{{ wizard_charity.name|default:"Not Selected" }}</span>
                         </div>
 
-                    {% if step == 2 %}
-                    <div id="liveSummary" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--fin-border); display: none;">
-                        <div style="font-size: 11px; font-weight: 700; color: var(--fin-primary); text-transform: uppercase; margin-bottom: 12px;">Estimated Summary</div>
-                        <div id="selectedItemsList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
-                            <!-- Dynamic items will appear here -->
+                        {% if step == 2 %}
+                        <div id="liveSummary" class="mt-6 pt-6 border-t border-gray-200 hidden">
+                            <div class="text-[11px] font-bold text-brand uppercase mb-3">Estimated Summary</div>
+                            <div id="selectedItemsList" class="flex flex-col gap-2 mb-4"></div>
+                            <div class="flex justify-between items-baseline pt-3 border-t border-dashed border-gray-200">
+                                <span class="text-sm text-gray-400">Est. Total</span>
+                                <span id="liveTotalDisplay" class="text-xl font-extrabold text-gray-900">£0.00</span>
+                            </div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 12px; border-top: 1px dashed var(--fin-border);">
-                            <span style="font-size: 13px; color: var(--fin-text-muted);">Est. Total</span>
-                            <span id="liveTotalDisplay" style="font-size: 20px; font-weight: 800; color: var(--fin-text-heading);">£0.00</span>
-                        </div>
-                    </div>
-                    {% endif %}
+                        {% endif %}
 
-                    {% if step == 3 %}
-                    <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--fin-border);">
-                        <div style="font-size: 11px; font-weight: 700; color: var(--fin-primary); text-transform: uppercase; margin-bottom: 4px;">Grand Total</div>
-                        <div style="font-size: 28px; font-weight: 800; color: var(--fin-text-heading);">£{{ grand_total|floatformat:2 }}</div>
+                        {% if step == 3 %}
+                        <div class="mt-6 pt-6 border-t border-gray-200">
+                            <div class="text-[11px] font-bold text-brand uppercase mb-1">Grand Total</div>
+                            <div class="text-3xl font-extrabold text-gray-900">£{{ grand_total|floatformat:2 }}</div>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
-                
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; font-size: 12px; color: #1e40af;">
-                    <i class="bi bi-info-circle"></i> Auto-saves draft on each step.
+
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4 text-xs text-blue-800">
+                    <i data-lucide="info" class="w-3.5 h-3.5 inline"></i> Auto-saves draft on each step.
                 </div>
             </aside>
 
@@ -590,188 +377,112 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-
-    // Initialize billing details if client already selected
     const clientSelect = document.querySelector('select[name="client"]');
-
 
     function updateBillingDetails(clientId) {
         if (!clientId) return;
-        
         const emailInp = document.querySelector('input[name="billing_email"]');
         const addrInp = document.querySelector('textarea[name="billing_address"]');
-        
         if (!emailInp || !addrInp) return;
-
         fetch(`/charity/api/clients/?client_id=${clientId}`)
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
                 if (data && data.length > 0) {
                     const client = data[0];
                     if (!emailInp.value) emailInp.value = client.billing_email;
                     if (!addrInp.value) addrInp.value = client.billing_address;
                 }
-            })
-            .catch(err => console.error('Error fetching client details:', err));
+            }).catch(err => console.error('Error fetching client details:', err));
     }
 
     if (clientSelect) {
-        clientSelect.addEventListener('change', function() {
-            updateBillingDetails(this.value);
-        });
-        if (clientSelect.value) {
-            updateBillingDetails(clientSelect.value);
-        }
+        clientSelect.addEventListener('change', function() { updateBillingDetails(this.value); });
+        if (clientSelect.value) updateBillingDetails(clientSelect.value);
     }
 
-    // UI Interactive Selection for Step 2 (Service Cards)
+    // Live summary for Step 2
     const liveSummary = document.getElementById('liveSummary');
     const selectedItemsList = document.getElementById('selectedItemsList');
     const liveTotalDisplay = document.getElementById('liveTotalDisplay');
 
     function updateLiveSummary() {
         if (!liveSummary) return;
-        liveSummary.style.display = 'block';
+        liveSummary.classList.remove('hidden');
 
         let total = parseFloat("{{ wizard_data.base_campaign_price|default:0 }}");
-        let itemsHtml = `
-            <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span style="color: var(--fin-text-muted);">Base Campaign</span>
-                <span style="font-weight: 600;">£${total.toFixed(2)}</span>
-            </div>
-        `;
+        let itemsHtml = `<div class="flex justify-between text-xs"><span class="text-gray-400">Base Campaign</span><span class="font-semibold">£${total.toFixed(2)}</span></div>`;
 
-        // Service Prices Mapping
         const prices = {
-            'vdm_package_standard': 575,
-            'vdm_package_client_supplied': 450,
-            'enable_gratitude_card': 250,
-            'enable_qr_generation': 150,
-            'enable_batch_processing': 200,
-            'enable_email_sign_off': 50,
-            'enable_pers_vo_amends': 55,
-            'enable_text_amends': 30,
-            'enable_re_proof': 30,
-            'enable_add_programming': 120,
-            'enable_data_cleaning': 60,
-            'enable_audio_cleanup': 65,
-            'enable_analytics_report': 30,
-            'enable_bounce_log': 30,
-            'enable_add_donate_page': 50,
-            'enable_bounce_foc': 0
+            'vdm_package_standard': 575, 'vdm_package_client_supplied': 450,
+            'enable_gratitude_card': 250, 'enable_qr_generation': 150, 'enable_batch_processing': 200,
+            'enable_email_sign_off': 50, 'enable_pers_vo_amends': 55, 'enable_text_amends': 30,
+            'enable_re_proof': 30, 'enable_add_programming': 120, 'enable_data_cleaning': 60,
+            'enable_audio_cleanup': 65, 'enable_analytics_report': 30, 'enable_bounce_log': 30,
+            'enable_add_donate_page': 50, 'enable_bounce_foc': 0
+        };
+        const labels = {
+            'vdm_package_standard': 'VDM Package', 'vdm_package_client_supplied': 'VDM (Supplied)',
+            'enable_gratitude_card': 'Gratitud-E Card', 'enable_qr_generation': 'QR Generation',
+            'enable_batch_processing': 'Batch Processing', 'enable_email_sign_off': 'Email Sign Off',
+            'enable_pers_vo_amends': 'VO Amends', 'enable_text_amends': 'Text Amends',
+            'enable_re_proof': 'RE-proof', 'enable_add_programming': 'Add. Programming',
+            'enable_data_cleaning': 'Data Cleaning', 'enable_audio_cleanup': 'Audio Cleanup',
+            'enable_analytics_report': 'Analytics Report', 'enable_bounce_log': 'Bounce Log',
+            'enable_add_donate_page': 'Donate Page', 'enable_bounce_foc': 'Bounce back (FOC)'
         };
 
-        const priceLabels = {
-            'vdm_package_standard': 'VDM Package',
-            'vdm_package_client_supplied': 'VDM (Supplied)',
-            'enable_gratitude_card': 'Gratitud-E Card',
-            'enable_qr_generation': 'QR Generation',
-            'enable_batch_processing': 'Batch Processing',
-            'enable_email_sign_off': 'Email Sign Off',
-            'enable_pers_vo_amends': 'VO Amends',
-            'enable_text_amends': 'Text Amends',
-            'enable_re_proof': 'RE-proof',
-            'enable_add_programming': 'Add. Programming',
-            'enable_data_cleaning': 'Data Cleaning',
-            'enable_audio_cleanup': 'Audio Cleanup',
-            'enable_analytics_report': 'Analytics Report',
-            'enable_bounce_log': 'Bounce Log',
-            'enable_add_donate_page': 'Donate Page',
-            'enable_bounce_foc': 'Bounce back (FOC)'
-        };
-
-        // Radios (VDM Package)
         const vdmValue = document.querySelector('input[name="vdm_package"]:checked')?.value;
         if (vdmValue && vdmValue !== 'none') {
             const key = `vdm_package_${vdmValue}`;
             const price = prices[key];
             total += price;
-            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span style="color: var(--fin-text-muted);">${priceLabels[key]}</span>
-                <span style="font-weight: 600;">£${price.toFixed(2)}</span>
-            </div>`;
+            itemsHtml += `<div class="flex justify-between text-xs"><span class="text-gray-400">${labels[key]}</span><span class="font-semibold">£${price.toFixed(2)}</span></div>`;
         }
 
-        // Checkboxes
         document.querySelectorAll('.svc-chk').forEach(chk => {
             if (chk.checked) {
                 const price = prices[chk.name];
                 if (price !== undefined) {
                     total += price;
-                    itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px;">
-                        <span style="color: var(--fin-text-muted);">${priceLabels[chk.name]}</span>
-                        <span style="font-weight: 600;">£${price.toFixed(2)}</span>
-                    </div>`;
+                    itemsHtml += `<div class="flex justify-between text-xs"><span class="text-gray-400">${labels[chk.name]}</span><span class="font-semibold">£${price.toFixed(2)}</span></div>`;
                 }
             }
         });
 
-        // Numeric Inputs
-        const setupCosts = parseFloat(document.querySelector('input[name="setup_costs"]')?.value || 0);
-        if (setupCosts > 0) {
-            total += setupCosts;
-            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span style="color: var(--fin-text-muted);">Set up costs</span>
-                <span style="font-weight: 600;">£${setupCosts.toFixed(2)}</span>
-            </div>`;
-        }
+        ['setup_costs', 'video_stock_cost', 'audio_stock_cost'].forEach(n => {
+            const val = parseFloat(document.querySelector(`input[name="${n}"]`)?.value || 0);
+            if (val > 0) { total += val; itemsHtml += `<div class="flex justify-between text-xs"><span class="text-gray-400">${n.replace(/_/g, ' ')}</span><span class="font-semibold">£${val.toFixed(2)}</span></div>`; }
+        });
 
         const csvQty = parseInt(document.querySelector('input[name="csv_file_qty"]')?.value || 0);
-        if (csvQty > 0) {
-            const csvPrice = csvQty * 10;
-            total += csvPrice;
-            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span style="color: var(--fin-text-muted);">CSV Files (${csvQty})</span>
-                <span style="font-weight: 600;">£${csvPrice.toFixed(2)}</span>
-            </div>`;
-        }
-
-        const videoStock = parseFloat(document.querySelector('input[name="video_stock_cost"]')?.value || 0);
-        if (videoStock > 0) {
-            total += videoStock;
-            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span style="color: var(--fin-text-muted);">Video Stock</span>
-                <span style="font-weight: 600;">£${videoStock.toFixed(2)}</span>
-            </div>`;
-        }
-
-        const audioStock = parseFloat(document.querySelector('input[name="audio_stock_cost"]')?.value || 0);
-        if (audioStock > 0) {
-            total += audioStock;
-            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span style="color: var(--fin-text-muted);">Audio Stock</span>
-                <span style="font-weight: 600;">£${audioStock.toFixed(2)}</span>
-            </div>`;
-        }
+        if (csvQty > 0) { const p = csvQty * 10; total += p; itemsHtml += `<div class="flex justify-between text-xs"><span class="text-gray-400">CSV Files (${csvQty})</span><span class="font-semibold">£${p.toFixed(2)}</span></div>`; }
 
         selectedItemsList.innerHTML = itemsHtml;
         liveTotalDisplay.textContent = '£' + total.toFixed(2);
     }
 
     document.querySelectorAll('.pkg-card input, input[name="setup_costs"], input[name="csv_file_qty"], input[name="video_stock_cost"], input[name="audio_stock_cost"]').forEach(input => {
-        // Update card styling whenever the input changes state
         input.addEventListener('change', function() {
             if (input.type === 'radio') {
-                // Update all cards in the same radio group (name)
                 document.querySelectorAll(`input[name="${input.name}"]`).forEach(r => {
                     const card = r.closest('.pkg-card');
-                    if (card) card.classList.toggle('selected', r.checked);
+                    if (card) {
+                        card.classList.toggle('border-brand', r.checked);
+                        card.classList.toggle('bg-brand/5', r.checked);
+                    }
                 });
             } else if (input.type === 'checkbox') {
-                // For checkboxes
                 const card = input.closest('.pkg-card');
-                if (card) card.classList.toggle('selected', input.checked);
+                if (card) {
+                    card.classList.toggle('border-brand', input.checked);
+                    card.classList.toggle('bg-brand/5', input.checked);
+                }
             }
             updateLiveSummary();
         });
-
-        // For number inputs, also use oninput
-        if (input.type === 'number') {
-            input.addEventListener('input', updateLiveSummary);
-        }
+        if (input.type === 'number') input.addEventListener('input', updateLiveSummary);
     });
 
-    // Initial call if on step 2
     if (liveSummary) updateLiveSummary();
 });
 </script>

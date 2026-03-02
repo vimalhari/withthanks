@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0044_remove_charity_billing_address_and_more'),
+        ("charity", "0044_remove_charity_billing_address_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='campaign',
-            name='appeal_reference',
+            model_name="campaign",
+            name="appeal_reference",
         ),
     ]

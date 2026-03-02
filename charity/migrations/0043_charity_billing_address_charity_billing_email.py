@@ -4,20 +4,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0042_invoice_campaign_invoice_campaign_volume_and_more'),
+        ("charity", "0042_invoice_campaign_invoice_campaign_volume_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='billing_address',
-            field=models.TextField(blank=True, help_text='Default physical address for invoices'),
+            model_name="charity",
+            name="billing_address",
+            field=models.TextField(blank=True, help_text="Default physical address for invoices"),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='billing_email',
-            field=models.EmailField(blank=True, help_text='Default email for invoices', max_length=254),
+            model_name="charity",
+            name="billing_email",
+            field=models.EmailField(
+                blank=True, help_text="Default email for invoices", max_length=254
+            ),
         ),
     ]
