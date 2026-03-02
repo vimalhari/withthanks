@@ -1,6 +1,6 @@
 # WithThanks
 
-A Django web application that helps charities send personalized thank-you videos to their donors. When a donation is received, WithThanks generates a voiceover using ElevenLabs TTS, stitches it onto a branded base video with FFmpeg, uploads the result to Cloudflare Stream, and delivers it to the donor via email.
+A Django web application that helps charities send personalised thank-you videos to their donors. When a donation is received, WithThanks generates a voiceover using ElevenLabs TTS, stitches it onto a branded base video with FFmpeg, and delivers it to the donor via email. Both the REST API and the CSV batch upload path share a single unified Celery pipeline — every job is tracked through a `DonationJob` record, batch completion is reported atomically via Celery chords, and three isolated worker queues prevent slow video jobs from ever blocking maintenance tasks.
 
 ---
 
@@ -15,8 +15,10 @@ A Django web application that helps charities send personalized thank-you videos
   - [Local Setup](#local-setup)
   - [Environment Variables](#environment-variables)
 - [Running the Application](#running-the-application)
-  - [Using Docker](#using-docker)
+  - [Using Docker Compose](#using-docker-compose)
   - [Without Docker](#without-docker)
+  - [Development Tooling](#development-tooling)
+- [Celery Pipeline](#celery-pipeline)
 - [API Reference](#api-reference)
 - [CSV Upload](#csv-upload)
 - [CI/CD Pipeline](#cicd-pipeline)
@@ -26,47 +28,69 @@ A Django web application that helps charities send personalized thank-you videos
 
 ## Features
 
-- **Personalized thank-you videos** – generates a unique video per donor using ElevenLabs TTS voiceovers stitched onto a base video.
-- **Gratitude video campaigns** – automatically sends a special "gratitude" video to repeat donors (configurable cooldown period).
-- **CSV batch processing** – upload a CSV file to trigger video generation and delivery for many donors at once.
-- **REST API** – single and bulk donation ingestion endpoints for integration with external donation platforms.
-- **Cloudflare Stream** – videos are uploaded to Cloudflare Stream for reliable, low-latency playback; falls back to email attachments if disabled.
-- **Resend email delivery** – donor emails are sent through the Resend API.
-- **Multi-campaign support** – each charity can have multiple campaigns (Thank You, Direct Email) with separate video templates and text templates.
-- **Django Admin** – full admin interface for managing charities, campaigns, donors, donations, and send logs.
+- **Personalised thank-you videos** — generates a unique video per donor using ElevenLabs TTS voiceovers stitched onto a base video with FFmpeg.
+- **Multiple send modes** — `WithThanks` (personalised), `VDM` (shared Cloudflare Stream URL for mass campaigns), and `Gratitude` (repeat-donor special message).
+- **30-day deduplication** — donors who already received a personalised video in the last 30 days get a "card only" fallback to avoid over-messaging.
+- **CSV batch processing** — upload a CSV to trigger video generation for many donors at once; the whole batch is tracked as a single `DonationBatch` and marked `completed` or `completed_with_errors` automatically.
+- **REST API** — single and bulk donation ingestion endpoints for external donation platforms; both paths now share the same `DonationJob`-based pipeline.
+- **Unified Celery pipeline** — one processing task (`process_donation_row`) handles both API and CSV jobs; groups + chords provide atomic batch completion tracking.
+- **Queue isolation** — `video` queue (CPU/FFmpeg), `default` queue (orchestration/callbacks), and `maintenance` queue (periodic tasks) run on separate workers.
+- **Cloudflare Stream** — VDM campaign videos are uploaded once per campaign and the CDN URL is cached; falls back to a local media URL if disabled.
+- **Resend email delivery** — personalised HTML emails with embedded video links sent via the Resend API.
+- **Admin notifications** — when a batch finishes, an email is sent to `ADMIN_NOTIFICATION_EMAIL` with job totals and pass/fail counts.
+- **Multi-tenant** — each charity has its own campaigns, templates, member users, and job history; superadmin can switch context.
+- **Billing** — Stripe-based invoicing with webhook-driven status updates.
+- **Django Admin** — full admin interface for managing charities, campaigns, donors, donations, invoices, and send logs.
 
 ---
 
 ## Architecture Overview
 
-Both ingestion channels (REST API and CSV batch upload) share the same video
-production service (`video_builder`) and write to a unified set of normalised
-models (`Donor → Donation → VideoSendLog`).
+Both ingestion channels (REST API and CSV batch upload) converge on the same
+`DonationJob`-based Celery task. Batch fan-outs use Celery `group + chord`
+so every batch has an atomic completion callback.
 
 ```
 Donation event
      ┌────────────┴────────────┐
      │                         │
   REST API                CSV batch upload
-  (async — Celery)        (Celery task per row)
+  POST /api/donations/    POST /upload/
      │                         │
      ▼                         ▼
-video_dispatch             process_donation_row
+Create DonationBatch      batch_process_csv
++ DonationJob(s)          (bulk_create all rows)
      │                         │
      └──────────┬──────────────┘
+                │
+         group(process_donation_row, ...)
+                │          [video queue]
+                ▼
+     process_donation_row(job_id)
+                │
+    ┌───────────┼───────────────┐
+    │           │               │
+  Mode:VDM   Mode:WithThanks  Mode:Gratitude
+  (shared CF  (personalised    (repeat-donor
+   Stream)     TTS+FFmpeg)      asset)
                 │
         video_builder.build_personalized_video()
                 │
     ┌───────────┼───────────────┐
     ▼           ▼               ▼
 ElevenLabs   FFmpeg          Cloudflare Stream
-  (TTS)     (stitch)           (upload)
+  (TTS)     (stitch)       (VDM upload, cached)
                 │
                 ▼
-         send_video_email() → Resend
+        send_video_email() → Resend
                 │
                 ▼
-     Donor / Donation / VideoSendLog (normalised)
+         job.status = "success"
+                │
+                ▼ (chord callback)
+       on_batch_complete()  [default queue]
+       → DonationBatch.status = completed
+       → admin notification email
 ```
 
 ---
@@ -77,7 +101,7 @@ ElevenLabs   FFmpeg          Cloudflare Stream
 |---|---|
 | Web framework | Django 6.0.2 |
 | REST API | Django REST Framework 3.16.1 |
-| Task queue | Celery 5.6 + Redis 7.2 |
+| Task queue | Celery 5.6 + Redis 7 (group / chord / queue routing) |
 | Video processing | FFmpeg (subprocess) |
 | TTS / Voiceover | ElevenLabs 2.37 |
 | Video hosting | Cloudflare Stream |
@@ -101,45 +125,52 @@ ElevenLabs   FFmpeg          Cloudflare Stream
 ```
 WithThanks/
 ├── charity/                    # Main Django application
-│   ├── models.py               # Charity, Campaign, Donor, Donation, VideoSendLog, ...
-│   ├── views.py                # CSV upload & processing view
-│   ├── forms.py                # CSVUploadForm
+│   ├── models.py               # Charity, Campaign, DonationBatch, DonationJob, Donor, ...
+│   ├── tasks.py                # Celery tasks: process_donation_row, batch_process_csv,
+│   │                           #   on_batch_complete, dispatch_donation_video_task (deprecated),
+│   │                           #   and all periodic maintenance tasks
+│   ├── views.py                # General views (dashboard, profile, etc.)
+│   ├── views_batches.py        # CSV upload, campaign blast, send wizard
+│   ├── views_billing.py        # Stripe billing views
+│   ├── views_campaign.py       # Campaign CRUD
+│   ├── views_analytics.py      # Analytics views
+│   ├── forms.py                # Django forms
 │   ├── admin.py                # Django Admin configuration
 │   ├── urls.py                 # URL routing
 │   ├── api/
-│   │   ├── views.py            # DonationIngestAPIView, BulkDonationIngestAPIView
+│   │   ├── views.py            # DonationIngestAPIView, BulkDonationIngestAPIView,
+│   │   │                       #   TaskStatusAPIView (now DonationJob-backed)
 │   │   └── serializers.py      # DonationIngestSerializer, BulkDonationIngestSerializer
 │   ├── services/
-│   │   ├── video_dispatch.py   # API pipeline orchestration
-│   │   ├── video_builder.py    # Shared TTS + FFmpeg stitching (used by both pipelines)
-│   │   ├── sync_bridge.py      # CSV → normalised model bridge (Donor/Donation/VideoSendLog)
+│   │   ├── video_builder.py    # TTS + FFmpeg stitching (VideoSpec, build_personalized_video)
+│   │   ├── video_dispatch.py   # Stage-3 API pipeline service (Donor/Donation/VideoSendLog)
+│   │   ├── sync_bridge.py      # Sync DonationJob → normalised Donor/Donation/VideoSendLog
 │   │   └── stripe_billing.py   # Stripe invoice & webhook handling
 │   ├── utils/
 │   │   ├── video_utils.py      # FFmpeg stitching helpers
 │   │   ├── voiceover.py        # ElevenLabs TTS wrapper
 │   │   ├── cloudflare_stream.py# Cloudflare Stream upload helper
 │   │   ├── resend_utils.py     # Resend email helper
-│   │   └── filenames.py        # Safe filename utilities
-│   ├── management/commands/
-│   │   └── generate_videos.py  # Custom management command (test/dev)
+│   │   └── access_control.py   # Multi-tenant access helpers
+│   ├── management/commands/    # Custom management commands
 │   ├── migrations/             # Database migrations
-│   └── templates/              # HTML templates (upload_csv, voiceovers_list, ...)
+│   └── templates/              # HTML templates
 ├── withthanks/                 # Django project configuration
-│   ├── settings.py
-│   ├── celery.py               # Celery app + Beat schedule
+│   ├── settings.py             # All settings incl. CELERY_TASK_QUEUES / CELERY_TASK_ROUTES
+│   ├── celery.py               # Celery app + Beat schedule (queue-aware)
 │   ├── urls.py
-│   ├── wsgi.py
-│   └── asgi.py
+│   └── wsgi.py
 ├── media/
 │   ├── base_videos/            # Base MP4 templates
-│   ├── videos/                 # Generated / stitched output videos
-│   └── voiceovers/             # Generated TTS audio files
+│   ├── outputs/                # Generated / stitched output videos
+│   └── voiceover_cache/        # Cached TTS audio files (pruned after 30 days)
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml              # Ruff + Pyright + Django tests
 │       ├── deploy-dev.yml      # Push to develop → Coolify on Hetzner
 │       └── deploy-prod.yml     # Push to main → Coolify on DigitalOcean
 ├── Dockerfile                  # Multi-stage build (uv, Python 3.12)
+├── docker-compose.yml          # Local dev: web + worker-video + worker-maintenance + beat + redis + db
 ├── entrypoint.sh
 ├── manage.py
 ├── pyproject.toml              # Single source of truth (uv, ruff, pyright)
@@ -154,10 +185,10 @@ WithThanks/
 ### Prerequisites
 
 - Python **3.12+**
-- [uv](https://docs.astral.sh/uv/) – fast Python package and project manager
+- [uv](https://docs.astral.sh/uv/) — fast Python package and project manager
 - FFmpeg installed and on `PATH`
-- Redis (for Celery)
-- Docker (optional, for containerised setup)
+- Redis (for Celery broker + result backend)
+- Docker & Docker Compose (optional, recommended for local development)
 
 ### Local Setup
 
@@ -184,15 +215,7 @@ uv run python manage.py runserver
 
 ### Environment Variables
 
-Create a `.env` file in the project root with the following variables:
-
-For local development, the quickest path is:
-
-```bash
-cp .env.example .env
-```
-
-`DJANGO_SECRET_KEY` is required in production. Local management commands have a development fallback, but defining it explicitly in `.env` is still recommended.
+Create a `.env` file in the project root. The minimum required set for local development:
 
 ```env
 # Django
@@ -205,56 +228,84 @@ DATABASE_URL=postgres://user:password@localhost:5432/withthanks
 # Media
 MEDIA_ROOT=/app/media
 
-# Cloudflare Stream
+# Celery
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Video
 CLOUDFLARE_ACCOUNT_ID=your-account-id
 CLOUDFLARE_STREAM_TOKEN=your-api-token
 CLOUDFLARE_STREAM_ENABLED=true
 
-# ElevenLabs
+# ElevenLabs TTS
 ELEVENLABS_API_KEY=your-elevenlabs-api-key
 
 # Resend (email)
 RESEND_API_KEY=your-resend-api-key
+DEFAULT_FROM_EMAIL=WithThanks <no-reply@yourdomain.com>
 
-# Cloudflare R2 (optional — only needed if file storage is required)
-# Install the r2 extra first: uv sync --extra r2
+# Admin notifications — receives batch-completion emails (optional)
+ADMIN_NOTIFICATION_EMAIL=admin@yourdomain.com
+
+# Cloudflare R2 (optional — only needed if remote file storage is required)
 CLOUDFLARE_R2_ACCESS_KEY_ID=your-r2-access-key
 CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-r2-secret-key
 CLOUDFLARE_R2_BUCKET_NAME=your-bucket
 CLOUDFLARE_R2_ACCOUNT_ID=your-account-id
 
-# Redis / Celery
-CELERY_BROKER_URL=redis://localhost:6379/0
+# Stripe (optional — only needed for billing features)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 ---
 
 ## Running the Application
 
-### Using Docker
+### Using Docker Compose
+
+The `docker-compose.yml` defines five services:
+
+| Service | Purpose |
+|---|---|
+| `db` | PostgreSQL 17 |
+| `redis` | Redis 7 (broker + result backend) |
+| `web` | Django dev server (hot-reload, runs migrations on startup) |
+| `worker` | Celery worker consuming `video` and `default` queues (concurrency 2) |
+| `worker-maintenance` | Celery worker consuming `maintenance` queue only (concurrency 1) |
+| `beat` | Celery Beat periodic task scheduler |
 
 ```bash
-# Build and start
-docker build -t withthanks-django:latest .
-docker run -d \
-  --name withthanks-container \
-  -p 8000:8000 \
-  -v /path/to/media:/app/media \
-  --env-file .env \
-  withthanks-django:latest
+# Start all services
+docker compose up
+
+# Background mode
+docker compose up -d
+
+# Follow worker logs
+docker compose logs -f worker
 ```
 
 ### Without Docker
+
+Run each component in a separate terminal:
 
 ```bash
 # Terminal 1: Django dev server
 uv run python manage.py runserver
 
-# Terminal 2: Celery worker
-uv run celery -A withthanks worker --loglevel=info
+# Terminal 2: Celery worker — video + orchestration
+uv run celery -A withthanks worker --loglevel=info --queues=video,default --concurrency=2
+
+# Terminal 3: Celery worker — maintenance (beat tasks)
+uv run celery -A withthanks worker --loglevel=info --queues=maintenance --concurrency=1
+
+# Terminal 4: Celery Beat scheduler
+uv run celery -A withthanks beat --loglevel=info
 ```
 
-### Development tooling
+### Development Tooling
 
 ```bash
 # Lint
@@ -268,13 +319,50 @@ uv run ruff format .
 
 # Type check
 uv run pyright
+
+# Run tests
+uv run python manage.py test
 ```
+
+---
+
+## Celery Pipeline
+
+### Queues
+
+| Queue | Worker | Tasks routed here |
+|---|---|---|
+| `video` | `worker` | `process_donation_row` |
+| `default` | `worker` | `batch_process_csv`, `on_batch_complete`, `dispatch_donation_video_task` (deprecated) |
+| `maintenance` | `worker-maintenance` | `refresh_all_campaign_stats`, `mark_overdue_invoices`, `cleanup_stale_jobs`, `prune_voiceover_cache`, `cleanup_old_videos` |
+
+### Key tasks
+
+| Task | Description |
+|---|---|
+| `process_donation_row(job_id)` | Core pipeline — TTS, FFmpeg stitch, email send, job status update. `bind=True, max_retries=10, rate_limit="2/s"`. Duplicate-email-on-retry bug fixed: won't retry if the job is already committed as `failed`. |
+| `batch_process_csv(batch_id)` | Reads CSV, bulk-creates `DonationJob` rows, dispatches a `group + chord` to the video queue. `bind=True, max_retries=3`. Marks `DonationBatch.status = processing` before dispatch. |
+| `on_batch_complete(results, batch_id)` | Chord callback. Marks `DonationBatch.status` as `completed` or `completed_with_errors` and sends an admin notification email. |
+| `dispatch_donation_video_task(...)` | **Deprecated.** Compat stub that creates a `DonationJob` and delegates to `process_donation_row`. External callers continue to work without any changes. |
+| `refresh_all_campaign_stats` | Beat: every 15 min. Refreshes `CampaignStats` for all campaigns. |
+| `mark_overdue_invoices` | Beat: daily 06:00 UTC. Transitions `Sent` invoices past due date to `Overdue`. |
+| `cleanup_stale_jobs` | Beat: every 30 min. Resets jobs stuck in `processing` for more than 2 hours to `failed`. |
+| `prune_voiceover_cache` | Beat: daily 03:00 UTC. Deletes cached TTS files older than 30 days. |
+| `cleanup_old_videos` | Beat: daily 04:00 UTC. Deletes generated output videos older than 7 days. |
+
+### Time limits
+
+| Setting | Value |
+|---|---|
+| `CELERY_TASK_SOFT_TIME_LIMIT` | 25 min — triggers `SoftTimeLimitExceeded`, allowing graceful cleanup |
+| `CELERY_TASK_TIME_LIMIT` | 30 min — hard SIGKILL if the soft limit is ignored |
+| `CELERY_RESULT_EXPIRES` | 24 h — task results are auto-expired from Redis after one day |
 
 ---
 
 ## API Reference
 
-All API endpoints are prefix-routed under `/api/` (see `withthanks/urls.py`).
+All endpoints are prefix-routed under `/api/` (see `withthanks/urls.py`).
 
 ### `POST /api/donations/ingest/`
 
@@ -288,80 +376,70 @@ Trigger a thank-you video for a single donation.
   "donor_email": "donor@example.com",
   "donor_name": "Jane Doe",
   "amount": "50.00",
-  "donated_at": "2026-03-01T10:00:00Z",   // optional, defaults to now
-  "campaign_type": "THANK_YOU"             // THANK_YOU | VDM
+  "donated_at": "2026-03-01T10:00:00Z",
+  "campaign_type": "THANK_YOU"
 }
 ```
 
 **Response `202 Accepted`:**
 
-Video generation runs asynchronously via Celery.  Poll `GET /api/tasks/<task_id>/`
-for the result.
-
 ```json
 {
   "task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "job_id": 42,
+  "batch_id": 7,
   "status": "queued",
   "donor_email": "donor@example.com"
 }
 ```
 
-### `GET /api/tasks/<task_id>/`
-
-Poll the status of an async donation dispatch task.
-
-**Response (pending):**
-
-```json
-{
-  "task_id": "a1b2c3d4-...",
-  "status": "PENDING"
-}
-```
-
-**Response (success):**
-
-```json
-{
-  "task_id": "a1b2c3d4-...",
-  "status": "SUCCESS",
-  "result": {
-    "donation_id": 42,
-    "send_log_id": 7,
-    "donor_email": "donor@example.com",
-    "send_kind": "PERSONALIZED",
-    "campaign_type": "THANK_YOU",
-    "video_path": "/app/media/videos/jane_doe_thankyou.mp4"
-  }
-}
-```
-
----
-
 ### `POST /api/donations/bulk-ingest/`
 
-Trigger thank-you videos for multiple donations in a single request.
+Trigger videos for multiple donations. All jobs are tracked in one `DonationBatch`; a chord fires `on_batch_complete` when all jobs finish.
 
 **Request body:**
 
 ```json
 {
   "donations": [
-    {
-      "charity_id": 1,
-      "donor_email": "donor1@example.com",
-      "donor_name": "Alice",
-      "amount": "25.00",
-      "campaign_type": "THANK_YOU"
-    },
-    {
-      "charity_id": 1,
-      "donor_email": "donor2@example.com",
-      "donor_name": "Bob",
-      "amount": "100.00",
-      "campaign_type": "VDM"
-    }
+    { "charity_id": 1, "donor_email": "alice@example.com", "donor_name": "Alice", "amount": "25.00", "campaign_type": "THANK_YOU" },
+    { "charity_id": 1, "donor_email": "bob@example.com",   "donor_name": "Bob",   "amount": "100.00", "campaign_type": "THANK_YOU" }
   ]
+}
+```
+
+**Response `202 Accepted`:**
+
+```json
+{
+  "batch_id": 8,
+  "chord_task_id": "b2c3d4e5-...",
+  "job_count": 2,
+  "job_ids": [43, 44],
+  "status": "queued"
+}
+```
+
+### `GET /api/tasks/<task_id>/`
+
+Poll a Celery task by its ID. Optionally pass `?job_id=<id>` to get the
+DB-sourced `DonationJob` status instead (more reliable after result expiry).
+
+**Response (by task ID):**
+
+```json
+{ "task_id": "a1b2c3d4-...", "status": "SUCCESS", "result": { ... } }
+```
+
+**Response (by job ID — `?job_id=42`):**
+
+```json
+{
+  "job_id": 42,
+  "status": "success",
+  "donor_email": "donor@example.com",
+  "error_message": null,
+  "completed_at": "2026-03-02T11:23:45Z"
 }
 ```
 
@@ -369,32 +447,33 @@ Trigger thank-you videos for multiple donations in a single request.
 
 ## CSV Upload
 
-Navigate to `/upload/` in the browser to access the CSV upload form.
+Navigate to `/upload/` to access the CSV upload form.
 
-**Required CSV columns:**
+**Accepted column names (case-insensitive, flexible synonyms supported):**
 
-| Column | Required | Description |
+| Field | Accepted column names | Required |
 |---|---|---|
-| `email` | Yes | Donor email address |
-| `name` | No | Donor full name (defaults to "donor") |
-| `amount` | Yes | Donation amount (numeric) |
-| `donated_at` | No | ISO 8601 datetime string |
+| Email | `email`, `recipient email`, `email-id`, `email address` | Yes |
+| Name | `donor_name`, `name`, `full name` | No (defaults to "Donor") |
+| Amount | `donation_amount`, `amount`, `donation` | No (defaults to 0) |
 
 **Example:**
 
 ```csv
-email,name,amount,donated_at
-alice@example.com,Alice Smith,50.00,2026-03-01T09:00:00Z
-bob@example.com,Bob Jones,25.00,2026-03-01T10:30:00Z
+email,name,amount
+alice@example.com,Alice Smith,50.00
+bob@example.com,Bob Jones,25.00
 ```
 
-Select the target charity and campaign type in the form, then submit. Each row dispatches a video generation and email delivery job. Processing errors are reported per-row without halting the rest of the batch.
+On submission:
+1. A `DonationBatch` record is created with `status = pending`.
+2. `batch_process_csv` runs in the background — bulk-creates all `DonationJob` rows and fans them out via `group + chord`.
+3. Each `DonationJob` is processed by `process_donation_row` on the `video` queue.
+4. When all jobs finish, `on_batch_complete` marks the batch as `completed` or `completed_with_errors` and emails `ADMIN_NOTIFICATION_EMAIL`.
 
 ---
 
 ## CI/CD Pipeline
-
-The project uses **GitHub Actions** for CI and **Coolify** for CD across two environments.
 
 ### Branching strategy
 
@@ -405,12 +484,12 @@ The project uses **GitHub Actions** for CI and **Coolify** for CD across two env
 
 ### Workflows
 
-#### `.github/workflows/ci.yml` — runs on every push / PR
+#### `.github/workflows/ci.yml` — every push / PR
 
-1. **Ruff lint** – `ruff check .`
-2. **Ruff format check** – `ruff format --check .`
-3. **Pyright type check** – `pyright`
-4. **Django tests** – `python manage.py test`
+1. **Ruff lint** — `ruff check .`
+2. **Ruff format check** — `ruff format --check .`
+3. **Pyright type check** — `pyright`
+4. **Django tests** — `python manage.py test`
 
 #### `.github/workflows/deploy-dev.yml` — push to `develop`
 
@@ -418,25 +497,18 @@ Triggers the Coolify **dev** application webhook on Hetzner via the `dev` GitHub
 
 #### `.github/workflows/deploy-prod.yml` — push to `main`
 
-Runs the full CI suite first, then triggers the Coolify **prod** application webhook on DigitalOcean via the `prod` GitHub Environment secrets.
+Runs the full CI suite first, then triggers the Coolify **prod** application webhook on DigitalOcean.
 
-### GitHub Environment secrets required
+### Required GitHub Environment secrets
 
 | Secret | Description |
 |---|---|
-| `COOLIFY_WEBHOOK_URL` | Coolify deploy webhook URL for the app |
+| `COOLIFY_WEBHOOK_URL` | Coolify deploy webhook URL |
 | `COOLIFY_TOKEN` | Coolify API token |
 
 | Variable | Description |
 |---|---|
-| `APP_URL` | Public URL of the deployed app (logged after deploy) |
-
-### Coolify setup
-
-1. In Coolify, create an application pointing at this GitHub repo.
-2. Set the Dockerfile as the build source.
-3. Mount a persistent volume to `/app/media`.
-4. Copy the Coolify API token and the app's deploy webhook URL into the corresponding GitHub Environment secrets.
+| `APP_URL` | Public URL of the deployed app |
 
 ---
 
@@ -445,10 +517,13 @@ Runs the full CI suite first, then triggers the Coolify **prod** application web
 | Model | Description |
 |---|---|
 | `Charity` | A registered charity organisation linked to a Django `User` account. |
-| `VideoTemplate` | An uploaded base video with an optional overlay spec (JSON) used for template-based sends. |
-| `TextTemplate` | A named text body with ElevenLabs voice ID and locale, used to generate TTS voiceovers. Supports `{{donor_name}}`, `{{donation_amount}}`, `{{charity}}`, `{{campaign_name}}` placeholders. |
-| `Donor` | A donor record scoped to a charity (unique per `charity + email`). |
-| `Campaign` | Links a charity to a campaign type, video template, and text template with configurable gratitude cooldown. |
-| `Donation` | A financial donation record linking donor, charity, amount, and campaign type. |
-| `DonationJob` | A single CSV row being processed — tracks status, video path, and generation time. |
-| `VideoSendLog` | Audit log of every video send attempt (unified across both pipelines), including Cloudflare Stream metadata, email provider message ID, and error details. |
+| `Campaign` | Links a charity to an appeal type (`WithThanks`, `VDM`, `Gratitude`), video template, text template, and personalisation settings. |
+| `DonationBatch` | Groups a set of `DonationJob` records. Tracks `status` (`pending → processing → completed / completed_with_errors / failed`) and is the target of the Celery chord callback. |
+| `DonationJob` | A single donor send job — tracks `status`, `video_path`, `generation_time`, `completed_at`, and `error_message`. The single source of truth for both API and CSV pipeline jobs. |
+| `VideoTemplate` | An uploaded base video used as the canvas for FFmpeg stitching. |
+| `TextTemplate` | A named voiceover script with ElevenLabs voice ID. Supports `{{donor_name}}`, `{{donation_amount}}`, `{{charity}}`, `{{campaign_name}}` placeholders. |
+| `Donor` | Normalised donor record scoped to a charity (`unique_together: charity + email`). |
+| `Donation` | A financial donation record linking `Donor`, `Charity`, amount, and campaign type. |
+| `VideoSendLog` | Audit log of every video send attempt, including Cloudflare Stream metadata, Resend message ID, send kind, and error details. |
+| `Invoice` | Stripe-backed invoice record with status lifecycle (`Draft → Sent → Paid / Overdue`). |
+| `UnsubscribedUser` | Per-charity unsubscribe list; checked before every job is processed. |
