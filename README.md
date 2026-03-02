@@ -173,6 +173,14 @@ uv run python manage.py runserver
 
 Create a `.env` file in the project root with the following variables:
 
+For local development, the quickest path is:
+
+```bash
+cp .env.example .env
+```
+
+`DJANGO_SECRET_KEY` is required in production. Local management commands have a development fallback, but defining it explicitly in `.env` is still recommended.
+
 ```env
 # Django
 DJANGO_SECRET_KEY=your-secret-key-here

@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlparse
@@ -15,13 +16,30 @@ load_dotenv(BASE_DIR / ".env")
 # Core settings
 # ------------------------------------------------------------
 _secret_key = os.environ.get("DJANGO_SECRET_KEY")
+_local_commands = {
+    "runserver",
+    "test",
+    "shell",
+    "check",
+    "migrate",
+    "makemigrations",
+    "createsuperuser",
+    "collectstatic",
+    "seed_services",
+}
+_is_local_command = any(cmd in sys.argv for cmd in _local_commands)
+_debug_env = os.environ.get("DJANGO_DEBUG")
+DEBUG = _debug_env.lower() == "true" if _debug_env is not None else _is_local_command
+
 if not _secret_key:
-    raise RuntimeError(
-        "DJANGO_SECRET_KEY environment variable must be set. "
-        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
-    )
+    if _is_local_command:
+        _secret_key = "django-insecure-local-dev-secret-key-change-me"
+    else:
+        raise RuntimeError(
+            "DJANGO_SECRET_KEY environment variable must be set. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+        )
 SECRET_KEY = _secret_key
-DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
 
 # Accept a comma-separated list of extra hosts from the environment.
 _extra_hosts = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
@@ -70,6 +88,11 @@ MIDDLEWARE = [
 # ------------------------------------------------------------
 ROOT_URLCONF = "withthanks.urls"
 
+# Authentication redirects for login-required views.
+LOGIN_URL = "charity_login"
+LOGIN_REDIRECT_URL = "/charity/dashboard/"
+LOGOUT_REDIRECT_URL = "/"
+
 # ------------------------------------------------------------
 # Templates
 # ------------------------------------------------------------
@@ -84,6 +107,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "charity.context_processors.charity_context",
             ]
         },
     }
@@ -323,6 +347,22 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # ------------------------------------------------------------
+# Upload size limits (stage3 needs large CSV/video uploads)
+# ------------------------------------------------------------
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
+
+# ------------------------------------------------------------
+# Server base URL (used for tracking links in emails)
+# ------------------------------------------------------------
+SERVER_BASE_URL = os.environ.get("SERVER_BASE_URL", "http://127.0.0.1:8000")
+
+# ------------------------------------------------------------
+# ElevenLabs voice settings
+# ------------------------------------------------------------
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", ELEVENLABS_DEFAULT_VOICE_ID)
+
+# ------------------------------------------------------------
 # Ensure media folders exist
 # ------------------------------------------------------------
 try:
@@ -330,5 +370,8 @@ try:
     (MEDIA_ROOT / "videos").mkdir(parents=True, exist_ok=True)
     (MEDIA_ROOT / "voiceovers").mkdir(parents=True, exist_ok=True)
     (MEDIA_ROOT / "base_videos").mkdir(parents=True, exist_ok=True)
+    (MEDIA_ROOT / "temp").mkdir(parents=True, exist_ok=True)
+    (MEDIA_ROOT / "outputs").mkdir(parents=True, exist_ok=True)
+    (MEDIA_ROOT / "voiceover_cache").mkdir(parents=True, exist_ok=True)
 except Exception as _e:
     print(f"⚠️ Could not ensure media folders exist: {_e}")  # noqa: T201

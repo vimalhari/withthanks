@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WithThanks</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      }
+
+      .card {
+        width: min(560px, 92vw);
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        padding: 36px;
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        color: #1f2937;
+      }
+
+      p {
+        margin: 0 0 24px;
+        color: #4b5563;
+      }
+
+      .actions {
+        display: grid;
+        gap: 12px;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 11px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        color: #fff;
+        background: #2563eb;
+      }
+
+      .button.secondary {
+        background: #374151;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>WithThanks</h1>
+      <p>Generate and send personalised donor thank-you videos.</p>
+      <div class="actions">
+        <a class="button" href="/upload-csv/">Open CSV Upload</a>
+        <a class="button secondary" href="/admin/">Open Admin</a>
+      </div>
+    </main>
+  </body>
+</html>

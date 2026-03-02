@@ -20,7 +20,7 @@ def escape_drawtext(text: str) -> str:
 
 
 def fix_windows_fontpath(font: str) -> str:
-    """FFmpeg requires C\:/Windows/... format."""
+    """FFmpeg requires C\\:/Windows/... format."""
     if ":" in font:
         drive, rest = font.split(":", 1)
         return f"{drive}\\:/{rest.lstrip('/')}"
