@@ -4,6 +4,7 @@ import logging
 import traceback
 from decimal import Decimal
 
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.utils.dateparse import parse_datetime
 
@@ -15,6 +16,7 @@ from .forms import CSVUploadForm
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def upload_csv_and_process(request):
     """
     Handle CSV upload, generate personalized first 5s of video with TTS and overlay,

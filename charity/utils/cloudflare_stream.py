@@ -40,8 +40,9 @@ class StreamUploadResult:
 
 
 def _credentials() -> tuple[str, str]:
-    account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
-    api_token = os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
+    from django.conf import settings
+    account_id = getattr(settings, "CLOUDFLARE_ACCOUNT_ID", "") or os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+    api_token = getattr(settings, "CLOUDFLARE_STREAM_TOKEN", "") or os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
     if not account_id or not api_token:
         raise RuntimeError(
             "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_TOKEN must be set in the environment."

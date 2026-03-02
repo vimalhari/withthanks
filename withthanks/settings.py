@@ -1,5 +1,7 @@
 import os
+from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -12,14 +14,21 @@ load_dotenv(BASE_DIR / ".env")
 # ------------------------------------------------------------
 # Core settings
 # ------------------------------------------------------------
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or "dev-secret-key-change-in-production"
+_secret_key = os.environ.get("DJANGO_SECRET_KEY")
+if not _secret_key:
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY environment variable must be set. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+    )
+SECRET_KEY = _secret_key
 DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
 
+# Accept a comma-separated list of extra hosts from the environment.
+_extra_hosts = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
 ALLOWED_HOSTS = [
-    "hirefella.com",
-    "www.hirefella.com",
-    "localhost",
-    "127.0.0.1",
+    # Only allow local hosts in development; production hosts must come from ALLOWED_HOSTS env var.
+    *(["localhost", "127.0.0.1"] if DEBUG else []),
+    *_extra_hosts,
 ]
 
 # ------------------------------------------------------------
@@ -31,8 +40,14 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
-    "charity",  # your app
+    # Third-party
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "drf_yasg",
+    # Local
+    "charity",
 ]
 
 # ------------------------------------------------------------
@@ -40,11 +55,14 @@ INSTALLED_APPS = [
 # ------------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise serves static files directly — must come right after SecurityMiddleware.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 # ------------------------------------------------------------
@@ -79,12 +97,79 @@ ASGI_APPLICATION = "withthanks.asgi.application"
 
 # ------------------------------------------------------------
 # Database
+# Uses DATABASE_URL env-var when present (production / Coolify).
+# Falls back to SQLite for local development.
+# Format: postgresql://user:password@host:5432/dbname
 # ------------------------------------------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+_db_url = os.environ.get("DATABASE_URL", "")
+if _db_url:
+    _parsed = urlparse(_db_url)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _parsed.path.lstrip("/"),
+            "USER": _parsed.username or "",
+            "PASSWORD": _parsed.password or "",
+            "HOST": _parsed.hostname or "localhost",
+            "PORT": str(_parsed.port or 5432),
+            "OPTIONS": {"connect_timeout": 10},
+        }
     }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+# ------------------------------------------------------------
+# Django REST Framework
+# ------------------------------------------------------------
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # Session auth kept for the DRF browsable API in DEBUG mode.
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+}
+
+# Add browsable API renderer only in debug mode so Swagger stays clean in prod.
+if DEBUG:
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"].append(  # type: ignore[index]
+        "rest_framework.renderers.BrowsableAPIRenderer"
+    )
+
+# ------------------------------------------------------------
+# JWT settings (django-rest-framework-simplejwt)
+# ------------------------------------------------------------
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=int(os.environ.get("JWT_ACCESS_HOURS", "1"))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get("JWT_REFRESH_DAYS", "7"))),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+# ------------------------------------------------------------
+# Swagger / drf-yasg
+# ------------------------------------------------------------
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+        }
+    },
+    "USE_SESSION_AUTH": False,
 }
 
 # ------------------------------------------------------------
@@ -95,7 +180,6 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 # In Docker the MEDIA_ROOT env-var is set to /app/media (volume mount).
-# Locally it falls back to <project>/media so `manage.py check` works without /app.
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 
 # ------------------------------------------------------------
@@ -109,21 +193,69 @@ VIDEO_OUTPUT_DIR = MEDIA_ROOT / "videos"
 try:
     VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 except Exception as _e:
-    print(f"⚠️ Could not create VIDEO_OUTPUT_DIR: {_e}")
+    print(f"⚠️ Could not create VIDEO_OUTPUT_DIR: {_e}")  # noqa: T201
 
 # ------------------------------------------------------------
 # Cloudflare Stream
 # ------------------------------------------------------------
-# Credentials – set these in your .env / environment.
 CLOUDFLARE_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
 CLOUDFLARE_STREAM_TOKEN = os.environ.get("CLOUDFLARE_STREAM_TOKEN", "")
-# Set to "false" to disable Stream and fall back to e-mail attachments.
 CLOUDFLARE_STREAM_ENABLED = os.environ.get("CLOUDFLARE_STREAM_ENABLED", "true").lower() == "true"
+
+# ------------------------------------------------------------
+# Cloudflare R2 (optional – install the r2 extra: uv sync --extra r2)
+# Compatible with Django Storages S3 backend.
+# ------------------------------------------------------------
+CLOUDFLARE_R2_ACCESS_KEY_ID = os.environ.get("CLOUDFLARE_R2_ACCESS_KEY_ID", "")
+CLOUDFLARE_R2_SECRET_ACCESS_KEY = os.environ.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY", "")
+CLOUDFLARE_R2_BUCKET_NAME = os.environ.get("CLOUDFLARE_R2_BUCKET_NAME", "")
+CLOUDFLARE_R2_ACCOUNT_ID = os.environ.get("CLOUDFLARE_R2_ACCOUNT_ID", "")
+if CLOUDFLARE_R2_BUCKET_NAME:
+    # S3-compatible endpoint for Cloudflare R2
+    AWS_ACCESS_KEY_ID = CLOUDFLARE_R2_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY = CLOUDFLARE_R2_SECRET_ACCESS_KEY
+    AWS_STORAGE_BUCKET_NAME = CLOUDFLARE_R2_BUCKET_NAME
+    AWS_S3_ENDPOINT_URL = f"https://{CLOUDFLARE_R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+    AWS_S3_REGION_NAME = "auto"
+
+# Django 4.2+ STORAGES dict (replaces deprecated DEFAULT_FILE_STORAGE / STATICFILES_STORAGE).
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "storages.backends.s3boto3.S3Boto3Storage"
+            if CLOUDFLARE_R2_BUCKET_NAME
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        # CompressedManifestStaticFilesStorage adds cache-busting hashes and gzip/brotli encoding.
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# ------------------------------------------------------------
+# Third-party API keys
+# ------------------------------------------------------------
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ELEVENLABS_DEFAULT_VOICE_ID = os.environ.get("ELEVENLABS_DEFAULT_VOICE_ID", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
 # ------------------------------------------------------------
 # Email defaults
 # ------------------------------------------------------------
-DEFAULT_FROM_EMAIL = "No Reply <no-reply@tanjavoorathefe.in>"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "No Reply <no-reply@example.com>")
+
+# ------------------------------------------------------------
+# Celery
+# ------------------------------------------------------------
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per video task
 
 # ------------------------------------------------------------
 # Timezone / internationalization
@@ -131,17 +263,30 @@ DEFAULT_FROM_EMAIL = "No Reply <no-reply@tanjavoorathefe.in>"
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 # ------------------------------------------------------------
-# Logging for debugging video and ffmpeg operations
+# Default primary key field type
+# ------------------------------------------------------------
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ------------------------------------------------------------
+# Logging
 # ------------------------------------------------------------
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
-        "console": {"class": "logging.StreamHandler"},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
     },
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO"},
@@ -152,18 +297,38 @@ LOGGING = {
 # ------------------------------------------------------------
 # CSRF Trusted Origins
 # ------------------------------------------------------------
+_csrf_origins = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 CSRF_TRUSTED_ORIGINS = [
-    "https://hirefella.com",
-    "https://www.hirefella.com",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    *_csrf_origins,
 ]
 
 # ------------------------------------------------------------
-# Optional: ensure upload folder exists for video generation
+# HTTPS / security hardening (production only)
+# ------------------------------------------------------------
+if not DEBUG:
+    # Redirect all HTTP to HTTPS.
+    SECURE_SSL_REDIRECT = True
+    # Trust the X-Forwarded-Proto header set by Coolify / Nginx / Traefik.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # HSTS: tell browsers to only use HTTPS for 1 year, including subdomains.
+    SECURE_HSTS_SECONDS = 31_536_000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    # Only send session/CSRF cookies over HTTPS.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Prevent browsers from MIME-sniffing the content type.
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# ------------------------------------------------------------
+# Ensure media folders exist
 # ------------------------------------------------------------
 try:
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
     (MEDIA_ROOT / "videos").mkdir(parents=True, exist_ok=True)
-except Exception as e:
-    print(f"⚠️ Could not ensure media folders exist: {e}")
+    (MEDIA_ROOT / "voiceovers").mkdir(parents=True, exist_ok=True)
+    (MEDIA_ROOT / "base_videos").mkdir(parents=True, exist_ok=True)
+except Exception as _e:
+    print(f"⚠️ Could not ensure media folders exist: {_e}")  # noqa: T201

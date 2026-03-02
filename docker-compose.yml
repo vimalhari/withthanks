@@ -1,0 +1,96 @@
+# docker-compose.yml  –  Local development
+# Usage:
+#   docker compose up
+#   docker compose up -d        # background
+#   docker compose logs -f web  # follow logs
+#
+# The web service mounts your local source code so that edits are reflected
+# without rebuilding the image.  Does NOT run gunicorn – uses Django's dev
+# server for hot-reload support.
+
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: withthanks
+      POSTGRES_PASSWORD: withthanks
+      POSTGRES_DB: withthanks
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U withthanks"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (Celery broker) ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Django dev server ────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      # Use a dev-friendly target that skips collectstatic
+      target: build
+    command: >
+      sh -c "uv run python manage.py migrate --noinput &&
+             uv run python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      # Mount entire project so edits are reflected immediately
+      - .:/app
+      # Persist media files across container restarts
+      - media_data:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://withthanks:withthanks@db:5432/withthanks
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DJANGO_DEBUG: "true"
+      MEDIA_ROOT: /app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery worker ────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      target: build
+    command: uv run celery -A withthanks worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://withthanks:withthanks@db:5432/withthanks
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      MEDIA_ROOT: /app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  media_data:

@@ -8,8 +8,6 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-env/
-venv/
 build/
 develop-eggs/
 dist/
@@ -21,16 +19,21 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 *.log
 
-# PyInstaller
-*.manifest
-*.spec
+# Virtual environments
+.venv/
+venv/
+env/
 
-# Django / Flask
+# uv – lock file IS committed; local cache is not
+.uv/
+
+# Django
 *.sqlite3
 *.pyc
 *.pyo
@@ -38,14 +41,27 @@ var/
 media/
 staticfiles/
 instance/
+
+# Secrets / environment
 .env
+.env.*
+!.env.example
 
 # VS Code
 .vscode/
 
-# MacOS
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
-
-#Ignore vscode AI rules
+# Ignore Codacy AI rules (internal)
 .github/instructions/codacy.instructions.md
+
+# Temporary video processing artefacts
+/tmp/
+
+# Python coverage
+.coverage
+htmlcov/
+

@@ -134,14 +134,17 @@ def _build_personalized_video(
 
     if gratitude_mode:
         text = _default_gratitude_text(donor_name)
+        voice_id = getattr(campaign.text_template, "voice_id", "") if campaign.text_template else ""
     elif campaign.text_template and campaign.text_template.body:
         text = _render_template(campaign.text_template.body, context)
+        voice_id = campaign.text_template.voice_id or ""
     else:
         text = _default_personalized_text(donor_name, donation_amount)
+        voice_id = ""
 
     file_base = safe_filename(f"{donor_name}_{donation_amount}_{timezone.now().timestamp()}")[:120]
 
-    voiceover_path = generate_voiceover(text=text, file_name=file_base)
+    voiceover_path = generate_voiceover(text=text, file_name=file_base, voice_id=voice_id)
 
     if campaign.video_template and campaign.video_template.video_file:
         input_video = campaign.video_template.video_file.path

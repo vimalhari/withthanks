@@ -52,7 +52,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the entire built app (venv + source + staticfiles) from the build stage
 COPY --from=build /app /app
 
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
 
-# Production server – 4 workers, 120 s timeout for video processing requests
-CMD ["gunicorn", "withthanks.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
+# entrypoint.sh applies migrations then starts Gunicorn.
+ENTRYPOINT ["/app/entrypoint.sh"]
