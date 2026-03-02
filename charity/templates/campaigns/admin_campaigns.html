@@ -1,0 +1,93 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Campaigns - WithThanks{% endblock %}
+{% block breadcrumb_child %}Dashboard{% endblock %}
+
+{% block page_content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+    <div>
+        <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-bottom: 8px;">Campaigns</h1>
+        <p style="color: var(--text-muted); font-size: 16px;">Analyze and manage your fundraising campaigns.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button class="btn btn-secondary"><i class="bi bi-download"></i> Export</button>
+        <a href="{% url 'campaign_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Create Campaign
+        </a>
+    </div>
+</div>
+
+<!-- Performance Cards Grid -->
+<div class="grid-4" style="margin-bottom: 40px;">
+    <div class="saas-card" style="padding: 24px; border-left: 4px solid var(--primary);">
+        <p class="saas-label" style="margin-bottom: 12px;">Active Campaigns</p>
+        <div style="font-size: 28px; font-weight: 800;">{{ campaigns|length }}</div>
+        <div style="color: var(--status-success); font-size: 12px; font-weight: 600; margin-top: 8px;">
+            <i class="bi bi-arrow-up-right"></i> +12% from last month
+        </div>
+    </div>
+    <div class="saas-card" style="padding: 24px; border-left: 4px solid var(--status-success);">
+        <p class="saas-label" style="margin-bottom: 12px;">Total Reach</p>
+        <div style="font-size: 28px; font-weight: 800;">0</div>
+        <div style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">Consolidated reach</div>
+    </div>
+    <div class="saas-card" style="padding: 24px; border-left: 4px solid var(--status-active);">
+        <p class="saas-label" style="margin-bottom: 12px;">Conversion Rate</p>
+        <div style="font-size: 28px; font-weight: 800;">0%</div>
+        <div style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">System average</div>
+    </div>
+    <div class="saas-card" style="padding: 24px; border-left: 4px solid var(--status-draft);">
+        <p class="saas-label" style="margin-bottom: 12px;">Total Raised</p>
+        <div style="font-size: 28px; font-weight: 800;">£0.00</div>
+        <div style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">Life to date</div>
+    </div>
+</div>
+
+<!-- Campaign List Cards -->
+<div style="display: flex; flex-direction: column; gap: 20px;">
+    {% for campaign in campaigns %}
+    <div class="saas-card" style="padding: 0; overflow: hidden; transition: all 0.2s ease; border-color: rgba(0,0,0,0.05);" onmouseover="this.style.boxShadow='var(--shadow-md)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='var(--shadow-soft)'; this.style.transform='none'">
+        <div style="padding: 32px; display: flex; gap: 32px; align-items: flex-start;">
+            <!-- Campaign Brand/Icon -->
+            <div style="width: 56px; height: 56px; min-width: 56px; background: var(--primary-accent); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 24px; border: 1px solid rgba(79, 70, 229, 0.1);">
+                <i class="bi bi-megaphone-fill"></i>
+            </div>
+            
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="font-size: 20px; font-weight: 800; color: var(--text-headings); margin-bottom: 4px;">{{ campaign.name }}</h3>
+                        <p style="color: var(--text-muted); font-size: 14px; max-width: 600px; line-height: 1.6;">
+                            {{ campaign.description|default:"No description provided for this campaign. Click edit to add fundraising goals and details."|truncatechars:120 }}
+                        </p>
+                    </div>
+                    <span class="status-badge {% if campaign.status == 'active' %}status-running{% else %}status-draft{% endif %}">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 8px;"></span>
+                        {{ campaign.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <a href="{% url 'campaign_edit' campaign.id %}" class="btn btn-secondary" style="padding: 8px 12px;" title="Edit Settings">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'campaign_detail' campaign.id %}" class="btn btn-primary" style="padding: 8px 16px;">
+                    Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="saas-card" style="text-align: center; padding: 80px 40px; border-style: dashed;">
+        <div style="width: 72px; height: 72px; background: var(--bg-hover); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--status-draft); font-size: 28px;">
+            <i class="bi bi-megaphone"></i>
+        </div>
+        <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">No Campaigns Found</h3>
+        <p style="color: var(--text-muted); margin-bottom: 32px; max-width: 400px; margin-left: auto; margin-right: auto;">Launch your first fundraising campaign to start tracking reach and conversions.</p>
+        <a href="{% url 'campaign_create' %}" class="btn btn-primary">Create Your First Campaign</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

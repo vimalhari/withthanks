@@ -1,0 +1,332 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Manage Services - WithThanks{% endblock %}
+
+{% block breadcrumb_parent %}Management{% endblock %}
+{% block breadcrumb_child %}Services{% endblock %}
+
+{% block layout_head %}
+<!-- React & ReactDOM from CDN for immediate integration -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<!-- Babel for JSX transformation in the browser (convenient for this setup) -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+    .service-mgmt-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    .service-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        transition: all 0.2s;
+        margin-bottom: 16px;
+    }
+    .service-card:hover {
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        border-color: #6366f1;
+    }
+    .category-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        background: #f1f5f9;
+        color: #475569;
+    }
+    .price-tag {
+        font-size: 18px;
+        font-weight: 800;
+        color: #1e293b;
+    }
+    .form-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+    .form-control:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+    }
+    .btn-action {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: none;
+        background: #f8fafc;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+    .btn-action:hover {
+        background: #eef2ff;
+        color: #6366f1;
+    }
+    .btn-delete:hover {
+        background: #fef2f2;
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div id="services-root">
+    <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading Management Suite...</span>
+        </div>
+    </div>
+</div>
+
+<script type="text/babel">
+{% verbatim %}
+    const { useState, useEffect } = React;
+
+    const CategoryBadges = {
+        'VDM': { bg: '#eef2ff', color: '#4f46e5' },
+        'GRATITUDE': { bg: '#ecfdf5', color: '#059669' },
+        'ADDITIONAL': { bg: '#fff7ed', color: '#c2410b' },
+        'VOLUME': { bg: '#fdf2f8', color: '#db2777' }
+    };
+
+    function ServiceForm({ initialData, onSave, onCancel, processing }) {
+        const [formData, setFormData] = useState(initialData || {
+            name: '',
+            category: 'ADDITIONAL',
+            unit_price: 0,
+            description: '',
+            active: true
+        });
+
+        return (
+            <div className="saas-card p-4" style={{border: '2px solid #6366f1'}}>
+                <h4 className="mb-4">{initialData ? 'Edit Service' : 'Add New Service'}</h4>
+                <div className="row g-3">
+                    <div className="col-md-6">
+                        <label className="form-label">Service Name</label>
+                        <input 
+                            type="text" 
+                            className="form-control w-100"
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            placeholder="e.g. Video Direct Mail"
+                        />
+                    </div>
+                    <div className="col-md-3">
+                        <label className="form-label">Category</label>
+                        <select 
+                            className="form-control w-100"
+                            value={formData.category}
+                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        >
+                            <option value="VDM">VDM</option>
+                            <option value="GRATITUDE">Gratitude</option>
+                            <option value="ADDITIONAL">Additional</option>
+                            <option value="VOLUME">Volume</option>
+                        </select>
+                    </div>
+                    <div className="col-md-3">
+                        <label className="form-label">Base Price (£)</label>
+                        <input 
+                            type="number" 
+                            className="form-control w-100"
+                            value={formData.unit_price}
+                            onChange={(e) => setFormData({...formData, unit_price: e.target.value})}
+                        />
+                    </div>
+                    <div className="col-12">
+                        <label className="form-label">Description (Internal)</label>
+                        <textarea 
+                            className="form-control w-100"
+                            rows="2"
+                            value={formData.description}
+                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        ></textarea>
+                    </div>
+                    <div className="col-12 d-flex gap-2 justify-content-end mt-4">
+                        <button onClick={onCancel} className="btn btn-secondary px-4">Cancel</button>
+                        <button 
+                            onClick={() => onSave(formData)} 
+                            className="btn btn-primary px-4"
+                            disabled={!formData.name || processing}
+                        >
+                            {processing ? 'Saving...' : 'Save Service'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function ServicesManagementApp() {
+        const [services, setServices] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [editingId, setEditingId] = useState(null);
+        const [isAdding, setIsAdding] = useState(false);
+        const [processing, setProcessing] = useState(false);
+
+        useEffect(() => {
+            fetchServices();
+        }, []);
+
+        const fetchServices = async () => {
+            try {
+                const res = await fetch('/charity/api/billing/services/');
+                const data = await res.json();
+                setServices(data.services || []);
+                setLoading(false);
+            } catch (err) {
+                console.error("Load failed", err);
+                setLoading(false);
+            }
+        };
+
+        const handleSave = async (data) => {
+            setProcessing(true);
+            try {
+                const url = editingId 
+                    ? `/charity/api/billing/services/${editingId}/` 
+                    : '/charity/api/billing/services/';
+                const method = editingId ? 'PUT' : 'POST';
+                
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    await fetchServices();
+                    setEditingId(null);
+                    setIsAdding(false);
+                }
+            } catch (err) {
+                console.error("Save failed", err);
+            } finally {
+                setProcessing(false);
+            }
+        };
+
+        const handleDelete = async (id) => {
+            if (!confirm("Are you sure? This cannot be undone.")) return;
+            try {
+                const res = await fetch(`/charity/api/billing/services/${id}/`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) fetchServices();
+            } catch (err) {
+                console.error("Delete failed", err);
+            }
+        };
+
+        if (loading) return (
+            <div className="d-flex justify-content-center py-5">
+                <div className="spinner-border text-primary"></div>
+            </div>
+        );
+
+        return (
+            <div className="service-mgmt-container pb-5">
+                <div className="d-flex justify-content-between align-items-center mb-5">
+                    <div>
+                        <h1 style={{fontSize: '32px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em'}}>Service Catalog</h1>
+                        <p className="text-muted">Manage global service pricing and categories for all client invoices.</p>
+                    </div>
+                    <button 
+                        onClick={() => setIsAdding(true)} 
+                        className="btn btn-primary"
+                        style={{background: '#6366f1', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 600}}
+                        disabled={isAdding || editingId}
+                    >
+                        <i className="bi bi-plus-lg me-2"></i> Add Global Service
+                    </button>
+                </div>
+
+                {isAdding && (
+                    <div className="mb-4">
+                        <ServiceForm 
+                            onSave={handleSave} 
+                            onCancel={() => setIsAdding(false)} 
+                            processing={processing}
+                        />
+                    </div>
+                )}
+
+                <div className="row">
+                    {services.map(service => (
+                        <div key={service.id} className="col-12">
+                            {editingId === service.id ? (
+                                <div className="mb-4">
+                                    <ServiceForm 
+                                        initialData={{...service, category: service.category_raw}} 
+                                        onSave={handleSave} 
+                                        onCancel={() => setEditingId(null)} 
+                                        processing={processing}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="service-card d-flex align-items-center gap-4">
+                                    <div style={{flex: 1}}>
+                                        <div className="d-flex align-items-center gap-3 mb-1">
+                                            <h3 className="h6 mb-0 font-weight-bold" style={{color: '#0f172a'}}>{service.name}</h3>
+                                            <span 
+                                                className="category-badge"
+                                                style={{
+                                                    backgroundColor: CategoryBadges[service.category_raw]?.bg || '#f1f5f9',
+                                                    color: CategoryBadges[service.category_raw]?.color || '#475569'
+                                                }}
+                                            >
+                                                {service.category}
+                                            </span>
+                                        </div>
+                                        <p className="text-muted small mb-0">{service.description || 'No description provided.'}</p>
+                                    </div>
+                                    <div className="text-end" style={{minWidth: '120px'}}>
+                                        <div className="price-tag">£{service.unit_price}</div>
+                                        <div className="small text-muted">Base Unit Price</div>
+                                    </div>
+                                    <div className="d-flex gap-2 ms-3 border-start ps-3">
+                                        <button onClick={() => setEditingId(service.id)} className="btn-action" title="Edit Service">
+                                            <i className="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button onClick={() => handleDelete(service.id)} className="btn-action btn-delete" title="Delete Service">
+                                            <i className="bi bi-trash3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                
+                {services.length === 0 && !isAdding && (
+                    <div className="text-center py-5 saas-card">
+                        <i className="bi bi-tag-fill display-4 text-muted mb-3 d-block"></i>
+                        <h4 className="text-muted">No services found</h4>
+                        <p>Start by adding your first global service to the catalog.</p>
+                        <button onClick={() => setIsAdding(true)} className="btn btn-outline-primary mt-2">Get Started</button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('services-root'));
+    root.render(<ServicesManagementApp />);
+{% endverbatim %}
+</script>
+{% endblock %}

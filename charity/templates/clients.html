@@ -1,0 +1,356 @@
+{% extends "layouts/admin_layout.html" %}
+{% load static %}
+
+{% block title %}Clients - WithThanks{% endblock %}
+
+{% block breadcrumb_parent %}Management{% endblock %}
+{% block breadcrumb_child %}Clients{% endblock %}
+
+{% block page_content %}
+<div style="max-width: 1400px; margin: 0 auto;">
+    <!-- Page Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px;">
+        <div>
+            <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); margin: 0 0 8px 0; letter-spacing: -0.02em;">Clients</h1>
+            <p style="color: var(--text-muted); font-size: 15px; margin: 0; font-weight: 500;">Manage and onboard your partner clients.</p>
+        </div>
+        <button onclick="openAddClientModal()" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i>
+            Client
+        </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid-4" style="margin-bottom: 32px;">
+        <div class="saas-card" style="margin-bottom: 0; padding: 20px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Total Clients</div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--text-headings);">{{ clients.count }}</div>
+                </div>
+                <div style="width: 40px; height: 40px; background: var(--primary-accent); color: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--status-success);">
+                <i class="bi bi-arrow-up-short"></i>
+                <span>Active</span>
+            </div>
+        </div>
+        
+        <div class="saas-card" style="margin-bottom: 0; padding: 20px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Active Campaigns</div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--text-headings);">{{ total_campaigns }}</div>
+                </div>
+                <div style="width: 40px; height: 40px; background: #ecfdf5; color: #10b981; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="bi bi-megaphone-fill"></i>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--text-muted);">
+                <span>System-wide reach</span>
+            </div>
+        </div>
+
+        <div class="saas-card" style="margin-bottom: 0; padding: 20px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Videos Sent</div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--text-headings);">{{ total_videos }}</div>
+                </div>
+                <div style="width: 40px; height: 40px; background: #fff7ed; color: #f59e0b; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="bi bi-play-btn-fill"></i>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--text-muted);">
+                <span>Successfully generated</span>
+            </div>
+        </div>
+
+        <div class="saas-card" style="margin-bottom: 0; padding: 20px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Account Status</div>
+                    <div style="font-size: 28px; font-weight: 800; color: var(--text-headings);">Healthy</div>
+                </div>
+                <div style="width: 40px; height: 40px; background: #eff6ff; color: #3b82f6; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--status-success);">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Enterprise Active</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clients List -->
+    <div class="saas-card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-headings); margin: 0;">Managed Portfolio</h3>
+            <div style="display: flex; gap: 8px;">
+                <div style="position: relative;">
+                    <i class="bi bi-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+                    <input type="text" placeholder="Search clients..." style="padding: 6px 12px 6px 36px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; width: 240px;">
+                </div>
+            </div>
+        </div>
+        
+        {% if clients %}
+        <div style="overflow-x: auto;">
+            <table class="saas-table">
+                <thead>
+                    <tr>
+                        <th>Client Identity</th>
+                        <th>Organization</th>
+                        <th>Primary Contact</th>
+                        <th style="text-align: center;">Campaigns</th>
+                        <th style="text-align: center;">Videos</th>
+                        <th>Onboarded</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <div style="width: 36px; height: 36px; background: var(--bg-hover); color: var(--primary); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">
+                                    {{ client.client_name|slice:":2"|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--text-headings); font-size: 14px;">{{ client.client_name }}</div>
+                                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">ID: #CL-{{ client.id|add:1000 }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 500; color: var(--text-body);">{{ client.organization_name }}</span>
+                        </td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span style="font-size: 13px; font-weight: 500; color: var(--text-body);">{{ client.contact_email }}</span>
+                            </div>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="status-badge" style="background: var(--primary-accent); color: var(--primary); border: 1px solid rgba(79, 70, 229, 0.1);">{{ client.campaigns.count }}</span>
+                        </td>
+                        <td style="text-align: center;">
+                            <span style="font-weight: 600; color: var(--text-headings);">{{ client.jobs.count }}</span>
+                        </td>
+                        <td>
+                            <span style="color: var(--text-muted); font-size: 13px;">{{ client.created_at|date:"M d, Y" }}</span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                <a href="{% url 'client_edit' client.id %}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px; min-width: 0;" title="Edit Settings">
+                                    <i class="bi bi-gear-fill"></i>
+                                </a>
+                                <a href="{% url 'client_campaign_redirect' client.id %}" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px; min-width: 0;" title="View or Create Campaign">
+                                    <i class="bi bi-megaphone-fill"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 80px 24px; text-align: center; background: #fafafa;">
+            <div style="width: 64px; height: 64px; background: #fff; border: 1px dashed var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <i class="bi bi-people" style="font-size: 28px; color: var(--text-muted);"></i>
+            </div>
+            <h4 style="font-size: 18px; font-weight: 700; color: var(--text-headings); margin-bottom: 8px;">No clients available</h4>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px; max-width: 320px; margin-left: auto; margin-right: auto;">Start by onboarding your first client to begin creating personalized video campaigns.</p>
+            <button onclick="openAddClientModal()" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i>
+                Onboard First Client
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Onboarding Modal -->
+<div id="addClientModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="saas-card" style="width: 100%; max-width: 650px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; margin-bottom: 0; overflow: hidden; animation: modalIn 0.3s ease-out;">
+        <!-- Modal Header -->
+        <div style="padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div>
+                <h2 style="font-size: 20px; font-weight: 800; color: var(--text-headings); margin: 0; letter-spacing: -0.01em;">Client</h2>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted); font-weight: 500;">Configure profile and global defaults.</p>
+            </div>
+            <button onclick="closeAddClientModal()" style="background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--text-headings)'" onmouseout="this.style.color='var(--text-muted)'">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" action="{% url 'clients' %}" style="padding: 32px; overflow-y: auto;" autocomplete="off">
+            {% csrf_token %}
+            
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div>
+                    <h4 style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; border-bottom: 1px solid var(--primary-accent); padding-bottom: 6px;">Client Identity</h4>
+                    <div class="grid-2">
+                        <div>
+                            <label class="saas-label">Primary Contact <span style="color: var(--status-failed);">*</span></label>
+                            <input type="text" name="client_name" class="saas-input" placeholder="e.g. Save The Oceans" autocomplete="name" required>
+                        </div>
+                        <div>
+                            <label class="saas-label">Contact Email <span style="color: var(--status-failed);">*</span></label>
+                            <input type="email" name="contact_email" class="saas-input" placeholder="admin@client.org" autocomplete="off" data-lpignore="true" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <label class="saas-label">Contact Phone Number</label>
+                        <input type="text" name="contact_phone" class="saas-input" placeholder="e.g. +44 123 456 7890">
+                    </div>
+                    <div>
+                        <label class="saas-label">Company Number Field</label>
+                        <input type="text" name="company_number" class="saas-input" placeholder="e.g. 12345678">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="saas-label">Organization Name <span style="color: var(--status-failed);">*</span></label>
+                    <input type="text" name="organization_name" class="saas-input" placeholder="Used in video scripts and email signatures" required>
+                </div>
+
+                <!-- Address Section -->
+                <div>
+                    <h4 style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">Address Details</h4>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div>
+                            <label class="saas-label">Address Line 1</label>
+                            <input type="text" name="address_line_1" class="saas-input" placeholder="Street address">
+                        </div>
+                        <div>
+                            <label class="saas-label">Address Line 2</label>
+                            <input type="text" name="address_line_2" class="saas-input" placeholder="Apartment, suite, unit, etc. (optional)">
+                        </div>
+                        <div class="grid-2">
+                            <div>
+                                <label class="saas-label">County</label>
+                                <input type="text" name="county" class="saas-input" placeholder="County/Region">
+                            </div>
+                            <div>
+                                <label class="saas-label">Postcode</label>
+                                <input type="text" name="postcode" class="saas-input" placeholder="Postal code">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Integration Section -->
+                <div style="padding: 24px; background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 32px; height: 32px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;">
+                                <img src="https://www.blackbaud.com/favicon.ico" alt="Blackbaud" style="width: 16px; height: 16px;">
+                            </div>
+                            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-headings); margin: 0;">Blackbaud Raiser's Edge Integration</h4>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="blackbaud_enabled" id="bb_enabled_onboard">
+                            <label class="form-check-label small fw-bold" for="bb_enabled_onboard" style="color: var(--text-muted); margin-left: 8px;">Enable Integration</label>
+                        </div>
+                    </div>
+
+                    <div id="blackbaud_fields_onboard" style="display: none; flex-direction: column; gap: 16px; animation: slideDown 0.3s ease-out;">
+                        <div>
+                            <label class="saas-label">Application ID (OAuth client_id)</label>
+                            <input type="text" name="blackbaud_client_id" class="saas-input" placeholder="Enter your Blackbaud Client ID">
+                        </div>
+                        <div>
+                            <label class="saas-label">Application Secret (OAuth client_secret)</label>
+                            <input type="password" name="blackbaud_client_secret" class="saas-input" placeholder="Enter your Blackbaud Client Secret">
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); background: #f1f5f9; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-info-circle-fill" style="color: var(--primary);"></i>
+                            Find these credentials in your Blackbaud SKY API Developer Portal.
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    document.getElementById('bb_enabled_onboard').addEventListener('change', function() {
+                        const fields = document.getElementById('blackbaud_fields_onboard');
+                        fields.style.display = this.checked ? 'flex' : 'none';
+                    });
+                </script>
+
+                <!-- Action Footer -->
+                <div style="display: flex; gap: 16px; margin-top: 12px; padding-top: 24px; border-top: 1px solid var(--border);">
+                    <button type="button" onclick="closeAddClientModal()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 2;">
+                        <i class="bi bi-shield-check"></i> Save
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAddClientModal() {
+    const modal = document.getElementById('addClientModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAddClientModal() {
+    const modal = document.getElementById('addClientModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function editClient(clientId) {
+    window.location.href = `/admin/charity/charity/${clientId}/change/`;
+}
+
+// Global handle for modal closing
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('addClientModal');
+    if (e.target === modal) {
+        closeAddClientModal();
+    }
+});
+
+// ESC Key listener
+window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAddClientModal();
+    }
+});
+</script>
+
+<style>
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.saas-table th {
+    background: #fafafa;
+    border-top: 1px solid var(--border);
+}
+
+.saas-table td {
+    border-bottom: 1px solid var(--border);
+}
+
+.saas-table tr:last-child td {
+    border-bottom: none;
+}
+@keyframes pulse {
+    0% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.5; }
+}
+</style>
+{% endblock %}

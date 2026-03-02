@@ -1,0 +1,540 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Enterprise Report Dashboard | WithThanks{% endblock %}
+{% block breadcrumb_parent %}Analytics{% endblock %}
+{% block breadcrumb_child %}Unified Dashboard{% endblock %}
+
+{% block layout_head %}
+<!-- Google Fonts: Inter & Outfit -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --primary: #6366f1;
+        --secondary: #94a3b8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #f43f5e;
+        --info: #0ea5e9;
+        --dark: #0f172a;
+        --light-bg: #f1f5f9;
+        --card-bg: #ffffff;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        --enterprise-border: 1px solid #e2e8f0;
+    }
+
+    body { background-color: var(--light-bg); font-family: 'Inter', sans-serif; color: var(--dark); }
+    h1, h2, h3, .metric-val { font-family: 'Outfit', sans-serif; }
+
+    .enterprise-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        border: var(--enterprise-border);
+        box-shadow: var(--card-shadow);
+        padding: 20px;
+        height: 100%;
+        transition: all 0.2s;
+    }
+
+    .kpi-section-title {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--secondary);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .kpi-section-title::after { content: ""; height: 1px; flex-grow: 1; background: #e2e8f0; }
+
+    .kpi-card { padding: 16px; border-radius: 10px; border: 1px solid #f1f5f9; background: #fafafa; }
+    .kpi-label { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+    .kpi-value { font-size: 24px; font-weight: 800; color: var(--dark); }
+    .kpi-trend { font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+    
+    /* Funnel Upgrade */
+    .funnel-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 0;
+    }
+
+    .funnel-row { width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+    .funnel-bar {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 12px;
+        position: relative;
+        transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        z-index: 2;
+        border-radius: 4px;
+    }
+
+    .funnel-label-side {
+        position: absolute;
+        left: 0;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--secondary);
+        width: 80px;
+    }
+
+    .funnel-val-side {
+        position: absolute;
+        right: 0;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--dark);
+    }
+
+    /* Chart Headers */
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .chart-title { font-size: 15px; font-weight: 800; color: var(--dark); display: flex; align-items: center; gap: 8px; }
+    
+    .filter-select {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        background: white;
+    }
+
+    .btn-analyze {
+        background: var(--dark);
+        color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 700;
+        border: none;
+        font-size: 14px;
+    }
+
+    .badge-soft { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .badge-soft-primary { background: #eef2ff; color: var(--primary); }
+    
+    [x-cloak] { display: none !important; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div x-data="enterpriseDashboard()" x-init="init()" x-cloak class="container-fluid py-4 px-4" style="max-width: 1700px;">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-black mb-0" style="font-size: 2rem; letter-spacing: -1px;">Report Dashboard</h1>
+            <div class="d-flex align-items-center gap-2 text-muted small fw-bold mt-1">
+                <span>Enterprise Dashboard</span>
+                <span class="text-primary">•</span>
+                <span x-text="filters.charity_id !== 'all' ? 'Real-time Monitoring' : 'Selection Awaiting'"></span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <select x-model="filters.days" @change="refreshData()" class="filter-select">
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+            </select>
+            <button class="btn btn-white enterprise-card py-2 px-3 d-flex align-items-center gap-2" @click="refreshData()" :disabled="loading">
+                <i class="bi bi-arrow-clockwise" :class="loading && 'spin'"></i>
+                <span class="small fw-bold">Sync Data</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Selection Bar -->
+    <div class="enterprise-card mb-4 bg-white py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <select x-model="filters.charity_id" @change="onCharityChange()" class="form-select filter-select w-100 border-0">
+                    <option value="all">Select Client...</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}">{{ client.client_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select x-model="filters.campaign_id" @change="refreshData()" class="form-select filter-select w-100 border-0" :disabled="filters.charity_id === 'all'">
+                    <option value="all">Select Campaign...</option>
+                    <template x-for="camp in campaigns" :key="camp.id">
+                        <option :value="camp.id" x-text="camp.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn-analyze w-100" @click="refreshData()" :disabled="filters.campaign_id === 'all' || loading">
+                    <span x-show="!loading">Execute Analysis</span>
+                    <span x-show="loading">Calibrating...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div x-show="filters.campaign_id !== 'all'">
+        
+        <!-- KPI Grid: Email & Video -->
+        <div class="row g-4 mb-4">
+            <!-- Email Intel -->
+            <div class="col-xl-6">
+                <div class="kpi-section-title"><i class="bi bi-envelope-paper"></i> Email Intelligence</div>
+                <div class="row g-3">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">📤 Emails Sent</div>
+                            <div class="kpi-value" x-text="metrics.total_sent">0</div>
+                            <div class="kpi-trend text-muted small mt-1">Total campaign volume</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">❌ Failed</div>
+                            <div class="kpi-value text-danger" x-text="metrics.total_failed">0</div>
+                            <div class="kpi-trend text-danger small mt-1">Bounced / Undelivered</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">👀 Opened</div>
+                            <div class="kpi-value text-success" x-text="metrics.total_opened">0</div>
+                            <div class="kpi-trend text-success small mt-1">Unique recipients</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">📊 Views</div>
+                            <div class="kpi-value text-primary" x-text="metrics.total_views">0</div>
+                            <div class="kpi-trend text-primary small mt-1">Total open events</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Intel -->
+            <div class="col-xl-6">
+                <div class="kpi-section-title"><i class="bi bi-play-btn"></i> Video Intelligence</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="enterprise-card kpi-card" style="background: var(--dark); color: white;">
+                            <div class="kpi-label" style="color: rgba(255,255,255,0.6);">Total Plays</div>
+                            <div class="kpi-value text-white" x-text="metrics.plays">0</div>
+                            <div class="kpi-trend" :class="metrics.trends.plays.startsWith('+') ? 'text-success' : 'text-danger'">
+                                <i class="bi" :class="metrics.trends.plays.startsWith('+') ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+                                <span x-text="metrics.trends.plays || '0%'"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">Completion</div>
+                            <div class="kpi-value text-success" x-text="metrics.video_completion_rate">0%</div>
+                            <div class="kpi-trend text-success">Finished</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">Rewatch Rate</div>
+                            <div class="kpi-value text-warning" x-text="metrics.rewatch_rate">0%</div>
+                            <div class="kpi-trend text-muted">Viral factor</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">Avg Watch Time</div>
+                            <div class="kpi-value" x-text="metrics.avg_watch_time">0s</div>
+                            <div class="kpi-trend text-primary">Per play</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="enterprise-card kpi-card">
+                            <div class="kpi-label">Total Consumption</div>
+                            <div class="kpi-value" x-text="metrics.total_watch_time">00:00:00</div>
+                            <div class="kpi-trend text-muted">HH:MM:SS</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Layer 1: Emails & Trends -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-7">
+                <div class="enterprise-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Email Lifecycle Performance</h3>
+                        <div class="badge-soft badge-soft-primary">Weekly Aggregation</div>
+                    </div>
+                    <div style="height: 320px;">
+                        <canvas id="emailPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="enterprise-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Open & Click Trend</h3>
+                    </div>
+                    <div style="height: 320px;">
+                        <canvas id="conversionTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Layer 2: Video Deep Dive -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4">
+                <div class="enterprise-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Engagement Tier</h3>
+                    </div>
+                    <div style="height: 250px;">
+                        <canvas id="engagementTierChart"></canvas>
+                    </div>
+                    <div class="mt-4 pt-3 border-top grid gap-2 d-flex flex-column">
+                        <template x-for="(label, index) in chartsData.engagement.labels">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small fw-bold text-muted d-flex align-items-center gap-2">
+                                    <span :style="'width: 8px; height: 8px; border-radius: 50%; background:' + chartsData.engagement.colors[index]"></span>
+                                    <span x-text="label"></span>
+                                </span>
+                                <span class="small fw-black" x-text="chartsData.engagement.values[index]"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="enterprise-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Audience Retention Curve</h3>
+                    </div>
+                    <div style="height: 340px;">
+                        <canvas id="retentionCurveChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="enterprise-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Watch Duration</h3>
+                    </div>
+                    <div style="height: 340px;">
+                        <canvas id="watchDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversion Funnel Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="enterprise-card">
+                    <div class="chart-header mb-5 border-bottom pb-3">
+                        <h3 class="chart-title">Dynamic Conversion Funnel <span class="badge-soft badge-soft-primary ms-2" x-text="campaignType"></span></h3>
+                        <span class="text-muted small fw-bold">CAMPAIGN-SPECIFIC PIPELINE</span>
+                    </div>
+
+                    <div class="row align-items-center gx-5">
+                        <div class="col-lg-8">
+                            <div class="funnel-container">
+                                <template x-for="(stage, index) in chartsData.funnel.stages" :key="index">
+                                    <div class="funnel-row">
+                                        <div class="funnel-label-side" x-text="stage.label"></div>
+                                        <div class="funnel-bar" 
+                                             :style="'width: ' + (100 - (index * 8)) + '%; max-width: 600px; background:' + getFunnelColor(index)">
+                                            <span x-text="stage.label" class="d-none d-md-inline"></span>
+                                        </div>
+                                        <div class="funnel-val-side" x-text="stage.value"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="p-4 rounded-4" style="background: #f8fafc;">
+                                <div class="mb-4">
+                                    <label class="small text-muted fw-bold d-block mb-1">FUNNEL EFFICIENCY</label>
+                                    <div class="h2 fw-black text-primary" x-text="metrics.click_rate">0%</div>
+                                    <p class="small text-muted mb-0">Conversion from Sent to Call-to-Action</p>
+                                </div>
+                                <div>
+                                    <label class="small text-muted fw-bold d-block mb-1">VIDEO RETENTION INDEX</label>
+                                    <div class="h2 fw-black text-success" x-text="metrics.video_completion_rate">0%</div>
+                                    <p class="small text-muted mb-0">Percentage of plays reaching completion</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Empty State -->
+    <template x-if="filters.campaign_id === 'all'">
+        <div class="text-center py-5">
+            <div class="enterprise-card d-inline-block p-5 bg-white" style="max-width: 600px;">
+                <div class="mb-4 text-primary"><i class="bi bi-bar-chart-line" style="font-size: 4rem; opacity: 0.8;"></i></div>
+                <h2 class="fw-black mb-3">Report Generation Awating</h2>
+                <p class="text-muted fw-medium lh-lg">Select a client and campaign from the filters above to generate your comprehensive analytics report. The dashboard will aggregate delivery metrics, video engagement, and conversion tracking.</p>
+                <div class="mt-4 pt-4 border-top d-flex justify-content-center gap-4">
+                    <div class="text-start"><div class="fw-bold small text-muted mb-1">DATA POINTS</div><div class="fw-black text-dark">Real-time</div></div>
+                    <div class="text-start"><div class="fw-bold small text-muted mb-1">EXPORT</div><div class="fw-black text-dark">CSV/PDF Available</div></div>
+                    <div class="text-start"><div class="fw-bold small text-muted mb-1">STATUS</div><div class="fw-black text-dark text-success">Select Campaign</div></div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function enterpriseDashboard() {
+        return {
+            loading: false,
+            campaignType: 'THANKYOU',
+            filters: { charity_id: 'all', campaign_id: 'all', days: '30' },
+            campaigns: [],
+            metrics: {
+                total_sent: 0, total_failed: 0, total_opened: 0, total_views: 0,
+                clicked: 0, unsubs: 0, plays: 0,
+                open_rate: '0%', click_rate: '0%', unsub_rate: '0%', bounce_rate: '0%',
+                avg_watch_time: '0s', total_watch_time: '00:00:00', video_completion_rate: '0%', rewatch_rate: '0%',
+                trends: { sent: '0%', open_rate: '0%', plays: '0%', click: '0%' }
+            },
+            chartsData: {
+                funnel: { stages: [] },
+                timeline: [],
+                distribution: { buckets: [], values: [] },
+                retention: { labels: [], values: [] },
+                engagement: { labels: [], values: [], colors: [] }
+            },
+            chartInstances: {},
+
+            async init() {
+                const params = new URLSearchParams(window.location.search);
+                this.filters.charity_id = params.get('charity_id') || 'all';
+                this.filters.campaign_id = params.get('campaign_id') || 'all';
+                
+                if (this.filters.charity_id !== 'all') {
+                    await this.fetchCampaigns();
+                    if (this.filters.campaign_id !== 'all') this.refreshData();
+                }
+            },
+
+            async fetchCampaigns() {
+                if (this.filters.charity_id === 'all') return;
+                this.loading = true;
+                try {
+                    const response = await fetch(`{% url 'api_campaigns' %}?client_id=${this.filters.charity_id}`);
+                    this.campaigns = await response.json();
+                } catch (e) { console.error(e); } finally { this.loading = false; }
+            },
+
+            async onCharityChange() {
+                this.filters.campaign_id = 'all';
+                await this.fetchCampaigns();
+            },
+
+            async refreshData() {
+                if (this.filters.campaign_id === 'all') return;
+                this.loading = true;
+                try {
+                    const params = new URLSearchParams(this.filters);
+                    const response = await fetch(`{% url 'analytics_api_unified_data' %}?${params.toString()}`);
+                    const data = await response.json();
+                    
+                    this.campaignType = data.campaign_type;
+                    this.metrics = data.metrics;
+                    this.chartsData = data.charts;
+                    
+                    this.$nextTick(() => this.updateCharts());
+                } catch (e) { console.error(e); } finally { this.loading = false; }
+            },
+
+            getFunnelColor(index) {
+                const colors = ['#6366f1', '#4f46e5', '#4338ca', '#3b82f6', '#2563eb', '#0ea5e9', '#06b6d4', '#10b981', '#f43f5e'];
+                return colors[index % colors.length];
+            },
+
+            updateCharts() {
+                // 1. Email Performance (Grouped Bar)
+                this._renderChart('emailPerformanceChart', 'bar', {
+                    labels: this.chartsData.timeline.map(d => d.label),
+                    datasets: [
+                        { label: 'Sent', data: this.chartsData.timeline.map(d => d.sent), backgroundColor: '#6366f1', borderRadius: 4 },
+                        { label: 'Opened', data: this.chartsData.timeline.map(d => d.opened), backgroundColor: '#0ea5e9', borderRadius: 4 },
+                        { label: 'Clicked', data: this.chartsData.timeline.map(d => d.clicked), backgroundColor: '#10b981', borderRadius: 4 }
+                    ]
+                }, { maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6, font: { weight: 'bold' } } } } });
+
+                // 2. Conversion Trend (Spline Area)
+                this._renderChart('conversionTrendChart', 'line', {
+                    labels: this.chartsData.timeline.map(d => d.label),
+                    datasets: [{
+                        label: 'Open Trend',
+                        data: this.chartsData.timeline.map(d => d.opened),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                });
+
+                // 3. Engagement Pie
+                this._renderChart('engagementTierChart', 'doughnut', {
+                    labels: this.chartsData.engagement.labels,
+                    datasets: [{ data: this.chartsData.engagement.values, backgroundColor: this.chartsData.engagement.colors, borderWidth: 0 }]
+                }, { cutout: '75%', maintainAspectRatio: false, plugins: { legend: { display: false } } });
+
+                // 4. Retention Curve
+                this._renderChart('retentionCurveChart', 'line', {
+                    labels: this.chartsData.retention.labels,
+                    datasets: [{
+                        label: 'Viewers',
+                        data: this.chartsData.retention.values,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        borderWidth: 4
+                    }]
+                });
+
+                // 5. Watch Distribution (Histogram)
+                this._renderChart('watchDistributionChart', 'bar', {
+                    labels: this.chartsData.distribution.buckets,
+                    datasets: [{ label: 'Plays', data: this.chartsData.distribution.values, backgroundColor: '#f59e0b', borderRadius: 4 }]
+                }, { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } });
+            },
+
+            _renderChart(id, type, data, options = {}) {
+                const ctx = document.getElementById(id);
+                if (!ctx) return;
+                if (this.chartInstances[id]) this.chartInstances[id].destroy();
+                this.chartInstances[id] = new Chart(ctx.getContext('2d'), {
+                    type, data, options: { maintainAspectRatio: false, ...options }
+                });
+            }
+        }
+    }
+</script>
+{% endblock %}

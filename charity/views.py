@@ -1,91 +1,78 @@
-# charity/views.py
-import csv
 import logging
-import traceback
-from decimal import Decimal
-
+import json
+from datetime import timedelta
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.utils.dateparse import parse_datetime
+from django.db.models import Sum, Count, Q, Avg
+from django.http import HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from django.db.models.functions import TruncDate
+from django.core.paginator import Paginator
 
-from charity.models import Campaign
-from charity.services.video_dispatch import dispatch_donation_video
+from .models import Charity, DonationJob, DonationBatch, Campaign, ReceivedEmail, UnsubscribedUser
+from .models_analytics import EmailEvent, VideoEvent
+from .utils.access_control import get_active_charity
 
-from .forms import CSVUploadForm
+# Hub Imports for backward compatibility with urls.py
+from .views_auth import *
+from .views_invoices import *
+from .views_batches import *
+from .views_automation import *
+from .views_admin import *
 
 logger = logging.getLogger(__name__)
 
+@login_required(login_url="charity_login")
+def dashboard_view(request):
+    """Core dashboard with performance optimizations."""
+    current_charity = get_active_charity(request)
+    if not current_charity and not request.user.is_superuser:
+        return redirect('client_setup')
 
-@login_required
-def upload_csv_and_process(request):
-    """
-    Handle CSV upload, generate personalized first 5s of video with TTS and overlay,
-    append remaining base video, and send via email.
-    """
-    message = None
-    visible_errors = []  # 👈 store short messages for display
-
-    if request.method == "POST":
-        form = CSVUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            csv_file = request.FILES["csv_file"]
-
-            try:
-                lines = csv_file.read().decode("utf-8").splitlines()
-            except Exception as e:
-                message = "Uploaded file must be a UTF-8 encoded CSV."
-                logger.exception("CSV decode failed: %s", e)
-                return render(request, "upload_csv.html", {"form": form, "message": message})
-
-            charity = form.cleaned_data["charity"]
-            campaign_type = form.cleaned_data["campaign_type"]
-            reader = csv.DictReader(lines)
-            processed_count = 0
-            errors = []
-
-            for i, row in enumerate(reader, start=1):
-                try:
-                    name = (row.get("name") or "donor").strip()
-                    amount_str = (row.get("amount") or "").strip()
-                    email = (row.get("email") or "").strip()
-                    donated_at_raw = (row.get("donated_at") or "").strip()
-
-                    if not email:
-                        logger.info("Row %d skipped: no email", i)
-                        continue
-
-                    if not amount_str:
-                        raise ValueError("amount is required")
-
-                    amount = Decimal(amount_str)
-                    donated_at = parse_datetime(donated_at_raw) if donated_at_raw else None
-
-                    dispatch_donation_video(
-                        charity=charity,
-                        donor_email=email,
-                        donor_name=name,
-                        amount=amount,
-                        donated_at=donated_at,
-                        source="CSV",
-                        campaign_type=campaign_type,
-                    )
-                    processed_count += 1
-
-                except Exception as exc:
-                    logger.error("Row %d failed: %s\n%s", i, exc, traceback.format_exc())
-                    errors.append({"row": i, "error": str(exc)})
-                    # 👇 add short visible message for web display
-                    visible_errors.append(f"Row {i}: {exc}")
-
-            campaign_label = dict(Campaign.CampaignType.choices).get(campaign_type, campaign_type)
-            message = f"Processed {processed_count} rows for {charity.name} ({campaign_label}) successfully!"
-            if errors:
-                message += f" ({len(errors)} rows failed.)"
-
-    else:
-        form = CSVUploadForm()
-
-    # 👇 Pass visible_errors to the template
-    return render(
-        request, "upload_csv.html", {"form": form, "message": message, "errors": visible_errors}
+    view_mode = request.GET.get("view", "campaigns")
+    # Base query optimized with select_related
+    jobs = DonationJob.objects.all().select_related('donation_batch', 'donation_batch__charity')
+    if current_charity:
+        jobs = jobs.filter(donation_batch__charity=current_charity)
+    
+    # Simple stats for summary
+    stats = jobs.aggregate(
+        total=Count('id'),
+        success=Count('id', filter=Q(status='success')),
+        failed=Count('id', filter=Q(status='failed')),
+        pending=Count('id', filter=Q(status='pending'))
     )
+    
+    # List population based on view mode
+    if view_mode == 'campaigns':
+        clients = Campaign.objects.filter(client=current_charity) if current_charity else Campaign.objects.all()
+        # Optimization: annotate with stats if needed by template
+        clients = clients.annotate(
+            total_batches=Count('batches', distinct=True),
+            total_videos=Count('batches__jobs', distinct=True)
+        ).select_related('client')
+    elif request.user.is_superuser and view_mode == 'clients':
+        clients = Charity.objects.all().annotate(
+            total_campaigns=Count('campaigns', distinct=True),
+            total_batches=Count('batches', distinct=True),
+            total_videos=Count('batches__jobs', distinct=True)
+        ).order_by('client_name')
+    else:
+        clients = [current_charity] if current_charity else []
+
+    return render(request, 'dashboard.html', {
+        'stats': stats,
+        'clients': clients,
+        'view_mode': view_mode,
+        'current_charity': current_charity,
+    })
+
+
+@login_required(login_url="charity_login")
+def logs_view(request):
+    """Paginated logs view."""
+    current_charity = get_active_charity(request)
+    jobs_list = DonationJob.objects.filter(donation_batch__charity=current_charity).order_by('-created_at')
+    paginator = Paginator(jobs_list, 25)
+    logs = paginator.get_page(request.GET.get('page'))
+    return render(request, "logs.html", {"logs": logs, "current_charity": current_charity})

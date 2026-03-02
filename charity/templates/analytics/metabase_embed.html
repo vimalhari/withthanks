@@ -1,0 +1,54 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Advanced Analytics (Metabase) - WithThanks{% endblock %}
+{% block breadcrumb_parent %}Analytics{% endblock %}
+{% block breadcrumb_child %}Advanced{% endblock %}
+
+{% block layout_head %}
+<style>
+    .metabase-container {
+        border-radius: 20px;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-md);
+        height: calc(100vh - 200px);
+        min-height: 800px;
+        display: flex;
+        flex-direction: column;
+    }
+    .metabase-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    .embed-header {
+        padding: 16px 24px;
+        background: var(--navbar-dark);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="metabase-container">
+    <div class="embed-header">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-shield-lock-fill text-info"></i>
+            <span style="font-weight: 700; font-size: 14px;">SECURE ADVANCED ANALYTICS (METABASE)</span>
+        </div>
+        <div style="font-size: 11px; opacity: 0.7;">
+            SIGNED EMBEDDING ENABLED
+        </div>
+    </div>
+    <iframe
+        src="{{ iframe_url }}"
+        class="metabase-iframe"
+        allowtransparency
+    ></iframe>
+</div>
+{% endblock %}

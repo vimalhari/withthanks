@@ -1,100 +1,45 @@
 from django.contrib import admin
-from django.utils.html import format_html
-
-from .models import Campaign, Charity, Donation, Donor, TextTemplate, VideoSendLog, VideoTemplate
+from .models import Charity, DonationJob, DonationBatch, UnsubscribedUser, Invoice, InvoiceBatch
 
 
-@admin.register(Charity)
-class CharityAdmin(admin.ModelAdmin):
-    list_display = ("name", "website", "user", "created_at")
-    search_fields = ("name", "user__email", "user__username")
-    list_filter = ("created_at",)
-    ordering = ("name",)
+# Register your models here.
+admin.site.register(Charity)
+admin.site.register(DonationBatch)
+
+@admin.register(DonationJob)
+class DonationJobAdmin(admin.ModelAdmin):
+    list_display = ("name", "email", "amount", "status", "created_at", "completed_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("name", "email", "task_id")
+
+@admin.register(UnsubscribedUser)
+class UnsubscribedUserAdmin(admin.ModelAdmin):
+    list_display = ('email', 'reason', 'unsubscribed_from_job', 'ip_address', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('email', 'reason')
+    readonly_fields = ('email', 'created_at', 'ip_address', 'user_agent', 'unsubscribed_from_job')
+    ordering = ('-created_at',)
+    
+    def has_add_permission(self, request):
+        # Prevent manual addition through admin
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion to maintain audit trail
+        return False
 
 
-@admin.register(VideoTemplate)
-class VideoTemplateAdmin(admin.ModelAdmin):
-    list_display = ("name", "charity", "duration_s", "is_active", "created_at")
-    list_filter = ("charity", "is_active")
-    search_fields = ("name", "charity__name")
-    ordering = ("-created_at",)
-    readonly_fields = ("id", "created_at")
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'charity', 'amount', 'status', 'issue_date', 'due_date', 'created_at')
+    list_filter = ('status', 'invoice_type', 'issue_date')
+    search_fields = ('invoice_number', 'charity__name')
+    readonly_fields = ('created_at',)
+    ordering = ('-issue_date',)
 
 
-@admin.register(TextTemplate)
-class TextTemplateAdmin(admin.ModelAdmin):
-    list_display = ("name", "charity", "locale", "voice_id", "is_active")
-    list_filter = ("charity", "locale", "is_active")
-    search_fields = ("name", "charity__name", "body")
-    ordering = ("name",)
-    readonly_fields = ("id",)
-
-
-@admin.register(Campaign)
-class CampaignAdmin(admin.ModelAdmin):
-    list_display = (
-        "name",
-        "charity",
-        "campaign_type",
-        "video_mode",
-        "gratitude_cooldown_days",
-        "is_active",
-        "created_at",
-    )
-    list_filter = ("charity", "campaign_type", "video_mode", "is_active")
-    search_fields = ("name", "charity__name")
-    ordering = ("-created_at",)
-    readonly_fields = ("id", "created_at")
-    autocomplete_fields = ("text_template", "video_template", "gratitude_video_template")
-
-
-@admin.register(Donor)
-class DonorAdmin(admin.ModelAdmin):
-    list_display = ("email", "full_name", "charity", "created_at")
-    list_filter = ("charity",)
-    search_fields = ("email", "full_name", "charity__name")
-    ordering = ("-created_at",)
-
-
-@admin.register(Donation)
-class DonationAdmin(admin.ModelAdmin):
-    list_display = ("donor", "charity", "amount", "campaign_type", "source", "donated_at")
-    list_filter = ("charity", "campaign_type", "source")
-    search_fields = ("donor__email", "donor__full_name", "charity__name")
-    ordering = ("-donated_at",)
-    date_hierarchy = "donated_at"
-
-
-@admin.register(VideoSendLog)
-class VideoSendLogAdmin(admin.ModelAdmin):
-    list_display = (
-        "recipient_email",
-        "charity",
-        "campaign_type",
-        "send_kind",
-        "status",
-        "stream_link",
-        "sent_at",
-    )
-    list_filter = ("charity", "campaign_type", "send_kind", "status")
-    search_fields = ("recipient_email", "charity__name", "stream_video_id", "provider_message_id")
-    ordering = ("-sent_at",)
-    readonly_fields = (
-        "charity",
-        "donor",
-        "donation",
-        "campaign",
-        "sent_at",
-        "created_at",
-        "stream_video_id",
-        "stream_playback_url",
-        "stream_thumbnail_url",
-        "provider_message_id",
-    )
-
-    @admin.display(description="Stream")
-    def stream_link(self, obj: VideoSendLog):
-        if obj.stream_playback_url:
-            return format_html('<a href="{}" target="_blank">▶ Watch</a>', obj.stream_playback_url)
-        return "—"
-
+@admin.register(InvoiceBatch)
+class InvoiceBatchAdmin(admin.ModelAdmin):
+    list_display = ('invoice', 'batch', 'videos_count', 'views_count', 'line_amount')
+    list_filter = ('invoice__status',)
+    search_fields = ('invoice__invoice_number', 'batch__batch_number')

@@ -1,139 +1,290 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Upload CSV | Voiceover & Video Generator</title>
-    <style>
-      * {
-        box-sizing: border-box;
-      }
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
 
-      body {
-        font-family: "Segoe UI", Roboto, sans-serif;
-        background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        margin: 0;
-      }
+{% block title %}Upload & Manage Batches - WithThanks{% endblock %}
+{% block breadcrumb_child %}Upload Center{% endblock %}
 
-      .container {
-        background: #fff;
-        padding: 40px 50px;
-        border-radius: 15px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-        width: 420px;
-        text-align: center;
-      }
-
-      h1 {
-        color: #333;
-        font-size: 1.6rem;
-        margin-bottom: 10px;
-      }
-
-      p.message {
-        background: #f0f7ff;
-        color: #0a66c2;
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-      }
-
-      p.error {
-        background: #ffecec;
-        color: #b00020;
-        padding: 10px;
-        border-radius: 8px;
-        margin-top: 10px;
-      }
-
-      form {
-        margin-top: 15px;
-        text-align: left;
-      }
-
-      label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #333;
-      }
-
-      input[type="file"] {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        cursor: pointer;
-      }
-
-      button {
-        width: 100%;
-        padding: 10px 0;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-      }
-
-      button:hover {
-        background-color: #0056b3;
-      }
-
-      ul.errors {
-        list-style: none;
-        padding: 0;
-        margin-top: 15px;
-        text-align: left;
-      }
-
-      ul.errors li {
-        color: #b00020;
-        font-size: 0.9rem;
-        margin-bottom: 5px;
-        background: #fff5f5;
-        padding: 6px 8px;
-        border-radius: 6px;
-      }
-
-      footer {
-        margin-top: 25px;
-        font-size: 0.8rem;
-        color: #777;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>Upload CSV for Voiceovers & Video</h1>
-
-      {% if message %}
-      <p class="message">{{ message }}</p>
-      {% endif %}
-
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %} {{ form.as_p }}
-        <button type="submit">Upload & Process</button>
-      </form>
-
-      {% if errors %}
-      <ul class="errors">
-        {% for err in errors %}
-        <li>{{ err }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-
-      <footer>
-        <p>Powered by Django · Automated Voiceover & Video Generator</p>
-      </footer>
+{% block page_content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+        <div>
+            <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-bottom: 8px;">Upload Center</h1>
+            <p style="color: var(--text-muted); font-size: 16px;">Create a new batch of donation jobs via CSV or manual entry.</p>
+        </div>
     </div>
-  </body>
-</html>
+
+    <!-- Django Messages / Notifications -->
+    {% if messages or message or errors %}
+    <div style="margin-bottom: 32px;">
+        {% for m in messages %}
+        <div class="saas-card" style="padding: 12px 20px; border-left: 4px solid var(--status-success); background: #f0fdf4; color: var(--status-success); font-weight: 600; margin-bottom: 12px;">
+             <i class="bi bi-check-circle-fill" style="margin-right: 8px;"></i> {{ m }}
+        </div>
+        {% endfor %}
+        
+        {% if message %}
+        <div class="saas-card" style="padding: 12px 20px; border-left: 4px solid var(--primary); background: var(--primary-accent); color: var(--primary); font-weight: 600; margin-bottom: 12px;">
+            <i class="bi bi-info-circle-fill" style="margin-right: 8px;"></i> {{ message }}
+        </div>
+        {% endif %}
+
+        {% if errors %}
+        <div class="saas-card" style="padding: 16px 20px; border-left: 4px solid var(--status-failed); background: #fef2f2; color: var(--status-failed); margin-bottom: 12px;">
+            <p style="font-weight: 700; margin-bottom: 8px;"><i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i> Verification Errors:</p>
+            <ul style="font-size: 13px; padding-left: 20px;">
+                {% for err in errors %}
+                <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 1️⃣ Upload Section: Dual Option Interface -->
+    <div class="grid-2" style="margin-bottom: 40px;">
+        <!-- Option A: Bulk Upload (CSV) -->
+        <div class="saas-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div style="width: 48px; height: 48px; background: var(--primary-accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 20px; font-size: 20px;">
+                    <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                </div>
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Bulk Upload (CSV)</h3>
+                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
+                    Upload a standardized CSV file to process multiple donations at once. Ensure your file includes headers: <i>Name, Amount, Email.</i>
+                </p>
+                
+                <form method="POST" enctype="multipart/form-data" id="bulkForm">
+                    {% csrf_token %}
+                    <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 32px; text-align: center; background: var(--bg-hover); transition: all 0.2s; cursor: pointer;" onmouseover="this.style.borderColor='var(--primary)'; this.style.background='white'" onmouseout="this.style.borderColor='var(--border)'; this.style.background='var(--bg-hover)'" onclick="document.getElementById('id_csv_file').click()">
+                        <div id="file-display">
+                            <i class="bi bi-cloud-arrow-up" style="font-size: 32px; color: var(--text-muted);"></i>
+                            <p style="font-size: 14px; font-weight: 600; color: var(--text-body); margin-top: 12px;">Click to select file</p>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">CSV format only, max 10MB</p>
+                        </div>
+                        <div style="display:none">{{ form.csv_file }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px; padding: 12px;">
+                        Process Bulk Batch
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Option B: Single Upload (Manual) -->
+        <div class="saas-card">
+            <div style="width: 48px; height: 48px; background: #fef9c3; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #a16207; margin-bottom: 20px; font-size: 20px;">
+                <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Single Entry (Manual)</h3>
+            <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
+                Quickly add a single donor record. This will create a priority batch with just one processing job.
+            </p>
+            
+            <form id="manualForm" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-group">
+                    <label class="saas-label">Donor Name</label>
+                    <input type="text" id="manual_name" placeholder="e.g. John Doe" class="saas-input">
+                </div>
+                <div class="grid-2" style="gap: 16px;">
+                    <div class="form-group">
+                        <label class="saas-label">Amount (£)</label>
+                        <input type="number" id="manual_amount" placeholder="25.00" step="0.01" class="saas-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="saas-label">Email Address</label>
+                        <input type="email" id="manual_email" placeholder="donor@example.com" class="saas-input">
+                    </div>
+                </div>
+                <button type="button" onclick="submitManual()" class="btn btn-secondary" style="width: 100%; margin-top: 4px; padding: 12px; border-color: var(--primary); color: var(--primary);">
+                    Create Single Job
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2️⃣ Batch Summary Card (Conditional) -->
+    {% if upload_info or jobs %}
+    <div class="saas-card" style="padding: 32px; border-top: 4px solid var(--primary);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                    <span class="status-badge status-running">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 8px;"></span>
+                        Batch Processing
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">ID: {{ upload_info.uploaded_at|default:"Current" }}</span>
+                </div>
+                <h2 style="font-size: 24px; font-weight: 800; color: var(--text-headings);">Batch Execution Overview</h2>
+            </div>
+            <div style="text-align: right;">
+                <p class="saas-label">Processed Ratio</p>
+                <div style="font-size: 24px; font-weight: 800; color: var(--primary);">{{ progress }}%</div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div style="height: 12px; background: var(--bg-hover); border-radius: 6px; overflow: hidden; margin-bottom: 32px;">
+            <div style="height: 100%; width: {{ progress }}%; background: var(--primary); transition: width 0.5s ease-out; box-shadow: 0 0 12px rgba(79, 70, 229, 0.4);"></div>
+        </div>
+
+        <div class="grid-4" style="grid-template-columns: repeat(5, 1fr); gap: 16px;">
+            <div style="padding: 16px; background: var(--bg-app); border-radius: 10px;">
+                <p class="saas-label" style="font-size: 10px; margin-bottom: 4px;">Total Records</p>
+                <div style="font-size: 20px; font-weight: 700;">{{ upload_info.total_rows|default:jobs|length }}</div>
+            </div>
+            <div style="padding: 16px; background: #dcfce7; border-radius: 10px; color: #166534;">
+                <p class="saas-label" style="font-size: 10px; margin-bottom: 4px; color: inherit; opacity: 0.7;">Success</p>
+                <div style="font-size: 20px; font-weight: 700;" id="count-success">0</div>
+            </div>
+            <div style="padding: 16px; background: #fee2e2; border-radius: 10px; color: #991b1b;">
+                <p class="saas-label" style="font-size: 10px; margin-bottom: 4px; color: inherit; opacity: 0.7;">Failed</p>
+                <div style="font-size: 20px; font-weight: 700;" id="count-failed">0</div>
+            </div>
+            <div style="padding: 16px; background: #fef9c3; border-radius: 10px; color: #854d0e;">
+                <p class="saas-label" style="font-size: 10px; margin-bottom: 4px; color: inherit; opacity: 0.7;">Pending</p>
+                <div style="font-size: 20px; font-weight: 700;" id="count-pending">0</div>
+            </div>
+            <div style="padding: 16px; background: var(--primary-accent); border-radius: 10px; color: var(--primary);">
+                <p class="saas-label" style="font-size: 10px; margin-bottom: 4px; color: inherit; opacity: 0.7;">Skipped</p>
+                <div style="font-size: 20px; font-weight: 700;">{{ upload_info.skipped_rows|default:"0" }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 3️⃣ Batch History Table & 4️⃣ Batch Controls -->
+    {% if jobs %}
+    <div style="margin-top: 48px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h3 style="font-size: 20px; font-weight: 800;">Batch History</h3>
+            <div style="display: flex; gap: 12px;">
+                <div style="position: relative; width: 300px;">
+                    <i class="bi bi-search" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 14px;"></i>
+                    <input type="text" id="batchSearch" placeholder="Search batch number or file..." class="saas-input" style="padding-left: 36px; font-size: 13px;">
+                </div>
+            </div>
+        </div>
+
+        <div class="saas-card" style="padding: 0; overflow: hidden;">
+            <table class="saas-table" id="batchTable">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Batch ID</th>
+                        <th style="width: 15%;">Upload Type</th>
+                        <th style="width: 15%;">Total Records</th>
+                        <th style="width: 15%;">Success Count</th>
+                        <th style="width: 15%;">Failed Count</th>
+                        <th style="width: 15%;">Batch Status</th>
+                        <th style="width: 10%; text-align: right;">Created Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% regroup jobs by donation_batch as batch_list %}
+                    {% for batch_group in batch_list %}
+                    {% with batch=batch_group.grouper %}
+                    {% if batch %}
+                    <tr style="cursor: pointer; transition: background 0.2s;" onclick="window.location.href='{% url 'batch_detail' batch.id %}'">
+                        <td style="font-weight: 700; color: var(--primary);">#{{ batch.batch_number|stringformat:"03d" }}</td>
+                        <td>
+                            <span style="font-size: 13px; color: var(--text-body);">
+                                {% if batch.upload_type == "CSV" %}
+                                <i class="bi bi-file-earmark-spreadsheet" style="margin-right: 6px; color: var(--primary);"></i>
+                                {% else %}
+                                <i class="bi bi-person-plus" style="margin-right: 6px; color: #a16207;"></i>
+                                {% endif %}
+                                {{ batch.upload_type }}
+                            </span>
+                        </td>
+                        <td style="font-weight: 500;">{{ batch.total_records }}</td>
+                        <td style="color: var(--status-success); font-weight: 700;">{{ batch.success_count }}</td>
+                        <td style="color: var(--status-failed); font-weight: 700;">{{ batch.failed_count }}</td>
+                        <td>
+                            {% with bst=batch.batch_status_display %}
+                            <span class="status-badge {% if bst == 'Processing' %}status-running{% elif bst == 'Completed' %}status-success{% else %}status-failed{% endif %}">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 8px;"></span>
+                                {{ bst }}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td style="text-align: right; color: var(--text-muted); font-size: 12px;">
+                            {{ batch.created_at|timesince }} ago
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // File input UX
+    const csvInput = document.getElementById('id_csv_file');
+    if(csvInput) {
+        csvInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                document.getElementById('file-display').innerHTML = `
+                    <i class="bi bi-file-earmark-check-fill" style="font-size: 32px; color: var(--status-success);"></i>
+                    <p style="font-size: 14px; font-weight: 700; color: var(--text-headings); margin-top: 12px;">${file.name}</p>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Ready to process</p>
+                `;
+            }
+        });
+    }
+
+    // Manual upload simulation (converts to CSV and submits via the same form to keep backend logic intact)
+    function submitManual() {
+        const name = document.getElementById('manual_name').value;
+        const amount = document.getElementById('manual_amount').value;
+        const email = document.getElementById('manual_email').value;
+
+        if(!name || !amount || !email) {
+            alert("Please fill in all donor fields.");
+            return;
+        }
+
+        const csvContent = "name,amount,email\n" + `${name},${amount},${email}`;
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const file = new File([blob], "manual_entry.csv", { type: "text/csv" });
+
+        // Set the file into the existing form input
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        csvInput.files = dataTransfer.files;
+
+        // Submit the form
+        document.getElementById('bulkForm').submit();
+    }
+
+    // Counts calculator
+    document.addEventListener('DOMContentLoaded', () => {
+        const table = document.getElementById('batchTable');
+        if(!table) return;
+
+        const rows = table.querySelectorAll('tbody tr');
+        
+        // Filter functionality
+        const search = document.getElementById('batchSearch');
+        if(!search) return;
+
+        const filter = () => {
+            const q = search.value.toLowerCase();
+
+            rows.forEach(r => {
+                const text = r.innerText.toLowerCase();
+                r.style.display = text.includes(q) ? '' : 'none';
+            });
+        };
+
+        search.addEventListener('input', filter);
+    });
+</script>
+{% endblock %}

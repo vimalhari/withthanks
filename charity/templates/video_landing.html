@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Special Message for {{ job.donor_name }}</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .player-container { max-width: 800px; width: 90%; background: #000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 12px; overflow: hidden; position: relative; }
+        video { width: 100%; display: block; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); pointer-events: none; opacity: 1; transition: opacity 0.3s; }
+        .overlay.hidden { opacity: 0; }
+        .play-btn { width: 80px; height: 80px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; transition: transform 0.2s; }
+        .play-btn:hover { transform: scale(1.1); }
+        .play-icon { width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 25px solid #333; margin-left: 5px; }
+        .branding { padding: 20px; background: #fff; text-align: center; }
+        .branding h1 { margin: 0 0 10px; color: #333; font-size: 24px; }
+        .branding p { color: #666; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+        <video id="mainVideo" controls playsinline poster="{{ job.charity.logo.url }}">
+            <source src="{{ video_url }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <div class="branding">
+            <h1>Thank You, {{ job.donor_name }}!</h1>
+            <p>A message from {{ job.charity.organization_name }}</p>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('mainVideo');
+        const trackingId = "{{ tracking_id }}";
+        const eventUrl = "{% url 'track_video_event' %}";
+        
+        // Helper to send events
+        function sendEvent(eventType, duration) {
+            if (!trackingId) return;
+            
+            const payload = {
+                tracking_id: trackingId,
+                event: eventType,
+                duration: duration || video.currentTime
+            };
+
+            fetch(eventUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(payload)
+            }).catch(err => console.error("Tracking Error:", err));
+        }
+
+        // Track Play
+        let hasPlayed = false;
+        video.addEventListener('play', () => {
+            if (!hasPlayed) {
+                hasPlayed = true;
+                sendEvent('play', video.currentTime);
+            }
+        });
+
+        // Track Pause
+        video.addEventListener('pause', () => {
+            // Only send pause if not ended (ended fires separate event)
+            if (!video.ended) {
+                sendEvent('pause', video.currentTime);
+            }
+        });
+
+        // Track Progress (Heartbeat every 5 seconds)
+        let lastReportTime = 0;
+        video.addEventListener('timeupdate', () => {
+            const now = Date.now();
+            if (now - lastReportTime > 5000) { // report every 5s
+                lastReportTime = now;
+                sendEvent('progress', video.currentTime);
+            }
+        });
+
+        // Track Complete
+        let hasCompleted = false;
+        video.addEventListener('ended', () => {
+            if (!hasCompleted) {
+                hasCompleted = true;
+                sendEvent('complete', video.duration); // Send total duration
+            }
+        });
+    </script>
+
+</body>
+</html>

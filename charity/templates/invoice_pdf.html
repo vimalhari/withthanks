@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice.invoice_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm 15mm 25mm 15mm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9px;
+                color: #666;
+            }
+            @bottom-right {
+                content: "{{ invoice.invoice_number }}";
+                font-size: 9px;
+                color: #666;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #333;
+            background: white; /* Ensure white background for print */
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2563eb;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-logo {
+            max-height: 60px;
+            max-width: 200px;
+            margin-bottom: 10px;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+        
+        .company-details {
+            font-size: 10px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        
+        .invoice-title-section {
+            text-align: right;
+        }
+        
+        .invoice-title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-number {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+        
+        .invoice-date {
+            font-size: 11px;
+            color: #4b5563;
+        }
+        
+        .invoice-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+        
+        .status-draft { background: #fef3c7; color: #92400e; }
+        .status-sent { background: #dbeafe; color: #1e40af; }
+        .status-paid { background: #d1fae5; color: #065f46; }
+        .status-overdue { background: #fee2e2; color: #991b1b; }
+        .status-void { background: #f3f4f6; color: #374151; }
+        
+        .billing-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .bill-to, .invoice-details {
+            width: 48%;
+        }
+        
+        .section-label {
+            font-size: 9px;
+            font-weight: bold;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .client-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+        
+        .client-details {
+            font-size: 10px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 10px;
+            font-size: 10px;
+        }
+        
+        .details-grid dt {
+            color: #6b7280;
+        }
+        
+        .details-grid dd {
+            color: #1f2937;
+            font-weight: 500;
+        }
+        
+        /* Line Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .items-table thead th {
+            background: #2563eb;
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .items-table thead th:first-child {
+            border-radius: 4px 0 0 0;
+        }
+        
+        .items-table thead th:last-child {
+            border-radius: 0 4px 0 0;
+            text-align: right;
+        }
+        
+        .items-table thead th.text-center {
+            text-align: center;
+        }
+        
+        .items-table thead th.text-right {
+            text-align: right;
+        }
+        
+        .items-table tbody td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        
+        .items-table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        
+        .items-table tbody td.text-center {
+            text-align: center;
+        }
+        
+        .items-table tbody td.text-right {
+            text-align: right;
+        }
+        
+        .item-description {
+            font-weight: 500;
+            color: #1f2937;
+        }
+        
+        .item-note {
+            font-size: 9px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        
+        /* Summary Section */
+        .summary-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+        
+        .summary-table {
+            width: 280px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .summary-row.subtotal {
+            background: #f9fafb;
+        }
+        
+        .summary-row.discount {
+            color: #059669;
+        }
+        
+        .summary-row.tax {
+            font-size: 9px;
+            color: #6b7280;
+        }
+        
+        .summary-row.total {
+            background: #2563eb;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        .summary-row.balance {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .summary-row.paid {
+            color: #059669;
+            font-weight: 500;
+        }
+        
+        /* Notes Section */
+        .notes-section {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 4px;
+            border-left: 3px solid #2563eb;
+        }
+        
+        .notes-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .notes-content {
+            font-size: 10px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        
+        /* Terms Section */
+        .terms-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .terms-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        
+        .terms-content {
+            font-size: 9px;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+        
+        /* Print Overrides */
+        @media print {
+            body { 
+                background: white; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+            }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    {% include '_invoice_content.html' %}
+</body>
+</html>

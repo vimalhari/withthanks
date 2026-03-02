@@ -1,0 +1,275 @@
+{% extends 'layouts/admin_layout.html' %}
+
+{% block title %}Edit Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block page_content %}
+<style>
+    :root {
+        --fin-primary: #4f46e5;
+        --fin-primary-hover: #4338ca;
+        --fin-bg: #f8fafc;
+        --fin-bg-soft: #f1f5f9;
+        --fin-border: #e2e8f0;
+        --fin-text-heading: #0f172a;
+        --fin-text-muted: #64748b;
+        --fin-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --fin-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    .fin-edit-container {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .fin-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--fin-border);
+        box-shadow: var(--fin-shadow-lg);
+        overflow: hidden;
+    }
+
+    .fin-card-header {
+        padding: 24px 32px;
+        border-bottom: 1px solid var(--fin-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+    }
+
+    .fin-card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--fin-text-heading);
+        margin: 0;
+    }
+
+    .fin-card-body {
+        padding: 32px;
+    }
+
+    .fin-alert {
+        background: #f8fafc;
+        border: 1px solid var(--fin-border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--fin-text-muted);
+        line-height: 1.5;
+    }
+
+    .fin-alert i {
+        color: var(--fin-primary);
+        font-size: 18px;
+    }
+
+    .fin-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    .fin-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .fin-group.full {
+        grid-column: span 2;
+    }
+
+    .fin-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--fin-text-muted);
+    }
+
+    /* Standard Form Inputs - Matched with create_invoice.html */
+    .fin-input, .fin-select, .fin-textarea {
+        width: 100%;
+        padding: 10px 14px;
+        background: #fff;
+        border: 1.5px solid var(--fin-border);
+        border-radius: 10px;
+        font-size: 14px;
+        color: var(--fin-text-heading);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        outline: none;
+    }
+
+    .fin-input:focus, .fin-select:focus, .fin-textarea:focus {
+        border-color: var(--fin-primary);
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    .fin-textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .fin-override-box {
+        background: #fdf2f2;
+        border: 1px solid #fee2e2;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 8px;
+    }
+
+    .fin-footer {
+        padding: 24px 32px;
+        background: #f8fafc;
+        border-top: 1px solid var(--fin-border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .fin-btn {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .fin-btn-secondary {
+        background: #fff;
+        color: var(--fin-text-muted);
+        border: 1.5px solid var(--fin-border);
+    }
+
+    .fin-btn-secondary:hover {
+        background: #f1f5f9;
+        color: var(--fin-text-heading);
+    }
+
+    .fin-btn-primary {
+        background: var(--fin-primary);
+        color: white;
+        border: none;
+    }
+
+    .fin-btn-primary:hover {
+        background: var(--fin-primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 4px 0 0;
+        color: #ef4444;
+        font-size: 12px;
+    }
+</style>
+
+<div class="fin-edit-container">
+    <div class="fin-card">
+        <header class="fin-card-header">
+            <h1 class="fin-card-title">Edit Invoice Details</h1>
+            <a href="{% url 'invoices' %}" style="color: var(--fin-text-muted); font-size: 20px; text-decoration: none;">&times;</a>
+        </header>
+
+        <main class="fin-card-body">
+            <div class="fin-alert">
+                <i class="bi bi-info-circle-fill"></i>
+                <div>
+                    <strong style="color: var(--fin-text-heading); display: block; margin-bottom: 4px;">Metadata Update Only</strong>
+                    You are editing high-level details for <strong>{{ invoice.invoice_number }}</strong>. To modify specific line items, pricing, or batch selections, please void this invoice and create a new one.
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="fin-grid">
+                    <!-- Row 1: Key Metadata -->
+                    <div class="fin-group">
+                        <label class="fin-label">Invoice Number</label>
+                        {{ form.invoice_number }}
+                        {{ form.invoice_number.errors }}
+                    </div>
+                    <div class="fin-group">
+                        <label class="fin-label">Status</label>
+                        {{ form.status }}
+                        {{ form.status.errors }}
+                    </div>
+
+                    <div class="fin-group">
+                        <label class="fin-label">Issue Date</label>
+                        {{ form.issue_date }}
+                        {{ form.issue_date.errors }}
+                    </div>
+                    <div class="fin-group">
+                        <label class="fin-label">Due Date</label>
+                        {{ form.due_date }}
+                        {{ form.due_date.errors }}
+                    </div>
+
+                    <!-- Row 2: Pricing Configuration -->
+                    <div class="fin-card" style="grid-column: span 2; padding: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-top: 12px;">
+                        <h3 style="font-size: 14px; font-weight: 700; color: var(--fin-text-heading); margin-bottom: 16px;">Pricing Configuration</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="fin-group">
+                                <label class="fin-label">Price per Video (£)</label>
+                                {{ form.price_per_video }}
+                            </div>
+                            <div class="fin-group">
+                                <label class="fin-label">Price per Batch (£)</label>
+                                {{ form.price_per_batch }}
+                            </div>
+                            <div class="fin-group">
+                                <label class="fin-label">Flat Fee (£)</label>
+                                {{ form.flat_fee }}
+                            </div>
+                            <div class="fin-group">
+                                <label class="fin-label">Tax (%)</label>
+                                {{ form.tax_percent }}
+                            </div>
+                            <div class="fin-group">
+                                <label class="fin-label">Discount (%)</label>
+                                {{ form.discount_percent }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Contact & Notes -->
+                    <div class="fin-group full">
+                        <label class="fin-label">Billing Email</label>
+                        {{ form.billing_email }}
+                    </div>
+                    <div class="fin-group full">
+                        <label class="fin-label">Billing Address</label>
+                        {{ form.billing_address }}
+                    </div>
+
+                    <div class="fin-group full">
+                        <label class="fin-label">Description / Public Notes</label>
+                        {{ form.description }}
+                        <div style="font-size: 12px; color: var(--fin-text-muted); margin-top: 4px;">This text appears on the PDF footer.</div>
+                        {{ form.description.errors }}
+                    </div>
+                </div>
+
+                <div class="fin-footer">
+                    <a href="{% url 'invoices' %}" class="fin-btn fin-btn-secondary">Cancel</a>
+                    <button type="submit" class="fin-btn fin-btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,345 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Revenue Intelligence - WithThanks{% endblock %}
+
+{% block layout_head %}
+<!-- Chart.js and Alpine.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+    :root {
+        --stripe-blue: #635bff;
+        --stripe-dark: #0a2540;
+        --stripe-light: #f6f9fc;
+        --stripe-border: #e6ebf1;
+        --text-main: #424770;
+        --text-heading: #1a1f36;
+        --success: #00d924;
+        --warning: #f5a623;
+        --danger: #df1b41;
+    }
+
+    .revenue-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--text-main);
+        background: #fff;
+    }
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .kpi-card {
+        background: #fff;
+        border: 1px solid var(--stripe-border);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        transition: transform 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .kpi-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .kpi-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-heading);
+        margin-bottom: 4px;
+    }
+
+    .kpi-trend {
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .trend-up { color: var(--success); }
+    .trend-down { color: var(--danger); }
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .chart-card {
+        background: #fff;
+        border: 1px solid var(--stripe-border);
+        border-radius: 8px;
+        padding: 24px;
+    }
+
+    .chart-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-heading);
+        margin-bottom: 20px;
+    }
+
+    .revenue-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .revenue-table th {
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-main);
+        text-transform: uppercase;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--stripe-border);
+        background: var(--stripe-light);
+    }
+
+    .revenue-table td {
+        padding: 16px;
+        border-bottom: 1px solid var(--stripe-border);
+        font-size: 14px;
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .status-good { background: #e6fffa; color: #319795; }
+    .status-slow { background: #fff5f5; color: #e53e3e; }
+
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="revenue-container" x-data="revenueDashboard()" x-init="init()" x-cloak>
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">Revenue Intelligence</h1>
+            <p style="font-size: 14px; color: var(--text-main);">Monitor your organization's financial health and payment performance.</p>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button @click="refreshData()" class="btn btn-secondary" :disabled="loading">
+                <i class="bi bi-arrow-clockwise" :class="loading ? 'spin' : ''"></i> Refresh
+            </button>
+            <a href="{% url 'invoices' %}" class="btn btn-primary">Manage Invoices</a>
+        </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">This Month Revenue <i class="bi bi-info-circle"></i></div>
+            <div class="kpi-value" x-text="'£' + formatNumber(metrics.kpis.this_month_revenue)">£0.00</div>
+            <div class="kpi-trend" :class="metrics.kpis.revenue_growth.startsWith('+') ? 'trend-up' : 'trend-down'">
+                <i class="bi" :class="metrics.kpis.revenue_growth.startsWith('+') ? 'bi-graph-up' : 'bi-graph-down'"></i>
+                <span x-text="metrics.kpis.revenue_growth">0%</span> vs last month
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Paid This Month <i class="bi bi-check-circle"></i></div>
+            <div class="kpi-value" x-text="'£' + formatNumber(metrics.kpis.paid_this_month)">£0.00</div>
+            <div class="kpi-trend text-muted">
+                Collection: <span x-text="metrics.kpis.collection_rate">0%</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Pending / Overdue <i class="bi bi-clock-history"></i></div>
+            <div class="kpi-value" style="color: var(--danger);" x-text="'£' + formatNumber(metrics.kpis.overdue_amount)">£0.00</div>
+            <div class="kpi-trend" x-text="'£' + formatNumber(metrics.kpis.pending_amount) + ' pending validation'">£0.00 pending</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Collection Time <i class="bi bi-lightning-charge"></i></div>
+            <div class="kpi-value" x-text="metrics.efficiency.avg_collection_time">0 days</div>
+            <div class="kpi-trend trend-up">
+                Efficiency: <span x-text="metrics.efficiency.efficiency_score">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-title">Revenue & Realized Collections</div>
+            <div style="height: 300px;">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Payment Status Distribution</div>
+            <div style="height: 300px;">
+                <canvas id="statusPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="chart-card">
+            <div class="chart-title">Growth Velocity %</div>
+            <div style="height: 200px;">
+                <canvas id="growthChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Invoice Conversion Rate</div>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; font-weight: 800; color: var(--stripe-blue);" x-text="metrics.efficiency.conversion_rate">0%</div>
+                    <p style="color: var(--text-main); font-weight: 600;">Sent to Paid Conversion</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Analytics -->
+    <div class="chart-card" style="margin-top: 32px;">
+        <div class="chart-title">Client Payment Performance</div>
+        <table class="revenue-table">
+            <thead>
+                <tr>
+                    <th>Organization</th>
+                    <th>Total Billed</th>
+                    <th>Outstanding</th>
+                    <th>Avg Days to Pay</th>
+                    <th>Risk Profile</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="client in metrics.clients" :key="client.name">
+                    <tr>
+                        <td style="font-weight: 600; color: var(--text-heading);" x-text="client.name"></td>
+                        <td x-text="'£' + formatNumber(client.total_billed)"></td>
+                        <td :class="client.outstanding > 0 ? 'text-danger' : ''" x-text="'£' + formatNumber(client.outstanding)"></td>
+                        <td x-text="client.avg_pay_days + ' days'"></td>
+                        <td>
+                            <span class="status-badge" :class="client.status === 'Good' ? 'status-good' : 'status-slow'" x-text="client.status"></span>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function revenueDashboard() {
+        return {
+            loading: false,
+            metrics: {
+                kpis: { this_month_revenue: 0, paid_this_month: 0, pending_amount: 0, overdue_amount: 0, revenue_growth: '0%', collection_rate: '0%' },
+                efficiency: { avg_collection_time: '0 days', conversion_rate: '0%', efficiency_score: '0%' },
+                charts: { labels: [], revenue: [], paid: [], growth: [], status_pie: [0,0,0,0] },
+                clients: []
+            },
+            charts: {},
+
+            async init() {
+                await this.refreshData();
+            },
+
+            async refreshData() {
+                this.loading = true;
+                try {
+                    const response = await fetch('/api/revenue/');
+                    const data = await response.json();
+                    this.metrics = data;
+                    this.updateCharts();
+                } catch (e) {
+                    console.error("Dashboard error:", e);
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            formatNumber(num) {
+                return new Intl.NumberFormat('en-GB', { minimumFractionDigits: 2 }).format(num);
+            },
+
+            updateCharts() {
+                // 1. Revenue Bar Chart
+                this._renderChart('revenueChart', 'bar', {
+                    labels: this.metrics.charts.labels,
+                    datasets: [
+                        { label: 'Invoiced', data: this.metrics.charts.revenue, backgroundColor: '#635bff', borderRadius: 4 },
+                        { label: 'Collected', data: this.metrics.charts.paid, backgroundColor: '#00d924', borderRadius: 4 }
+                    ]
+                });
+
+                // 2. Status Pie
+                this._renderChart('statusPieChart', 'doughnut', {
+                    labels: ['Paid', 'Sent', 'Overdue', 'Draft'],
+                    datasets: [{
+                        data: this.metrics.charts.status_pie,
+                        backgroundColor: ['#00d924', '#635bff', '#df1b41', '#e6ebf1'],
+                        borderWidth: 0
+                    }]
+                }, { plugins: { legend: { position: 'right' } } });
+
+                // 3. Growth Line
+                this._renderChart('growthChart', 'line', {
+                    labels: this.metrics.charts.labels,
+                    datasets: [{
+                        label: 'Growth Rate %',
+                        data: this.metrics.charts.growth,
+                        borderColor: '#635bff',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: true,
+                        backgroundColor: 'rgba(99, 91, 255, 0.05)'
+                    }]
+                });
+            },
+
+            _renderChart(id, type, data, options = {}) {
+                if (this.charts[id]) this.charts[id].destroy();
+                const ctx = document.getElementById(id).getContext('2d');
+                this.charts[id] = new Chart(ctx, {
+                    type: type,
+                    data: data,
+                    options: {
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        ...options,
+                        scales: type === 'doughnut' ? {} : {
+                            y: { grid: { display: false } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        }
+    }
+</script>
+
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+{% endblock %}

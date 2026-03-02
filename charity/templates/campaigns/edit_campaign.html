@@ -1,0 +1,296 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Edit {{ campaign.name }} - WithThanks{% endblock %}
+{% block breadcrumb_child %}Edit Campaign{% endblock %}
+
+{% block layout_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    .flatpickr-calendar { border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); }
+    .flatpickr-day.selected { background: var(--primary) !important; border-color: var(--primary) !important; }
+    .placeholder-tag {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 10px;
+        background: var(--bg-hover);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--primary);
+        cursor: default;
+    }
+    .placeholder-tag:hover {
+        background: var(--primary-accent);
+        border-color: var(--primary);
+    }
+    .asset-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 24px;
+        height: 100%;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+    }
+    .asset-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .file-upload-wrapper {
+        position: relative;
+        margin-top: auto;
+    }
+    .saas-file-input {
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        z-index: 2;
+    }
+    .file-upload-design {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px;
+        background: var(--bg-app);
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-md);
+        transition: all 0.2s;
+        color: var(--text-muted);
+    }
+    .saas-file-input:hover + .file-upload-design {
+        border-color: var(--primary);
+        background: var(--primary-accent);
+        color: var(--primary);
+    }
+    .current-asset-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: #fcfcfd;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        transition: border-color 0.2s;
+    }
+    .current-asset-info:hover {
+        border-color: var(--primary-accent);
+    }
+    /* Fix for filename overflow in grid columns */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+    }
+    @media (max-width: 768px) {
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <a href="{% url 'campaign_detail' campaign.id %}" style="color: var(--primary); text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                <i class="bi bi-arrow-left"></i> Campaign Detail
+            </a>
+            <h1 style="font-size: 32px; font-weight: 800; color: var(--text-headings); letter-spacing: -0.02em; margin-top: 16px;">Edit Settings</h1>
+            <p style="color: var(--text-muted); font-size: 16px; margin-top: 4px;">Update configuration for <strong>{{ campaign.name }}</strong></p>
+        </div>
+        <span class="status-badge {% if campaign.status == 'active' %}status-running{% else %}status-draft{% endif %}">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 8px;"></span>
+            {{ campaign.get_status_display }}
+        </span>
+    </div>
+
+    <form method="post" id="campaignEditForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- General Configuration Card -->
+        <div class="saas-card">
+            <h2 class="form-section-title"><i class="bi bi-gear" style="color: var(--primary); margin-right: 8px;"></i> General Configuration</h2>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="saas-label">Campaign Title *</label>
+                    <input name="title" required value="{{ campaign.name }}" class="saas-input">
+                </div>
+                <div class="form-group">
+                    <label class="saas-label">Current Status</label>
+                    <select name="status" class="saas-select">
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if campaign.status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="saas-label">Client / Charity *</label>
+                <select name="client_id" required class="saas-select">
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if campaign.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="saas-label">Internal Description</label>
+                <textarea name="description" rows="4" class="saas-textarea">{{ campaign.description }}</textarea>
+            </div>
+        </div>
+
+        <!-- Appeal Identity Card -->
+        <div class="saas-card">
+            <h2 class="form-section-title"><i class="bi bi-upc-scan" style="color: var(--primary); margin-right: 8px;"></i> Appeal & Tracking</h2>
+            <div class="form-group">
+                    <label class="saas-label">Appeal Code *</label>
+                    <input name="appeal_code" required value="{{ campaign.appeal_code }}" class="saas-input">
+                </div>
+            
+            <div class="form-group">
+                <label class="saas-label">Appeal Type</label>
+                <select name="appeal_type" required class="saas-select">
+                    {% for val, label in appeal_types %}
+                    <option value="{{ val }}" {% if campaign.appeal_type == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="saas-label" style="display: flex; align-items: start; gap: 8px; cursor: pointer; text-transform: none; font-weight: 500;">
+                        <input type="checkbox" name="is_personalized" {% if campaign.is_personalized %}checked{% endif %} style="width: 16px; height: 16px; margin-top: 2px; accent-color: var(--primary);">
+                        <div>
+                            <span style="display: block; margin-bottom: 2px;">Is Personalized Video? (Thank you)</span>
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 400; line-height: 1.4;">
+                                Enables Voice Generation (TTS) + Stitching. <br>If unchecked, sends generic video (or card if deduped).
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="saas-label">Appeal Start Date</label>
+                    <input type="text" name="appeal_start" value="{{ campaign.appeal_start|date:'d/m/Y' }}" class="saas-input uk-date-field">
+                </div>
+                <div class="form-group">
+                    <label class="saas-label">Appeal End Date</label>
+                    <input type="text" name="appeal_end" value="{{ campaign.appeal_end|date:'d/m/Y' }}" class="saas-input uk-date-field">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="saas-label">Email From Address</label>
+                <input type="email" name="from_email" value="{{ campaign.from_email }}" class="saas-input" placeholder="e.g. noreply@yourcharity.org">
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Override the default sender address for emails in this campaign. Leave blank to use the client default.</p>
+            </div>
+        </div>
+
+
+        <!-- Campaign Assets -->
+        <div class="saas-card">
+            <h2 class="form-section-title"><i class="bi bi-play-circle" style="color: var(--primary); margin-right: 8px;"></i> Campaign Assets</h2>
+            
+            <div class="grid-2">
+                <!-- Charity Video (VDM) -->
+                <div class="form-group">
+                    <label class="saas-label">Charity Video (VDM Appeal)</label>
+                    <div class="asset-card">
+                        {% if campaign.charity_video %}
+                        <div class="current-asset-info" style="min-width: 0;">
+                            <div style="width: 44px; height: 44px; background: #e0e7ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-file-earmark-play-fill" style="font-size: 22px; color: var(--primary);"></i>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 700; font-size: 14px; color: var(--text-headings); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; display: block;" title="{{ campaign.charity_video.name }}">
+                                    {{ campaign.charity_video.name }}
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Current Campaign Video</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="file-upload-wrapper">
+                            <input type="file" name="charity_video" class="saas-file-input" accept="video/mp4,video/mov" onchange="var fileName = this.files[0] ? this.files[0].name : 'Choose New Video'; this.nextElementSibling.querySelector('.file-name').textContent = fileName; this.nextElementSibling.style.borderColor = 'var(--primary)'; this.nextElementSibling.style.color = 'var(--primary)';">
+                            <div class="file-upload-design">
+                                <i class="bi bi-plus-circle" style="font-size: 18px; flex-shrink: 0;"></i>
+                                <span class="file-name" style="font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Choose New Video</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.5;">Main appeal video shown to donors. MP4 or MOV recommended.</p>
+                    </div>
+                </div>
+
+                <!-- Gratitude Video (WithThanks) -->
+                <div class="form-group">
+                    <label class="saas-label">Gratitude Video (WithThanks)</label>
+                    <div class="asset-card">
+                        {% if campaign.gratitude_video %}
+                        <div class="current-asset-info" style="min-width: 0;">
+                            <div style="width: 44px; height: 44px; background: #ecfdf5; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-heart-fill" style="font-size: 22px; color: #10b981;"></i>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-weight: 700; font-size: 14px; color: var(--text-headings); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; display: block;" title="{{ campaign.gratitude_video.name }}">
+                                    {{ campaign.gratitude_video.name }}
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Current Thank You Asset</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="file-upload-wrapper">
+                            <input type="file" name="gratitude_video" class="saas-file-input" accept="video/mp4,video/mov" onchange="var fileName = this.files[0] ? this.files[0].name : 'Choose New Video'; this.nextElementSibling.querySelector('.file-name').textContent = fileName; this.nextElementSibling.style.borderColor = 'var(--primary)'; this.nextElementSibling.style.color = 'var(--primary)';">
+                            <div class="file-upload-design">
+                                <i class="bi bi-plus-circle" style="font-size: 18px;"></i>
+                                <span class="file-name" style="font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Choose New Video</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.5;">Thank you video or gratitude card. Shown after donation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="saas-label">Voiceover Script Override</label>
+                <textarea name="voiceover_script_override" class="saas-textarea" rows="5" placeholder="Enter override script..." style="font-family: monospace; font-size: 13px;">{{ campaign.voiceover_script_override }}</textarea>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
+                    {% verbatim %}
+                    <span class="placeholder-tag">{{ donor_name }}</span>
+                    <span class="placeholder-tag">{{ donation_amount }}</span>
+                    <span class="placeholder-tag">{{ organization_name }}</span>
+                    {% endverbatim %}
+                </div>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">Leave blank to use the client's default script.</p>
+            </div>
+        </div>
+
+
+        <div style="display: flex; justify-content: flex-end; gap: 16px; margin-bottom: 100px;">
+            <a href="{% url 'campaign_detail' campaign.id %}" class="btn btn-secondary" style="padding: 12px 32px;">Discard Changes</a>
+            <button type="submit" class="btn btn-primary" style="padding: 12px 48px;">Update Campaign Settings</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr(".uk-date-field", {
+            dateFormat: "d/m/Y",
+            allowInput: true,
+        });
+    }
+});
+</script>
+{% endblock %}
