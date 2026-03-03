@@ -10,7 +10,6 @@ Maps legacy lowercase/mixed-case event types to their canonical uppercase equiva
 
 from django.db import migrations
 
-
 # Mapping: old_value → new_value
 EMAIL_EVENT_MAP = {
     "sent": "SENT",

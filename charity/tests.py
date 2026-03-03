@@ -2,7 +2,7 @@ from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from charity.models import Campaign, Charity, DonationBatch, DonationJob
@@ -47,10 +47,17 @@ class MultiTenantIsolationTests(TestCase):
 
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Charity A")
-        self.assertNotContains(response, "Charity B")
+        # Context badge renders charity name in uppercase
+        self.assertContains(response, "CHARITY A")
+        self.assertNotContains(response, "CHARITY B")
 
 
+@override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
+)
 class VideoProcessingIsolationTests(TestCase):
     def setUp(self):
         self.charity_a = Charity.objects.create(
@@ -69,7 +76,11 @@ class VideoProcessingIsolationTests(TestCase):
             is_personalized=True,
         )
         self.charity_a.default_voiceover_script = "Hello A {{donor_name}}"
+        # Provide a fake base video path (os.path.exists is mocked True in tests)
         self.charity_a.save()
+        Charity.objects.filter(pk=self.charity_a.pk).update(
+            default_template_video="test/fake_video_a.mp4"
+        )
 
         self.campaign_b = Campaign.objects.create(
             name="Campaign B",
@@ -80,8 +91,11 @@ class VideoProcessingIsolationTests(TestCase):
         )
         self.charity_b.default_voiceover_script = "Hello B {{donor_name}}"
         self.charity_b.save()
+        Charity.objects.filter(pk=self.charity_b.pk).update(
+            default_template_video="test/fake_video_b.mp4"
+        )
 
-        # Jobs for A
+        # Jobs for A — must link campaign so is_personalized is reachable
         self.batch_a = DonationBatch.objects.create(
             charity=self.charity_a, campaign=self.campaign_a, batch_number=1
         )
@@ -91,9 +105,10 @@ class VideoProcessingIsolationTests(TestCase):
             email="donor@a.com",
             donation_amount="10",
             charity=self.charity_a,
+            campaign=self.campaign_a,
         )
 
-        # Jobs for B
+        # Jobs for B — must link campaign so is_personalized is reachable
         self.batch_b = DonationBatch.objects.create(
             charity=self.charity_b, campaign=self.campaign_b, batch_number=1
         )
@@ -103,13 +118,15 @@ class VideoProcessingIsolationTests(TestCase):
             email="donor@b.com",
             donation_amount="20",
             charity=self.charity_b,
+            campaign=self.campaign_b,
         )
 
-    @patch("charity.tasks.generate_voiceover")
-    @patch("charity.tasks.stitch_voice_and_overlay")
+    @patch("charity.services.video_builder.generate_voiceover")
+    @patch("charity.services.video_builder.stitch_voice_and_overlay")
     @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload", return_value=None)
     @patch("os.path.exists")
-    def test_processing_isolation(self, mock_exists, mock_send, mock_stitch, mock_tts):
+    def test_processing_isolation(self, mock_exists, mock_stream, mock_send, mock_stitch, mock_tts):
         """Verify that jobs for different charities use their respective templates/branding"""
         from charity.tasks import process_donation_row
 

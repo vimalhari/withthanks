@@ -38,9 +38,7 @@ class AnalyticsBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateVi
                 user=self.request.user, status="ACTIVE"
             ).values_list("charity_id", flat=True)
 
-            if model_class == EmailEvent:
-                qs = qs.filter(job__donation_batch__charity_id__in=user_charity_ids)
-            elif model_class == VideoEvent:
+            if model_class in (EmailEvent, VideoEvent):
                 qs = qs.filter(job__donation_batch__charity_id__in=user_charity_ids)
             elif model_class == Campaign:
                 qs = qs.filter(charity_id__in=user_charity_ids)

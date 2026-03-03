@@ -277,9 +277,12 @@ def process_donation_row(self, job_id):
             stream_delivery = vdm_stream
         else:
             # For WithThanks / Gratitude: do a per-job upload (not cached on campaign).
-            stream_delivery = stream_safe_upload(
-                final_video_path or "",
-                meta_name=f"Job {job.id}",
+            # Fall back to empty StreamDelivery (local URL) if upload fails or is disabled.
+            stream_delivery = (
+                stream_safe_upload(
+                    final_video_path or "",
+                    meta_name=f"Job {job.id}",
+                ) or StreamDelivery()
             ) if final_video_path else StreamDelivery()
 
         cf_stream_url = stream_delivery.playback_url or None
@@ -621,12 +624,10 @@ def batch_process_csv(self, batch_id):
 
     except Exception as exc:
         logger.error("batch_process_csv %s failed: %s\n%s", batch_id, exc, traceback.format_exc())
-        try:
+        with contextlib.suppress(Exception):
             DonationBatch.objects.filter(id=batch_id).update(
                 status=DonationBatch.BatchStatus.FAILED
             )
-        except Exception:
-            pass
         raise self.retry(exc=exc) from exc
 
 

@@ -24,7 +24,6 @@ from django.shortcuts import redirect
 
 from .utils.access_control import get_active_charity
 
-
 # ---------------------------------------------------------------------------
 # ActiveCharityMixin
 # ---------------------------------------------------------------------------

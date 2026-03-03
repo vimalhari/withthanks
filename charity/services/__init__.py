@@ -28,7 +28,7 @@ from .video_pipeline import (
     stream_safe_upload,
 )
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # analytics
     "rebuild_all_campaign_stats",
     # batch

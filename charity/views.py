@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 
 from .models import Campaign, Charity, DonationJob
 from .utils.access_control import get_active_charity
-from .views_admin import (  # noqa: F401
+from .views_admin import (
     api_campaigns,
     api_clients,
     clear_client_context,
@@ -17,14 +17,14 @@ from .views_admin import (  # noqa: F401
     remove_member,
     switch_client,
 )
-from .views_auth import (  # noqa: F401
+from .views_auth import (
     change_password,
     login_view,
     logout_view,
     profile_view,
     register_view,
 )
-from .views_automation import (  # noqa: F401
+from .views_automation import (
     favicon_view,
     robots_view,
     track_click_view,
@@ -34,33 +34,33 @@ from .views_automation import (  # noqa: F401
     track_video_event_view,
     video_landing_view,
 )
-from .views_batches import (  # noqa: F401
+from .views_batches import (
     batch_detail_view,
     batch_tracking_report,
     export_donation_report,
     send_email_wizard,
     upload_csv_and_process,
 )
-from .views_invoices import (  # noqa: F401
-    create_invoice_view,
-    invoice_detail_view,
-    invoice_edit_view,
-    invoices_view,
-)
-from .views_invoice_actions import (  # noqa: F401
+from .views_invoice_actions import (
     invoice_mark_paid,
     invoice_send_email,
     invoice_stripe_send,
     invoice_void,
 )
-from .views_invoice_exports import (  # noqa: F401
+from .views_invoice_exports import (
     invoice_export_csv,
     invoice_export_json,
     invoice_export_pdf,
 )
+from .views_invoices import (
+    create_invoice_view,
+    invoice_detail_view,
+    invoice_edit_view,
+    invoices_view,
+)
 
 # All names below are intentional re-exports consumed by urls.py via `views.<name>`.
-__all__ = [
+__all__ = [  # noqa: RUF022
     # views_admin
     "api_campaigns",
     "api_clients",

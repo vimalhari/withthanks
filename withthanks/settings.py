@@ -322,9 +322,9 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 # Queue routing
 # ---------------------------------------------------------------------------
 # Three queues:
-#   video       – CPU/I-O heavy tasks (TTS, FFmpeg, email send)
-#   default     – lightweight orchestration (batch_process_csv, callbacks)
-#   maintenance – periodic beat tasks so they're never blocked by video work
+#   video       - CPU/I-O heavy tasks (TTS, FFmpeg, email send)
+#   default     - lightweight orchestration (batch_process_csv, callbacks)
+#   maintenance - periodic beat tasks so they're never blocked by video work
 
 from kombu import Queue  # noqa: E402
 

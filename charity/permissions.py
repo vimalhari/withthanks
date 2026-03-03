@@ -7,7 +7,7 @@ used inline in ``charity/api/views.py``.
 
 from __future__ import annotations
 
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 
 from charity.models import CharityMember
 
