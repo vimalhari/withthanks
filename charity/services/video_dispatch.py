@@ -9,13 +9,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from decimal import Decimal
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
 from charity.models import Campaign, Charity, Donation, Donor, VideoSendLog
 from charity.services.video_builder import VideoSpec, build_personalized_video
-from charity.utils.cloudflare_stream import StreamUploadResult, upload_video_to_stream
+from charity.services.video_pipeline import stream_safe_upload
 from charity.utils.resend_utils import send_video_email
 
 logger = logging.getLogger(__name__)
@@ -186,23 +185,13 @@ def dispatch_donation_video(
             gratitude_mode=False,
         )
 
-    # ------------------------------------------------------------------ #
-    # Upload to Cloudflare Stream (when enabled).                          #
-    # On failure we log a warning and fall back to attachment delivery.    #
-    # ------------------------------------------------------------------ #
-    stream_result: StreamUploadResult | None = None
-    if getattr(settings, "CLOUDFLARE_STREAM_ENABLED", False):
-        try:
-            stream_result = upload_video_to_stream(
-                video_path,
-                meta_name=f"{charity.name} - {donor.email}",
-            )
-        except Exception as stream_exc:
-            logger.warning(
-                "Cloudflare Stream upload failed for %s - falling back to attachment: %s",
-                donor.email,
-                stream_exc,
-            )
+    # Upload to Cloudflare Stream (when enabled).
+    # stream_safe_upload handles the CLOUDFLARE_STREAM_ENABLED guard,
+    # logs a warning on failure, and returns None for attachment fallback.
+    stream_result = stream_safe_upload(
+        video_path,
+        meta_name=f"{charity.name} - {donor.email}",
+    )
 
     try:
         provider_resp = send_video_email(

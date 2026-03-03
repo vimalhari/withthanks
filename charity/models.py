@@ -232,52 +232,17 @@ class Invoice(models.Model):
         return f"Invoice {self.invoice_number} - {self.charity.name}"
 
     def calculate_totals(self):
-        """Recalculates totals based on line items"""
-        from django.db.models import Sum
+        """Recalculate line-item totals and persist. Delegates to invoice_service."""
+        from charity.services.invoice_service import calculate_invoice_totals
 
-        # Sum from line items
-        subtotal = self.line_items.aggregate(sum=Sum("total_amount"))["sum"] or 0
-        self.subtotal = subtotal
-
-        # Calculate discount
-        if self.discount_percent > 0:
-            self.discount_amount = (self.subtotal * self.discount_percent) / 100
-        else:
-            self.discount_amount = 0
-
-        # Tax
-        taxable_amount = self.subtotal - self.discount_amount
-        if self.tax_percent > 0:
-            self.tax_amount = (taxable_amount * self.tax_percent) / 100
-        else:
-            self.tax_amount = 0
-
-        self.amount = taxable_amount + self.tax_amount
-        self.save()
-
+        calculate_invoice_totals(self)
         return self.amount
 
     def generate_invoice_number(self):
-        """Auto-generate invoice number: INV-YYYY-NNNN"""
-        from datetime import datetime
+        """Auto-generate invoice number: INV-YYYY-NNNN. Delegates to invoice_service."""
+        from charity.services.invoice_service import generate_invoice_number
 
-        year = datetime.now().year
-
-        # Get the last invoice number for this year
-        last_invoice = (
-            Invoice.objects.filter(invoice_number__startswith=f"INV-{year}-")
-            .order_by("-invoice_number")
-            .first()
-        )
-
-        if last_invoice:
-            # Extract the sequence number and increment
-            last_seq = int(last_invoice.invoice_number.split("-")[-1])
-            new_seq = last_seq + 1
-        else:
-            new_seq = 1
-
-        self.invoice_number = f"INV-{year}-{new_seq:04d}"
+        self.invoice_number = generate_invoice_number()
         return self.invoice_number
 
 
@@ -395,10 +360,7 @@ class DonationBatch(models.Model):
             return "CSV"
         return "Manual"
 
-    @property
-    def batch_status_display(self):
-        """Deprecated: use .status / .get_status_display() directly."""
-        return self.get_status_display()
+
 
 
 class DonationJob(models.Model):
@@ -441,15 +403,6 @@ class DonationJob(models.Model):
     real_views = models.PositiveIntegerField(default=0)
     real_clicks = models.PositiveIntegerField(default=0)
 
-    # Backward compatibility properties
-    @property
-    def name(self):
-        return self.donor_name
-
-    @property
-    def amount(self):
-        return self.donation_amount
-
     @property
     def total_views(self):
         return self.real_views
@@ -487,7 +440,7 @@ class DonationJob(models.Model):
         }.get(self.status, "secondary")
 
     def __str__(self):
-        return f"Job {self.id} - {self.name} ({self.status})"
+        return f"Job {self.id} - {self.donor_name} ({self.status})"
 
 
 class UnsubscribedUser(models.Model):
@@ -766,23 +719,30 @@ class CampaignField(models.Model):
 @receiver(post_delete, sender=Charity)
 def cleanup_charity_media(sender, instance, **kwargs):
     """
-    Delete media files when Charity is deleted.
-    Also deletes the entire client directory if possible, but safely.
+    Delete individual media files attached to a Charity row when it is deleted.
+    Also removes the per-client media folder if it exists.
     """
-    if instance.default_template_video:
-        instance.default_template_video.delete(save=False)
-    if instance.gratitude_card:
-        instance.gratitude_card.delete(save=False)
-    # Ideally we'd remove the folder too, but standard file field delete just removes the file.
-    # Given the strict structure media/clients/client_<id>/, we could try:
-    # try:
-    #     import shutil, os
-    #     from django.conf import settings
-    #     client_dir = os.path.join(settings.MEDIA_ROOT, 'clients', f'client_{instance.id}')
-    #     if os.path.exists(client_dir):
-    #         shutil.rmtree(client_dir)
-    # except:
-    #     pass
+    import logging
+    import shutil
+
+    from django.conf import settings
+
+    _log = logging.getLogger(__name__)
+
+    for field in (instance.default_template_video, instance.gratitude_card):
+        if field:
+            try:
+                field.delete(save=False)
+            except Exception as exc:
+                _log.warning("cleanup_charity_media: could not delete %s: %s", field.name, exc)
+
+    client_dir = os.path.join(settings.MEDIA_ROOT, "clients", f"client_{instance.id}")
+    if os.path.isdir(client_dir):
+        try:
+            shutil.rmtree(client_dir)
+            _log.info("cleanup_charity_media: removed %s", client_dir)
+        except Exception as exc:
+            _log.warning("cleanup_charity_media: could not remove %s: %s", client_dir, exc)
 
 
 # ---------------------------------------------------------------------------

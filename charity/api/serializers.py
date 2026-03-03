@@ -34,3 +34,24 @@ class DonationIngestSerializer(serializers.Serializer):
 
 class BulkDonationIngestSerializer(serializers.Serializer):
     donations = DonationIngestSerializer(many=True)
+
+    def validate_donations(self, donations):
+        """All donations in a bulk request must share the same charity and campaign_type."""
+        if not donations:
+            return donations
+        first_charity = donations[0]["charity_id"]
+        first_type = donations[0]["campaign_type"]
+        for i, d in enumerate(donations[1:], start=1):
+            if d["charity_id"] != first_charity:
+                raise serializers.ValidationError(
+                    f"Donation at index {i} has charity_id={d['charity_id']} "
+                    f"but index 0 has charity_id={first_charity}. "
+                    "Mixed-charity bulk requests are not supported — send separate requests per charity."
+                )
+            if d["campaign_type"] != first_type:
+                raise serializers.ValidationError(
+                    f"Donation at index {i} has campaign_type={d['campaign_type']} "
+                    f"but index 0 has campaign_type={first_type}. "
+                    "Mixed campaign_type bulk requests are not supported."
+                )
+        return donations

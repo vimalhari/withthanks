@@ -1,23 +1,15 @@
-import csv
 import logging
-import os
 from datetime import timedelta
-from io import BytesIO
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
-from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.utils import timezone
-from xhtml2pdf import pisa
 
 from .forms import InvoiceForm, InvoiceStep1Form, InvoiceStep2Form
 from .models import Campaign, Charity, Invoice, InvoiceLineItem
-from .utils import resend_utils
 from .utils.access_control import get_active_charity
 
 logger = logging.getLogger(__name__)
@@ -387,149 +379,6 @@ def invoice_detail_view(request, invoice_id):
 
 
 @login_required(login_url="charity_login")
-def invoice_mark_paid(request, invoice_id):
-    if request.method == "POST":
-        charity = get_active_charity(request)
-        if request.user.is_superuser and not charity:
-            invoice = get_object_or_404(Invoice, id=invoice_id)
-        else:
-            invoice = get_object_or_404(Invoice, id=invoice_id, charity=charity)
-        invoice.status = "Paid"
-        invoice.save()
-        messages.success(request, f"Invoice {invoice.invoice_number} marked as paid.")
-    return redirect("invoice_detail", invoice_id=invoice_id)
-
-
-@login_required(login_url="charity_login")
-def invoice_void(request, invoice_id):
-    if request.method == "POST":
-        charity = get_active_charity(request)
-        if request.user.is_superuser and not charity:
-            invoice = get_object_or_404(Invoice, id=invoice_id)
-        else:
-            invoice = get_object_or_404(Invoice, id=invoice_id, charity=charity)
-
-        # Void on Stripe if applicable
-        from .services.stripe_billing import is_enabled as stripe_enabled, void_stripe_invoice
-
-        if stripe_enabled() and invoice.stripe_invoice_id:
-            void_stripe_invoice(invoice)
-
-        invoice.status = "Void"
-        invoice.save()
-        messages.success(request, f"Invoice {invoice.invoice_number} has been voided.")
-    return redirect("invoice_detail", invoice_id=invoice_id)
-
-
-@login_required(login_url="charity_login")
-def invoice_export_pdf(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id)
-    # Check permission
-    charity = get_active_charity(request)
-    if not request.user.is_superuser and invoice.charity != charity:
-        return redirect("invoices")
-
-    logo_path = os.path.join(
-        settings.BASE_DIR, "charity", "static", "charity", "img", "with_thanks_logo_header.png"
-    )
-    html = render_to_string(
-        "_invoice_content.html", {"invoice": invoice, "logo_path": logo_path, "is_pdf": True}
-    )
-    buffer = BytesIO()
-    pdf_html = f"<!DOCTYPE html><html><head><style>@page {{size: A4; margin: 15mm;}} body {{font-family: 'Helvetica'; font-size: 10px;}}</style></head><body>{html}</body></html>"
-    pisa_status = pisa.CreatePDF(pdf_html, dest=buffer)
-    if pisa_status.err:
-        return HttpResponse("Error generating PDF", status=500)
-    buffer.seek(0)
-    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
-    return response
-
-
-@login_required(login_url="charity_login")
-def invoice_send_email(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id)
-    charity = get_active_charity(request)
-    if not request.user.is_superuser and invoice.charity != charity:
-        return redirect("invoices")
-
-    # PDF generation...
-    logo_path = os.path.join(
-        settings.BASE_DIR, "charity", "static", "charity", "img", "with_thanks_logo_header.png"
-    )
-    html = render_to_string(
-        "_invoice_content.html", {"invoice": invoice, "logo_path": logo_path, "is_pdf": True}
-    )
-    buffer = BytesIO()
-    pisa.CreatePDF(html, dest=buffer)
-    pdf_bytes = buffer.getvalue()
-
-    try:
-        recipient = invoice.billing_email
-        if not recipient:
-            messages.error(request, "Invoice has no billing email address.")
-            return redirect("invoice_detail", invoice_id=invoice.id)
-
-        resend_utils.send_invoice_email(
-            to_email=recipient,
-            invoice_pdf_bytes=pdf_bytes,
-            invoice_number=invoice.invoice_number,
-            subject=f"Invoice {invoice.invoice_number} from {invoice.charity.client_name}",
-            from_email=None,
-            filename=f"Invoice_{invoice.invoice_number}.pdf",
-        )
-        if invoice.status == "Draft":
-            invoice.status = "Sent"
-            invoice.save()
-        messages.success(request, f"Invoice sent to {recipient} successfully.")
-    except Exception as e:
-        logger.error(f"Failed to send invoice email: {e}")
-        messages.error(request, f"Failed to send email: {e}")
-    return redirect("invoice_detail", invoice_id=invoice.id)
-
-
-@login_required(login_url="charity_login")
-def invoice_export_csv(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id)
-    charity = get_active_charity(request)
-    if not request.user.is_superuser and invoice.charity != charity:
-        return redirect("invoices")
-
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = f'attachment; filename="invoice_{invoice.invoice_number}.csv"'
-    writer = csv.writer(response)
-    writer.writerow(["Invoice Number", "Client", "Issue Date", "Due Date", "Status", "Amount"])
-    writer.writerow(
-        [
-            invoice.invoice_number,
-            invoice.charity.client_name,
-            invoice.issue_date,
-            invoice.due_date,
-            invoice.status,
-            invoice.amount,
-        ]
-    )
-    return response
-
-
-@login_required(login_url="charity_login")
-def invoice_export_json(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id)
-    charity = get_active_charity(request)
-    if not request.user.is_superuser and invoice.charity != charity:
-        return JsonResponse({"error": "Unauthorized"}, status=403)
-    data = {
-        "invoice_number": invoice.invoice_number,
-        "client": invoice.charity.client_name,
-        "issue_date": str(invoice.issue_date),
-        "due_date": str(invoice.due_date),
-        "status": invoice.status,
-        "amount": float(invoice.amount),
-    }
-    return JsonResponse(data)
-
-
-@login_required(login_url="charity_login")
 def invoice_edit_view(request, invoice_id):
     charity = get_active_charity(request)
     if not charity and not request.user.is_superuser:
@@ -550,39 +399,3 @@ def invoice_edit_view(request, invoice_id):
     else:
         form = InvoiceForm(instance=invoice)
     return render(request, "invoice_edit.html", {"form": form, "invoice": invoice})
-
-
-@login_required(login_url="charity_login")
-def invoice_stripe_send(request, invoice_id):
-    """
-    Create and send an invoice via Stripe.
-    The charity contact receives an email with a hosted payment page.
-    """
-    from .services.stripe_billing import (
-        finalize_and_send_invoice,
-        is_enabled as stripe_enabled,
-    )
-
-    if not stripe_enabled():
-        messages.error(request, "Stripe is not configured. Set STRIPE_SECRET_KEY in your .env.")
-        return redirect("invoice_detail", invoice_id=invoice_id)
-
-    charity = get_active_charity(request)
-    if request.user.is_superuser and not charity:
-        invoice = get_object_or_404(Invoice, id=invoice_id)
-    else:
-        invoice = get_object_or_404(Invoice, id=invoice_id, charity=charity)
-
-    if request.method == "POST":
-        try:
-            hosted_url = finalize_and_send_invoice(invoice)
-            messages.success(
-                request,
-                f"Invoice {invoice.invoice_number} sent via Stripe. "
-                f'<a href="{hosted_url}" target="_blank">View payment page</a>',
-            )
-        except Exception as e:
-            logger.error(f"Stripe send failed for invoice {invoice.invoice_number}: {e}")
-            messages.error(request, f"Failed to send via Stripe: {e}")
-
-    return redirect("invoice_detail", invoice_id=invoice_id)

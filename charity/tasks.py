@@ -14,7 +14,13 @@ from django.utils.timezone import now
 from .models import DonationBatch, DonationJob, EmailTracking, UnsubscribedUser
 from .models_analytics import EmailEvent, VideoEvent
 from .services.video_builder import VideoSpec, build_personalized_video
-from .utils.cloudflare_stream import upload_video_to_stream
+from .services.video_pipeline import (
+    StreamDelivery,
+    build_tracking_urls,
+    get_or_upload_campaign_stream,
+    resolve_public_video_url,
+    stream_safe_upload,
+)
 from .utils.resend_utils import send_video_email
 
 logger = logging.getLogger(__name__)
@@ -119,40 +125,8 @@ def process_donation_row(self, job_id):
             unsubscribe_path = reverse("unsubscribe", kwargs={"job_id": job.id})
             unsubscribe_url = f"{server_url}{unsubscribe_path}"
 
-            # --- Cloudflare Stream: upload once, cache on Campaign ---
-            cf_stream_enabled = getattr(settings, "CLOUDFLARE_STREAM_ENABLED", False)
-            if cf_stream_enabled and campaign:
-                if campaign.cf_stream_video_url:
-                    # Already uploaded — reuse cached CDN URL
-                    logger.info(
-                        f"Job {job.id}: Reusing cached CF Stream URL for campaign {campaign.id}"
-                    )
-                else:
-                    # First job for this campaign — upload to Cloudflare Stream
-                    try:
-                        logger.info(
-                            f"Job {job.id}: Uploading VDM video to Cloudflare Stream "
-                            f"for campaign {campaign.id}"
-                        )
-                        cf_result = upload_video_to_stream(
-                            base_video_path,
-                            meta_name=f"{campaign.name} — VDM",
-                        )
-                        campaign.cf_stream_video_id = cf_result.video_id
-                        campaign.cf_stream_video_url = cf_result.playback_url
-                        campaign.save(
-                            update_fields=["cf_stream_video_id", "cf_stream_video_url"]
-                        )
-                        logger.info(
-                            f"Job {job.id}: CF Stream upload success — "
-                            f"uid={cf_result.video_id}"
-                        )
-                    except Exception as cf_err:
-                        # Non-fatal: fall back to local URL
-                        logger.warning(
-                            f"Job {job.id}: CF Stream upload failed, falling back to "
-                            f"local URL. Error: {cf_err}"
-                        )
+            # Upload once per campaign and cache the CF Stream URL on the Campaign row.
+            vdm_stream = get_or_upload_campaign_stream(campaign, final_video_path) if campaign else StreamDelivery()
 
         elif mode == "Gratitude":
             # MODE 3: Gratitude (New Template)
@@ -284,60 +258,36 @@ def process_donation_row(self, job_id):
         EmailEvent.objects.create(campaign=campaign, job=job, event_type="SENT")
 
         # TRACKING: Generate URLs
-        # Base Params: c=campaign_id, b=batch_id, u=job_id, type=appeal_type
-        # We use job.id (u) as the primary key for lookup in views as it's unique enough and linked to everything.
-
-        # 1. Tracking Pixel URL
-        # Path: /track/open/?c=...&b=...&u=...&type=...
-        track_open_path = reverse("track_open")
-        pixel_url = f"{server_url}{track_open_path}?u={job.id}&type={mode}"
-        if campaign:
-            pixel_url += f"&c={campaign.id}"
-        if job.donation_batch:
-            pixel_url += f"&b={job.donation_batch.id}"
-
-        # 2. Click/Redirect URL (Wraps the video/image link)
-        # Path: /track/click/?u=...&type=...
-        track_click_path = reverse("track_click")
-        click_url = f"{server_url}{track_click_path}?u={job.id}&type={mode}"
-        if campaign:
-            click_url += f"&c={campaign.id}"
-        if job.donation_batch:
-            click_url += f"&b={job.donation_batch.id}"
-
-        # 3. Unsubscribe URL
-        # Path: /track/unsubscribe/?u=...&type=...
-        # STRICT LOGIC: Omit for THANKYOU campaigns
-        unsubscribe_url = None
-        if campaign and campaign.appeal_type != "THANKYOU":
-            track_unsub_path = reverse("track_unsubscribe_full")
-            unsubscribe_url = f"{server_url}{track_unsub_path}?u={job.id}&type={mode}"
+        suppress_unsub = bool(campaign and campaign.appeal_type == "THANKYOU")
+        tracking = build_tracking_urls(
+            job_id=job.id,
+            mode=mode,
+            server_url=server_url,
+            campaign_id=campaign.id if campaign else None,
+            batch_id=job.donation_batch.id if job.donation_batch else None,
+            suppress_unsubscribe=suppress_unsub,
+        )
+        pixel_url = tracking.pixel_url
+        click_url = tracking.click_url
+        unsubscribe_url = tracking.unsubscribe_url
 
         # 4. Resolve Public Video Link for Template
-        # For VDM: prefer Cloudflare Stream URL (CDN) over local server path
-        video_url_link = ""
-        cf_stream_url = None
-        if mode == "VDM" and campaign and campaign.cf_stream_video_url:
-            video_url_link = campaign.cf_stream_video_url
-            cf_stream_url = campaign.cf_stream_video_url
-            logger.info(f"Job {job.id}: Using CF Stream URL: {video_url_link}")
-        elif final_video_path:
-            try:
-                rel_path = os.path.relpath(final_video_path, settings.MEDIA_ROOT)
-                clean_rel_path = rel_path.replace("\\", "/")
-                # Ensure we don't have double slashes in the path part, but preserve protocol
-                m_url = settings.MEDIA_URL
-                if not m_url.startswith("/"):
-                    m_url = "/" + m_url
+        # For VDM: prefer Cloudflare Stream URL (CDN) over local server path.
+        if mode == "VDM":
+            stream_delivery = vdm_stream
+        else:
+            # For WithThanks / Gratitude: do a per-job upload (not cached on campaign).
+            stream_delivery = stream_safe_upload(
+                final_video_path or "",
+                meta_name=f"Job {job.id}",
+            ) if final_video_path else StreamDelivery()
 
-                # Combine correctly: server_url (no trailing slash) + m_url (leading slash) + clean_rel_path
-                video_url_link = (
-                    f"{server_url}{m_url}{clean_rel_path}".replace("//", "/")
-                    .replace("http:/", "http://")
-                    .replace("https:/", "https://")
-                )
-            except ValueError:
-                video_url_link = f"{server_url}/media/outputs/{os.path.basename(final_video_path)}"
+        cf_stream_url = stream_delivery.playback_url or None
+        video_url_link = resolve_public_video_url(
+            final_video_path=final_video_path,
+            stream_delivery=stream_delivery,
+            server_url=server_url,
+        )
 
         context = {
             "donor_name": job.donor_name,
@@ -688,82 +638,39 @@ def batch_process_csv(self, batch_id):
 @shared_task
 def refresh_all_campaign_stats():
     """Refresh materialized CampaignStats for all campaigns."""
-    from .models import Campaign
-    from .models_analytics import CampaignStats
+    from .services.analytics_service import rebuild_all_campaign_stats
 
-    campaigns = Campaign.objects.all()
-    refreshed = 0
-    for campaign in campaigns:
-        stats, _ = CampaignStats.objects.get_or_create(campaign=campaign)
-        stats.update_stats()
-        refreshed += 1
-    logger.info(f"Refreshed CampaignStats for {refreshed} campaigns")
-    return {"refreshed": refreshed}
+    return rebuild_all_campaign_stats()
 
 
 @shared_task
 def mark_overdue_invoices():
     """Transition Sent invoices past their due date to Overdue status."""
-    from .models import Invoice
+    from .services.invoice_service import mark_overdue_bulk
 
-    overdue = Invoice.objects.filter(
-        status="Sent",
-        due_date__lt=now().date(),
-    ).update(status="Overdue")
-    logger.info(f"Marked {overdue} invoices as Overdue")
-    return {"marked_overdue": overdue}
+    return mark_overdue_bulk()
 
 
 @shared_task
 def cleanup_stale_jobs():
     """Reset jobs stuck in 'processing' for over 2 hours back to 'failed'."""
-    cutoff = now() - timedelta(hours=2)
-    stale = DonationJob.objects.filter(
-        status="processing",
-        updated_at__lt=cutoff,
-    ).update(status="failed", error_message="Stale job — timed out after 2 hours")
-    logger.info(f"Cleaned up {stale} stale processing jobs")
-    return {"stale_cleaned": stale}
+    from .services.batch_service import reset_stale_jobs
+
+    return reset_stale_jobs()
 
 
 @shared_task
 def prune_voiceover_cache():
     """Delete voiceover cache files older than 30 days."""
-    cache_dir = os.path.join(settings.MEDIA_ROOT, "voiceover_cache")
-    if not os.path.isdir(cache_dir):
-        return {"pruned": 0}
+    from .services.cleanup_service import prune_voiceover_cache as _prune
 
-    cutoff = time.time() - (30 * 86400)  # 30 days in seconds
-    pruned = 0
-    for fname in os.listdir(cache_dir):
-        fpath = os.path.join(cache_dir, fname)
-        try:
-            if os.path.isfile(fpath) and os.path.getmtime(fpath) < cutoff:
-                os.remove(fpath)
-                pruned += 1
-        except Exception as err:
-            logger.warning(f"Failed to prune {fpath}: {err}")
-    logger.info(f"Pruned {pruned} old voiceover cache files")
-    return {"pruned": pruned}
+    return _prune()
 
 
 @shared_task
 def cleanup_old_videos():
     """Delete generated video files from VIDEO_OUTPUT_DIR older than 7 days."""
-    video_dir = str(settings.VIDEO_OUTPUT_DIR)
-    if not os.path.isdir(video_dir):
-        return {"deleted": 0}
+    from .services.cleanup_service import remove_old_videos
 
-    cutoff = time.time() - (7 * 86400)  # 7 days in seconds
-    deleted = 0
-    for fname in os.listdir(video_dir):
-        fpath = os.path.join(video_dir, fname)
-        try:
-            if os.path.isfile(fpath) and os.path.getmtime(fpath) < cutoff:
-                os.remove(fpath)
-                deleted += 1
-        except Exception as err:
-            logger.warning(f"Failed to delete {fpath}: {err}")
-    logger.info(f"Deleted {deleted} old video files from output dir")
-    return {"deleted": deleted}
+    return remove_old_videos()
 

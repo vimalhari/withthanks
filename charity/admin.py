@@ -120,9 +120,9 @@ class DonationBatchAdmin(admin.ModelAdmin):
 
 @admin.register(DonationJob)
 class DonationJobAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "amount", "status", "created_at", "completed_at")
+    list_display = ("donor_name", "email", "donation_amount", "status", "created_at", "completed_at")
     list_filter = ("status", "created_at")
-    search_fields = ("name", "email", "task_id")
+    search_fields = ("donor_name", "email", "task_id")
 
 
 # ---------------------------------------------------------------------------

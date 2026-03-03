@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from charity.api.serializers import BulkDonationIngestSerializer, DonationIngestSerializer
 from charity.models import Campaign, Charity, DonationBatch, DonationJob
+from charity.permissions import IsCharityMember
 from charity.tasks import on_batch_complete, process_donation_row
 
 
@@ -26,6 +27,8 @@ class DonationIngestAPIView(APIView):
     Returns the Celery task ID and DonationJob ID so the caller can poll
     for completion either via the task result or the job record.
     """
+
+    permission_classes = [IsCharityMember]
 
     def post(self, request):
         serializer = DonationIngestSerializer(data=request.data)
@@ -75,6 +78,8 @@ class BulkDonationIngestAPIView(APIView):
     Returns the batch ID, chord task ID, and per-donation job IDs.
     """
 
+    permission_classes = [IsCharityMember]
+
     def post(self, request):
         serializer = BulkDonationIngestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -100,14 +105,15 @@ class BulkDonationIngestAPIView(APIView):
             status=DonationBatch.BatchStatus.PROCESSING,
         )
 
+        # All donations share the same charity/campaign (validated by serializer).
         jobs_to_create = [
             DonationJob(
                 donor_name=d["donor_name"],
                 email=d["donor_email"],
                 donation_amount=str(d["amount"]),
                 status="pending",
-                charity=Charity.objects.get(id=d["charity_id"]),
-                campaign=_resolve_campaign(Charity.objects.get(id=d["charity_id"]), d["campaign_type"]),
+                charity=charity,
+                campaign=campaign,
                 donation_batch=batch,
             )
             for d in donations
@@ -140,6 +146,8 @@ class TaskStatusAPIView(APIView):
     - Pass a Celery task_id to get raw task state.
     - Pass a job_id query param to get the DonationJob status from the DB.
     """
+
+    permission_classes = [IsCharityMember]
 
     def get(self, request, task_id):
         # If a job_id is provided, serve the DB record (more reliable than

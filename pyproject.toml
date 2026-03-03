@@ -28,6 +28,7 @@ dependencies = [
     "django-celery-beat>=2.7.0",
     # Stripe billing
     "stripe>=12.0.0",
+    "defusedcsv>=3.0.0",
 ]
 
 # ---------------------------------------------------------------------------
