@@ -6,7 +6,7 @@
 {% block breadcrumb_child %}Invoices{% endblock %}
 
 {% block page_content %}
-<div x-data="invoiceManager()" x-init="init()" x-cloak>
+<div x-data="invoiceManager()" x-init="init()">
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-10">
         <div>
@@ -18,9 +18,9 @@
                 <i data-lucide="tag" class="w-4 h-4 text-brand"></i> Manage Services
             </a>
             <a href="#" class="btn-secondary"><i data-lucide="download" class="w-4 h-4"></i> Export</a>
-            <button @click="openDrawer = true; resetNewInvoice();" class="btn-primary bg-violet-600 hover:bg-violet-700 border-violet-600">
+            <a href="{% url 'create_invoice' %}" class="btn-primary bg-violet-600 hover:bg-violet-700 border-violet-600">
                 <i data-lucide="plus" class="w-4 h-4"></i> Create Invoice
-            </button>
+            </a>
         </div>
     </div>
 
@@ -192,8 +192,8 @@
         </div>
     </div>
 
-    <!-- CREATE INVOICE MODAL -->
-    <template x-if="openDrawer">
+    <!-- (modal removed — use /invoices/create/ wizard instead) -->
+    <template x-if="false">
         <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[9999] flex justify-center items-center overflow-hidden" @click.self="openDrawer = false">
             <div class="w-[calc(100vw-32px)] h-[calc(100vh-32px)] bg-gray-100 rounded-xl shadow-2xl flex flex-col overflow-hidden" @click.stop>
                 <!-- Modal Header -->
@@ -394,37 +394,13 @@
         </div>
     </template>
 
-    <style>[x-cloak] { display: none !important; }</style>
-
     <script>
     function invoiceManager() {
         return {
-            openDrawer: false,
-            processing: false,
             metrics: { this_month_billed: 0, paid_this_month: 0, pending_amount: 0, overdue_amount: 0, collection_rate: '0%', avg_invoice_value: 0 },
             clients: [{% for client in clients %}{ id: '{{ client.id }}', name: '{{ client.name|escapejs }}', billing_address: '{{ client.billing_address|escapejs }}', address_line_1: '{{ client.address_line_1|default:""|escapejs }}', address_line_2: '{{ client.address_line_2|default:""|escapejs }}', county: '{{ client.county|default:""|escapejs }}', postcode: '{{ client.postcode|default:""|escapejs }}', email: '{{ client.billing_email|default:client.contact_email|default:""|escapejs }}' },{% endfor %}],
-            services: [],
-            selectedServiceId: '',
-            newInvoice: { charity_id: '', tax_percent: 20, discount_percent: 0, items: [], notes: '' },
-            newService: { name: '', category: 'ADDITIONAL', unit_price: 0, description: '' },
-            manualItem: { description: '', unit_price: 0 },
-            get selectedClientName() { if (!this.newInvoice?.charity_id) return 'No client selected'; const c = this.clients.find(x => String(x.id) === String(this.newInvoice.charity_id)); return c ? c.name : 'Selected Client'; },
-            get selectedClientDetails() { if (!this.newInvoice?.charity_id) return null; return this.clients.find(c => String(c.id) === String(this.newInvoice.charity_id)) || null; },
-            get subtotal() { return this.roundToTwo(this.newInvoice.items.reduce((s, i) => s + (Number(i.quantity) * Number(i.unit_price)), 0)); },
-            get tax_amount() { return this.roundToTwo(this.subtotal * (this.newInvoice.tax_percent / 100)); },
-            get total() { return this.roundToTwo(this.subtotal + this.tax_amount); },
-            roundToTwo(n) { return Math.round((n + Number.EPSILON) * 100) / 100; },
-            async init() { this.loadMetrics(); this.loadServices(); },
-            resetNewInvoice() { this.newInvoice = { charity_id: '', items: [], tax_percent: 20, discount_percent: 0, notes: '' }; },
+            async init() { this.loadMetrics(); },
             async loadMetrics() { try { const r = await fetch('/charity/api/revenue/'); const d = await r.json(); if (d.kpis) this.metrics = d.kpis; } catch(e) {} },
-            async loadServices() { try { const r = await fetch('/charity/api/billing/services/'); const d = await r.json(); this.services = d.services; } catch(e) {} },
-            get activeServices() { return this.services.filter(s => s.active); },
-            addServiceFromSelection() { this.addServiceToInvoice(this.selectedServiceId); this.selectedServiceId = ''; },
-            addServiceToInvoice(sid) { if (!sid) return; const e = this.newInvoice.items.find(i => i.service_id == sid); if (e) { e.quantity++; return; } const s = this.services.find(x => x.id == sid); if (s) this.newInvoice.items.push({ service_id: s.id, description: s.name, unit_price: s.unit_price, quantity: 1 }); },
-            addManualItem() { if (!this.manualItem.description) return; this.newInvoice.items.push({ service_id: null, description: this.manualItem.description, unit_price: this.manualItem.unit_price || 0, quantity: 1 }); this.manualItem = { description: '', unit_price: 0 }; },
-            removeItem(i) { this.newInvoice.items.splice(i, 1); },
-            getCookie(n) { let v = null; if (document.cookie) { for (const c of document.cookie.split(';')) { const t = c.trim(); if (t.startsWith(n + '=')) { v = decodeURIComponent(t.substring(n.length + 1)); break; } } } return v; },
-            async submitInvoice() { if (!this.newInvoice.charity_id || this.newInvoice.items.length === 0) return; this.processing = true; try { const r = await fetch('/charity/api/billing/create/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCookie('csrftoken') }, body: JSON.stringify(this.newInvoice) }); const d = await r.json(); if (r.ok && d.success) { this.openDrawer = false; this.resetNewInvoice(); alert('Invoice created!'); window.location.reload(); } else { alert('Error: ' + (d.error || 'Failed')); } } catch(e) { alert('System error.'); } finally { this.processing = false; } },
             formatNumber(n) { if (!n) return '0.00'; return parseFloat(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
         }
     }
