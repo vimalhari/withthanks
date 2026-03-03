@@ -4,21 +4,20 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0056_stage3_models'),
+        ("charity", "0056_stage3_models"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='donationjob',
-            name='fake_clicks',
+            model_name="donationjob",
+            name="fake_clicks",
         ),
         migrations.RemoveField(
-            model_name='donationjob',
-            name='fake_views',
+            model_name="donationjob",
+            name="fake_views",
         ),
         migrations.DeleteModel(
-            name='UnsubscribeEvent',
+            name="UnsubscribeEvent",
         ),
     ]

@@ -13,7 +13,7 @@ from django.db import migrations
 # Mapping: old_value → new_value
 EMAIL_EVENT_MAP = {
     "sent": "SENT",
-    "delivered": "SENT",       # delivered is logically the same as SENT
+    "delivered": "SENT",  # delivered is logically the same as SENT
     "failed": "FAILED",
     "bounced": "BOUNCED",
     "opened": "OPEN",

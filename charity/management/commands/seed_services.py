@@ -86,7 +86,7 @@ class Command(BaseCommand):
                     "category": category,
                     "unit_price": price,
                     "description": desc,
-                    "active": True,
+                    "is_active": True,
                 },
             )
             if created:

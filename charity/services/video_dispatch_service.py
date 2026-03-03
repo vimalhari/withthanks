@@ -20,6 +20,7 @@ from charity.utils.resend_utils import send_video_email
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DispatchResult:
     donation_id: int
@@ -96,7 +97,9 @@ def _build_template_video_path(campaign: Campaign, use_gratitude_template: bool)
 def _resolve_script_and_voice(campaign: Campaign, gratitude_mode: bool) -> tuple[str | None, str]:
     """Return ``(voiceover_script, voice_id)`` for the given campaign mode."""
     if gratitude_mode or not campaign.text_template:
-        return None, getattr(campaign.text_template, "voice_id", "") if campaign.text_template else ""
+        return None, getattr(
+            campaign.text_template, "voice_id", ""
+        ) if campaign.text_template else ""
     if campaign.text_template.body:
         return campaign.text_template.body, campaign.text_template.voice_id or ""
     return None, ""
@@ -195,7 +198,9 @@ def dispatch_donation_video(
         if campaign.gratitude_video_template:
             send_kind = VideoSendLog.SendKind.GRATITUDE
             tmp_video_path = _build_template_video_path(campaign, use_gratitude_template=True)
-            r2_video_url = tmp_video_path  # template videos already live in R2; use tmp path for delivery
+            r2_video_url = (
+                tmp_video_path  # template videos already live in R2; use tmp path for delivery
+            )
         else:
             send_kind = VideoSendLog.SendKind.GRATITUDE
             tmp_video_path, r2_video_url = _build_personalized_video(

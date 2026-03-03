@@ -1,4 +1,3 @@
-import os
 import uuid
 
 from django.contrib.auth.models import User
@@ -359,8 +358,6 @@ class DonationBatch(models.Model):
         return "Manual"
 
 
-
-
 class DonationJob(models.Model):
     # CORE FIELDS
     donor_name = models.CharField(max_length=255)
@@ -421,6 +418,7 @@ class DonationJob(models.Model):
             return path_str
         # Legacy: relative R2 key — construct URL via storage backend.
         from django.core.files.storage import default_storage
+
         try:
             return default_storage.url(path_str)
         except Exception:
@@ -773,9 +771,7 @@ class VideoSendLog(models.Model):
 
     charity = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="video_send_logs")
     donor = models.ForeignKey(Donor, on_delete=models.CASCADE, related_name="video_send_logs")
-    donation = models.ForeignKey(
-        Donation, on_delete=models.CASCADE, related_name="video_send_logs"
-    )
+    donation = models.ForeignKey(Donation, on_delete=models.CASCADE, related_name="video_send_logs")
     campaign = models.ForeignKey(
         Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name="video_send_logs"
     )

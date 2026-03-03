@@ -98,13 +98,13 @@ def get_slab_price(volume: int, personalized: bool = True) -> "float | str":
     """
     slabs = {
         "personalized": [(99, 110), (300, 265), (500, 375), (1000, 575), (3000, 1025)],
-        "standard":     [(99, 99),  (300, 250), (500, 350), (1000, 550), (3000, 1000)],
+        "standard": [(99, 99), (300, 250), (500, 350), (1000, 550), (3000, 1000)],
     }
-    tier_slabs = slabs.get("personalized" if personalized else "standard")
+    tier_slabs = slabs["personalized" if personalized else "standard"]
     for limit, price in tier_slabs:
         if volume <= limit:
             return price
-    return "POA" # Price on Application for > 3000
+    return "POA"  # Price on Application for > 3000
 
 
 @login_required(login_url="charity_login")
@@ -152,11 +152,15 @@ def create_invoice_view(request):
                 ).count()
 
                 # Auto-calculate CSV file count (exclude manual entries), £10/file
-                auto_csv_file_qty = DonationBatch.objects.filter(
-                    campaign=campaign,
-                    created_at__date__gte=start_date,
-                    created_at__date__lte=end_date,
-                ).exclude(csv_filename__icontains="manual_entry").count()
+                auto_csv_file_qty = (
+                    DonationBatch.objects.filter(
+                        campaign=campaign,
+                        created_at__date__gte=start_date,
+                        created_at__date__lte=end_date,
+                    )
+                    .exclude(csv_filename__icontains="manual_entry")
+                    .count()
+                )
 
                 # Auto-set one-time package defaults from campaign appeal type
                 auto_vdm_package = "standard" if campaign.appeal_type == "VDM" else "none"
@@ -406,7 +410,9 @@ def create_invoice_view(request):
             if "vdm_package" not in step2_initial:
                 step2_initial["vdm_package"] = wizard_data.get("auto_vdm_package", "none")
             if "enable_gratitude_card" not in step2_initial:
-                step2_initial["enable_gratitude_card"] = wizard_data.get("auto_gratitude_card", False)
+                step2_initial["enable_gratitude_card"] = wizard_data.get(
+                    "auto_gratitude_card", False
+                )
             context["form"] = InvoiceStep2Form(initial=step2_initial)
     elif step == 3:
         line_items = wizard_data.get("line_items", [])

@@ -3,6 +3,7 @@ import json
 import logging
 import uuid
 
+import defusedcsv
 from celery import chain, chord, group
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,8 +12,8 @@ from django.db.models.functions import TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Campaign, Charity, DonationBatch, DonationJob
 from .analytics_models import EmailEvent, VideoEvent
+from .models import Campaign, Charity, DonationBatch, DonationJob
 from .tasks import (
     batch_process_csv,
     dispatch_email_for_job,
@@ -211,7 +212,11 @@ def send_email_wizard(request):
                     status="pending",
                     donation_batch=batch,
                 )
-                process_donation_row.apply_async(args=(job.id,), queue="video")
+                chain(
+                    validate_and_prep_job.s(job.id).set(queue="default"),
+                    generate_video_for_job.s().set(queue="video"),
+                    dispatch_email_for_job.s().set(queue="default"),
+                ).apply_async()
                 batch.status = DonationBatch.BatchStatus.PROCESSING
                 batch.save(update_fields=["status"])
                 queued_count = 1
@@ -324,7 +329,7 @@ def export_donation_report(request):
     )
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="donation_report.csv"'
-    writer = csv.writer(response)
+    writer = defusedcsv.writer(response)
     writer.writerow(["Date", "Job Name", "Email", "Status", "Total Views"])
     for job in jobs.select_related("donation_batch"):
         writer.writerow(

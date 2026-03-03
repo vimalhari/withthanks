@@ -122,24 +122,32 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=self.campaign_b,
         )
 
-    @patch("charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4")
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
     @patch("charity.services.video_build_service.generate_voiceover")
     @patch("charity.services.video_build_service.stitch_voice_and_overlay")
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.stream_safe_upload", return_value=None)
     @patch("os.path.exists")
-    def test_processing_isolation(self, mock_exists, mock_stream, mock_send, mock_stitch, mock_tts, mock_upload):
+    def test_processing_isolation(
+        self, mock_exists, mock_stream, mock_send, mock_stitch, mock_tts, mock_upload
+    ):
         """Verify that jobs for different charities use their respective templates/branding"""
-        from charity.tasks import dispatch_email_for_job, generate_video_for_job, validate_and_prep_job
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
 
         mock_exists.return_value = True
         mock_tts.return_value = "/tmp/tts.mp3"
         mock_stitch.return_value = ("/tmp/final.mp4", 10)
 
         # Process Job A through all 3 stages
-        ctx = validate_and_prep_job(self.job_a.id)
-        ctx = generate_video_for_job(ctx)
-        dispatch_email_for_job(ctx)
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
         # Verify Job A used Script A and Sender A
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
@@ -150,9 +158,9 @@ class VideoProcessingIsolationTests(TestCase):
         mock_send.reset_mock()
 
         # Process Job B through all 3 stages
-        ctx = validate_and_prep_job(self.job_b.id)
-        ctx = generate_video_for_job(ctx)
-        dispatch_email_for_job(ctx)
+        ctx = validate_and_prep_job.run(self.job_b.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
         # Verify Job B used Script B and Sender B
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])

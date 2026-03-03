@@ -6,4 +6,4 @@ class CharityConfig(AppConfig):
     name = "charity"
 
     def ready(self):
-        import charity.signals  # noqa: F401  # pylint: disable=unused-import — registers signal receivers
+        import charity.signals  # noqa: F401  # pylint: disable=unused-import

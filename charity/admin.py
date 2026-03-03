@@ -409,16 +409,11 @@ class DonationBatchCampaignInline(TabularInline):
 
     @admin.display(description="Pending")
     def pending_count(self, obj: DonationBatch) -> int:
-        return obj.jobs.filter(
-            Q(status="pending") | Q(status="processing")
-        ).count()
+        return obj.jobs.filter(Q(status="pending") | Q(status="processing")).count()
 
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         return (
-            super()
-            .get_queryset(request)
-            .annotate(_job_count=Count("jobs"))
-            .order_by("-created_at")
+            super().get_queryset(request).annotate(_job_count=Count("jobs")).order_by("-created_at")
         )
 
 

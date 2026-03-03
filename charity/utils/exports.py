@@ -67,6 +67,7 @@ def export_analytics_csv(data_list, filename, summary_stats=None):
 def export_analytics_excel(data_list, filename, summary_stats=None):
     wb = Workbook()
     ws = wb.active
+    assert ws is not None
     ws.title = "Analytics Report"
 
     # Define styles
@@ -252,6 +253,7 @@ def export_batch_detail_csv(batch_info, data_list, filename):
 def export_batch_detail_excel(batch_info, data_list, filename, timeline_stats=None):
     wb = Workbook()
     ws = wb.active
+    assert ws is not None
     ws.title = "Batch Detail Report"
 
     # Batch Headers

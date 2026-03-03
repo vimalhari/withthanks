@@ -69,7 +69,7 @@ class DonationIngestAPIView(APIView):
 
         return Response(
             {
-                "task_id": task_result.id,
+                "task_id": task_result.id if task_result is not None else None,
                 "job_id": job.id,
                 "batch_id": batch.id,
                 "status": "queued",
@@ -170,13 +170,15 @@ class TaskStatusAPIView(APIView):
         if job_id:
             try:
                 job = DonationJob.objects.get(id=job_id)
-                return Response({
-                    "job_id": job.id,
-                    "status": job.status,
-                    "donor_email": job.email,
-                    "error_message": job.error_message,
-                    "completed_at": job.completed_at,
-                })
+                return Response(
+                    {
+                        "job_id": job.id,
+                        "status": job.status,
+                        "donor_email": job.email,
+                        "error_message": job.error_message,
+                        "completed_at": job.completed_at,
+                    }
+                )
             except DonationJob.DoesNotExist:
                 return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -191,4 +193,3 @@ class TaskStatusAPIView(APIView):
             payload["error"] = str(result.result)
 
         return Response(payload)
-

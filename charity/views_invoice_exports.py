@@ -56,9 +56,7 @@ def invoice_export_pdf(request, invoice_id):
         return HttpResponse("Error generating PDF", status=500)
 
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = (
-        f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
-    )
+    response["Content-Disposition"] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
     return response
 
 
@@ -70,9 +68,7 @@ def invoice_export_csv(request, invoice_id):
         return redirect("invoices")
 
     response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = (
-        f'attachment; filename="invoice_{invoice.invoice_number}.csv"'
-    )
+    response["Content-Disposition"] = f'attachment; filename="invoice_{invoice.invoice_number}.csv"'
     writer = defusedcsv.writer(response)
     writer.writerow(["Invoice Number", "Client", "Issue Date", "Due Date", "Status", "Amount"])
     writer.writerow(

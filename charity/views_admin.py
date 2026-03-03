@@ -28,10 +28,15 @@ def clear_client_context(request):
 
 @login_required(login_url="charity_login")
 def api_clients(request):
+    active_charity = get_active_charity(request)
     clients = (
         Charity.objects.all().order_by("client_name")
         if request.user.is_superuser
-        else Charity.objects.filter(id=get_active_charity(request).id)
+        else (
+            Charity.objects.filter(id=active_charity.id)
+            if active_charity
+            else Charity.objects.none()
+        )
     )
     data = [
         {

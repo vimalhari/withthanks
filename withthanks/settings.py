@@ -101,7 +101,6 @@ UNFOLD = {
     "SITE_ICON": None,
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
-
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
@@ -472,9 +471,9 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60       # 30 min hard kill (SIGKILL)
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 min hard kill (SIGKILL)
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 min soft limit — allows graceful cleanup
-CELERY_RESULT_EXPIRES = 60 * 60 * 24   # Keep results in Redis for 24 h then auto-expire
+CELERY_RESULT_EXPIRES = 60 * 60 * 24  # Keep results in Redis for 24 h then auto-expire
 
 # Celery Beat: use django-celery-beat database scheduler
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"

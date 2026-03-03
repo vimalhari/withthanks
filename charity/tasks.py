@@ -12,9 +12,9 @@ from django.conf import settings
 from django.db.models import Count
 from django.utils.timezone import now
 
+from .analytics_models import EmailEvent, VideoEvent
 from .exceptions import FatalTaskError
 from .models import DonationBatch, DonationJob, EmailTracking
-from .analytics_models import EmailEvent, VideoEvent
 from .services.video_build_service import VideoSpec, build_personalized_video
 from .services.video_pipeline_service import (
     StreamDelivery,
@@ -52,9 +52,7 @@ def validate_and_prep_job(self, job_id):
     Sets job status to "processing" and returns all resolved state as a plain
     JSON-serialisable dict for Stage 2 to consume.
     """
-    job = DonationJob.objects.select_related("charity", "campaign", "donation_batch").get(
-        id=job_id
-    )
+    job = DonationJob.objects.select_related("charity", "campaign", "donation_batch").get(id=job_id)
     client = job.charity
     campaign = job.campaign
 
@@ -230,9 +228,7 @@ def generate_video_for_job(self, context):
                     job.save(update_fields=["video_path"])
 
                     # VideoEvent created *after* successful generation.
-                    VideoEvent.objects.create(
-                        job=job, campaign=campaign, event_type="GENERATED"
-                    )
+                    VideoEvent.objects.create(job=job, campaign=campaign, event_type="GENERATED")
 
                 else:
                     # Default (non-personalised) video.
@@ -243,7 +239,11 @@ def generate_video_for_job(self, context):
                         )
                         is_card_only = True
                         template_name = "withthanks_card_only.html"
-                        card_r2_key = client.gratitude_card.name if (client and client.gratitude_card) else None
+                        card_r2_key = (
+                            client.gratitude_card.name
+                            if (client and client.gratitude_card)
+                            else None
+                        )
                         if card_r2_key:
                             local_card = download_base_video_to_tmp(card_r2_key)
                             intermediate_files.append(local_card)
@@ -305,9 +305,9 @@ def dispatch_email_for_job(self, context):
     is_card_only = context["is_card_only"]
 
     try:
-        job = DonationJob.objects.select_related(
-            "charity", "campaign", "donation_batch"
-        ).get(id=job_id)
+        job = DonationJob.objects.select_related("charity", "campaign", "donation_batch").get(
+            id=job_id
+        )
         client = job.charity
         campaign = job.campaign
         full_image_url = f"{server_url}{image_url}"
@@ -321,11 +321,13 @@ def dispatch_email_for_job(self, context):
             )
         else:
             stream_delivery = (
-                stream_safe_upload(
-                    final_video_path or "", meta_name=f"Job {job_id}"
+                (
+                    stream_safe_upload(final_video_path or "", meta_name=f"Job {job_id}")
+                    or StreamDelivery()
                 )
-                or StreamDelivery()
-            ) if final_video_path else StreamDelivery()
+                if final_video_path
+                else StreamDelivery()
+            )
 
         cf_stream_url = stream_delivery.playback_url or None
         video_url_link = resolve_public_video_url(
@@ -444,9 +446,7 @@ def dispatch_email_for_job(self, context):
         return {"status": "failed", "job_id": job_id}
 
     except Exception as exc:
-        logger.error(
-            "❌ Job %s Stage-3 failure: %s\n%s", job_id, exc, traceback.format_exc()
-        )
+        logger.error("❌ Job %s Stage-3 failure: %s\n%s", job_id, exc, traceback.format_exc())
         already_failed = False
         with contextlib.suppress(Exception):
             j = DonationJob.objects.get(id=job_id)
@@ -472,7 +472,7 @@ def dispatch_email_for_job(self, context):
 
 
 @shared_task(queue="default")
-def on_batch_complete(job_results, *, batch_id):  # noqa: ARG001
+def on_batch_complete(job_results, *, batch_id):
     """
     Chord callback fired after *all* per-job chains in a batch have finished.
 
@@ -559,6 +559,7 @@ def dispatch_donation_video_task(
     been migrated continue to work without code changes.
     """
     import warnings
+
     warnings.warn(
         "dispatch_donation_video_task is deprecated. "
         "Create a DonationJob directly and call process_donation_row instead.",
@@ -568,7 +569,8 @@ def dispatch_donation_video_task(
     logger.warning(
         "dispatch_donation_video_task is deprecated (charity_id=%s, donor_email=%s). "
         "Routing to process_donation_row via DonationJob.",
-        charity_id, donor_email,
+        charity_id,
+        donor_email,
     )
 
     try:
@@ -633,7 +635,12 @@ def batch_process_csv(self, batch_id):
         try:
             csv_binary = default_storage.open(batch.csv_filename, "rb")
         except (FileNotFoundError, Exception) as exc:
-            logger.error("Batch %s: CSV file not found in storage (%s): %s", batch_id, batch.csv_filename, exc)
+            logger.error(
+                "Batch %s: CSV file not found in storage (%s): %s",
+                batch_id,
+                batch.csv_filename,
+                exc,
+            )
             batch.status = DonationBatch.BatchStatus.FAILED
             batch.save(update_fields=["status"])
             return
@@ -645,12 +652,7 @@ def batch_process_csv(self, batch_id):
 
             jobs_to_create = []
             for row in reader:
-                name = (
-                    row.get("donor_name")
-                    or row.get("name")
-                    or row.get("full name")
-                    or "Donor"
-                )
+                name = row.get("donor_name") or row.get("name") or row.get("full name") or "Donor"
                 email = (
                     row.get("email")
                     or row.get("recipient email")
@@ -658,10 +660,7 @@ def batch_process_csv(self, batch_id):
                     or row.get("email address")
                 )
                 amount = (
-                    row.get("donation_amount")
-                    or row.get("amount")
-                    or row.get("donation")
-                    or "0"
+                    row.get("donation_amount") or row.get("amount") or row.get("donation") or "0"
                 )
 
                 if not email:
@@ -756,4 +755,3 @@ def cleanup_old_videos():
     from .services.cleanup_service import remove_old_videos
 
     return remove_old_videos()
-

@@ -64,9 +64,7 @@ def calculate_invoice_totals(invoice: Invoice) -> None:
     invoice.subtotal = subtotal
 
     invoice.discount_amount = (
-        (invoice.subtotal * invoice.discount_percent) / 100
-        if invoice.discount_percent > 0
-        else 0
+        (invoice.subtotal * invoice.discount_percent) / 100 if invoice.discount_percent > 0 else 0
     )
     taxable = invoice.subtotal - invoice.discount_amount
     invoice.tax_amount = (taxable * invoice.tax_percent) / 100 if invoice.tax_percent > 0 else 0

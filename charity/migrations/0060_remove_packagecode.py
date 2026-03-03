@@ -4,13 +4,12 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0059_donationjob_dedup_index_and_decimal_amount'),
+        ("charity", "0059_donationjob_dedup_index_and_decimal_amount"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='PackageCode',
+            name="PackageCode",
         ),
     ]

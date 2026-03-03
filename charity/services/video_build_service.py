@@ -131,7 +131,9 @@ def build_personalized_video(spec: VideoSpec) -> tuple[str, str]:
     )[:120]
 
     voiceover_path = generate_voiceover(
-        text=text, file_name=file_base, voice_id=spec.voice_id,
+        text=text,
+        file_name=file_base,
+        voice_id=spec.voice_id,
     )
 
     # --- Stitch video --------------------------------------------------- #

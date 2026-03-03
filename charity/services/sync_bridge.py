@@ -83,11 +83,7 @@ def sync_job_to_normalized_models(job) -> dict | None:
         else:
             send_kind = VideoSendLog.SendKind.PERSONALIZED
 
-        status = (
-            VideoSendLog.Status.SENT
-            if job.status == "success"
-            else VideoSendLog.Status.FAILED
-        )
+        status = VideoSendLog.Status.SENT if job.status == "success" else VideoSendLog.Status.FAILED
 
         campaign = job.campaign  # may be None
 

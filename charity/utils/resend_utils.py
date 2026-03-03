@@ -46,7 +46,6 @@ def _normalize_email(email: str) -> str:
     raise ValueError(f"Invalid email address: {email}")
 
 
-
 def send_video_email(
     to_email: str,
     file_path: str | None,
@@ -211,7 +210,7 @@ def send_video_email(
         # but we can wrap it in a retry loop.
 
         max_retries = 3
-        last_error = None
+        last_error: Exception = RuntimeError("All Resend send attempts failed")
 
         for attempt in range(max_retries):
             try:

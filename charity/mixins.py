@@ -112,9 +112,12 @@ class CharityMemberRequiredMixin(LoginRequiredMixin, ActiveCharityMixin):
         # Verify active membership.
         from .models import CharityMember
 
-        if self.charity and not CharityMember.objects.filter(
-            charity=self.charity, user=request.user, status="ACTIVE"
-        ).exists():
+        if (
+            self.charity
+            and not CharityMember.objects.filter(
+                charity=self.charity, user=request.user, status="ACTIVE"
+            ).exists()
+        ):
             messages.error(request, "You are not a member of the selected organisation.")
             return redirect("dashboard")
 

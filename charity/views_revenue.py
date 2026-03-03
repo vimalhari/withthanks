@@ -103,12 +103,11 @@ class RevenueIntelligenceAPI(LoginRequiredMixin, AnalyticsPermissionMixin, View)
 
         # Growth Rate Line (Rolling growth)
         growth_line = []
-        for i in range(len(chart_revenue)):
+        for i, curr in enumerate(chart_revenue):
             if i == 0:
                 growth_line.append(0)
             else:
                 prev = chart_revenue[i - 1]
-                curr = chart_revenue[i]
                 growth = ((curr - prev) / prev * 100) if prev > 0 else 0
                 growth_line.append(round(growth, 1))
 

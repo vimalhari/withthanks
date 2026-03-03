@@ -8,8 +8,8 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.generic import TemplateView, View
 
-from .models import Campaign, Charity, CharityMember
 from .analytics_models import CampaignStats, EmailEvent, VideoEvent
+from .models import Campaign, Charity, CharityMember
 from .utils.exports import export_analytics_csv, export_analytics_excel
 
 
@@ -330,7 +330,9 @@ class DeliveryDashboardView(AnalyticsBaseView):
 
             delivery_stats = email_qs.aggregate(
                 sent=Count("id", filter=Q(event_type="SENT")),
-                delivered=Count("id", filter=Q(event_type="SENT")),  # R2: no separate delivered state
+                delivered=Count(
+                    "id", filter=Q(event_type="SENT")
+                ),  # R2: no separate delivered state
                 bounced=Count("id", filter=Q(event_type="BOUNCED")),
                 failed=Count("id", filter=Q(event_type="FAILED")),
                 opened=Count("id", filter=Q(event_type="OPEN")),

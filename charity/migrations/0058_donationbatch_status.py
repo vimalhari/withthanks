@@ -4,15 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0057_cleanup_remove_fake_metrics_and_unsubscribe_event'),
+        ("charity", "0057_cleanup_remove_fake_metrics_and_unsubscribe_event"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='donationbatch',
-            name='status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('processing', 'Processing'), ('completed', 'Completed'), ('completed_with_errors', 'Completed with Errors'), ('failed', 'Failed')], db_index=True, default='pending', max_length=25),
+            model_name="donationbatch",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending"),
+                    ("processing", "Processing"),
+                    ("completed", "Completed"),
+                    ("completed_with_errors", "Completed with Errors"),
+                    ("failed", "Failed"),
+                ],
+                db_index=True,
+                default="pending",
+                max_length=25,
+            ),
         ),
     ]

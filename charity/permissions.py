@@ -25,9 +25,7 @@ class IsCharityMember(IsAuthenticated):
             return False
         if request.user.is_superuser:
             return True
-        return CharityMember.objects.filter(
-            user=request.user, status="ACTIVE"
-        ).exists()
+        return CharityMember.objects.filter(user=request.user, status="ACTIVE").exists()
 
 
 class IsCharityAdmin(IsAuthenticated):

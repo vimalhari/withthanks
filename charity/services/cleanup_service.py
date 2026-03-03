@@ -2,7 +2,7 @@
 Cloud storage cleanup logic.
 
 Prunes old voiceover cache files and generated video output files from R2
-using Django’s ``default_storage`` backend.  Nothing is read from or written
+using Django's ``default_storage`` backend.  Nothing is read from or written
 to the local filesystem.
 """
 

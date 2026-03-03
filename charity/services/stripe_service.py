@@ -117,9 +117,7 @@ def create_stripe_invoice(invoice: Invoice) -> str:
     invoice.stripe_invoice_id = stripe_invoice.id
     invoice.save(update_fields=["stripe_invoice_id"])
 
-    logger.info(
-        f"Created Stripe Invoice {stripe_invoice.id} for Invoice {invoice.invoice_number}"
-    )
+    logger.info(f"Created Stripe Invoice {stripe_invoice.id} for Invoice {invoice.invoice_number}")
     return stripe_invoice.id
 
 
@@ -147,9 +145,7 @@ def finalize_and_send_invoice(invoice: Invoice) -> str:
         invoice.status = "Sent"
     invoice.save(update_fields=["stripe_hosted_url", "stripe_pdf_url", "status"])
 
-    logger.info(
-        f"Sent Stripe Invoice {invoice.stripe_invoice_id} for {invoice.invoice_number}"
-    )
+    logger.info(f"Sent Stripe Invoice {invoice.stripe_invoice_id} for {invoice.invoice_number}")
     return invoice.stripe_hosted_url
 
 
@@ -180,9 +176,7 @@ def handle_webhook_event(payload: bytes, sig_header: str) -> dict:
     """
     stripe = _get_stripe()
 
-    event = stripe.Webhook.construct_event(
-        payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-    )
+    event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
 
     event_type = event["type"]
     data_object = event["data"]["object"]

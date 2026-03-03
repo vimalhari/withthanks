@@ -9,8 +9,8 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Campaign, DonationJob
 from .analytics_models import CampaignStats, VideoEvent
+from .models import Campaign, DonationJob
 
 logger = logging.getLogger(__name__)
 

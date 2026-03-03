@@ -4,19 +4,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0058_donationbatch_status'),
+        ("charity", "0058_donationbatch_status"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='donationjob',
-            name='donation_amount',
+            model_name="donationjob",
+            name="donation_amount",
             field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True),
         ),
         migrations.AddIndex(
-            model_name='donationjob',
-            index=models.Index(fields=['charity', 'email', 'status', 'completed_at'], name='donationjob_dedup_idx'),
+            model_name="donationjob",
+            index=models.Index(
+                fields=["charity", "email", "status", "completed_at"], name="donationjob_dedup_idx"
+            ),
         ),
     ]

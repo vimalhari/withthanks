@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
 from .analytics_models import EmailEvent, VideoEvent
+from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
 
 logger = logging.getLogger(__name__)
 
