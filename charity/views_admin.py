@@ -38,11 +38,15 @@ def api_clients(request):
             else Charity.objects.none()
         )
     )
+    client_id = request.GET.get("client_id")
+    if client_id:
+        clients = clients.filter(id=client_id)
     data = [
         {
             "id": str(c.id),
             "name": c.client_name,
             "billing_email": c.billing_email or c.contact_email or "",
+            "billing_address": c.billing_address or "",
         }
         for c in clients
     ]

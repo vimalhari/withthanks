@@ -158,70 +158,21 @@
                     <div class="mb-8">
                         <label class="form-label">Technical & Creative Services</label>
                         <div class="grid grid-cols-2 gap-3">
-                            {% with services="enable_qr_generation:QR Generation:£150:Campaign-wide QR codes,enable_batch_processing:Batch Processing:£200:Multi-batch automation,enable_email_sign_off:Email Sign Off:£50:Custom sign-off review,enable_pers_vo_amends:VO Amends:£55:Voiceover script changes,enable_text_amends:Text Amends:£30:Landing page text changes,enable_re_proof:RE-proof:£30:Second stage proofing,enable_add_programming:Add. Programming:£120:Custom logic requests,enable_data_cleaning:Data Cleaning:£60:Formatting & cleansing,enable_audio_cleanup:Audio Cleanup:£65:Client audio optimization,enable_analytics_report:Analytics Report:£30:Full insight breakdown,enable_bounce_log:Bounce Log:£30:Error tracking report,enable_add_donate_page:Donate Page:£50:Additional landing page" %}
-                            {% for svc in services|make_list %}{% endfor %}
-                            {% endwith %}
-
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_qr_generation.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_qr_generation" class="sr-only svc-chk" {% if form.enable_qr_generation.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">QR Generation (£150)</div>
-                                <div class="text-[11px] text-gray-400">Campaign-wide QR codes</div>
+                            {% for svc_name, svc_field, svc_price, svc_desc in services_meta %}
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand">
+                                <input type="checkbox" name="{{ svc_field }}" class="sr-only svc-chk" data-price="{{ svc_price }}">
+                                <div class="flex justify-between items-start gap-2">
+                                    <div>
+                                        <div class="font-bold text-gray-900">{{ svc_name }} (£{{ svc_price }})</div>
+                                        <div class="text-[11px] text-gray-400">{{ svc_desc }}</div>
+                                    </div>
+                                    <div class="svc-qty-wrap hidden items-center gap-1 shrink-0 mt-0.5">
+                                        <span class="text-[10px] text-gray-400 font-bold">&times;</span>
+                                        <input type="number" name="{{ svc_field }}_qty" value="1" min="1" class="svc-qty-inp w-10 text-center text-[12px] border border-gray-300 rounded py-0.5 bg-white" onclick="event.stopPropagation()">
+                                    </div>
+                                </div>
                             </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_batch_processing.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_batch_processing" class="sr-only svc-chk" {% if form.enable_batch_processing.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Batch Processing (£200)</div>
-                                <div class="text-[11px] text-gray-400">Multi-batch automation</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_email_sign_off.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_email_sign_off" class="sr-only svc-chk" {% if form.enable_email_sign_off.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Email Sign Off (£50)</div>
-                                <div class="text-[11px] text-gray-400">Custom sign-off review</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_pers_vo_amends.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_pers_vo_amends" class="sr-only svc-chk" {% if form.enable_pers_vo_amends.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">VO Amends (£55)</div>
-                                <div class="text-[11px] text-gray-400">Voiceover script changes</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_text_amends.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_text_amends" class="sr-only svc-chk" {% if form.enable_text_amends.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Text Amends (£30)</div>
-                                <div class="text-[11px] text-gray-400">Landing page text changes</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_re_proof.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_re_proof" class="sr-only svc-chk" {% if form.enable_re_proof.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">RE-proof (£30)</div>
-                                <div class="text-[11px] text-gray-400">Second stage proofing</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_add_programming.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_add_programming" class="sr-only svc-chk" {% if form.enable_add_programming.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Add. Programming (£120)</div>
-                                <div class="text-[11px] text-gray-400">Custom logic requests</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_data_cleaning.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_data_cleaning" class="sr-only svc-chk" {% if form.enable_data_cleaning.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Data Cleaning (£60)</div>
-                                <div class="text-[11px] text-gray-400">Formatting & cleansing</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_audio_cleanup.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_audio_cleanup" class="sr-only svc-chk" {% if form.enable_audio_cleanup.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Audio Cleanup (£65)</div>
-                                <div class="text-[11px] text-gray-400">Client audio optimization</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_analytics_report.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_analytics_report" class="sr-only svc-chk" {% if form.enable_analytics_report.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Analytics Report (£30)</div>
-                                <div class="text-[11px] text-gray-400">Full insight breakdown</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_bounce_log.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_bounce_log" class="sr-only svc-chk" {% if form.enable_bounce_log.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Bounce Log (£30)</div>
-                                <div class="text-[11px] text-gray-400">Error tracking report</div>
-                            </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_add_donate_page.value %}border-brand bg-brand/5{% endif %}">
-                                <input type="checkbox" name="enable_add_donate_page" class="sr-only svc-chk" {% if form.enable_add_donate_page.value %}checked{% endif %}>
-                                <div class="font-bold text-gray-900">Donate Page (£50)</div>
-                                <div class="text-[11px] text-gray-400">Additional landing page</div>
-                            </label>
+                            {% endfor %}
                         </div>
                     </div>
 
@@ -451,11 +402,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.querySelectorAll('.svc-chk').forEach(chk => {
             if (chk.checked) {
-                const price = prices[chk.name];
-                if (price !== undefined) {
-                    total += price;
-                    itemsHtml += `<div class="flex justify-between text-xs"><span class="text-gray-400">${labels[chk.name]}</span><span class="font-semibold">£${price.toFixed(2)}</span></div>`;
-                }
+                const price = prices[chk.name] !== undefined ? prices[chk.name] : parseFloat(chk.dataset.price || 0);
+                const qtyInp = chk.closest('.pkg-card')?.querySelector('.svc-qty-inp');
+                const qty = qtyInp ? Math.max(1, parseInt(qtyInp.value) || 1) : 1;
+                const lineTotal = price * qty;
+                total += lineTotal;
+                const label = labels[chk.name] || chk.name;
+                const qtyLabel = qty > 1 ? ` ×${qty}` : '';
+                itemsHtml += `<div class="flex justify-between text-xs"><span class="text-gray-400">${label}${qtyLabel}</span><span class="font-semibold">£${lineTotal.toFixed(2)}</span></div>`;
             }
         });
 
@@ -486,11 +440,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (card) {
                     card.classList.toggle('border-brand', input.checked);
                     card.classList.toggle('bg-brand/5', input.checked);
+                    const qtyWrap = card.querySelector('.svc-qty-wrap');
+                    if (qtyWrap) {
+                        qtyWrap.classList.toggle('hidden', !input.checked);
+                        qtyWrap.classList.toggle('flex', input.checked);
+                    }
                 }
             }
             updateLiveSummary();
         });
         if (input.type === 'number') input.addEventListener('input', updateLiveSummary);
+    });
+
+    document.querySelectorAll('.svc-qty-inp').forEach(inp => {
+        inp.addEventListener('input', updateLiveSummary);
     });
 
     if (liveSummary) updateLiveSummary();

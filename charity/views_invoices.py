@@ -125,6 +125,23 @@ def create_invoice_view(request):
 
     context = {"step": step, "wizard_data": wizard_data, "wizard_charity": wizard_charity}
 
+    # Services metadata for the Step 2 template loop
+    services_meta = [
+        ("QR Generation", "enable_qr_generation", 150, "Campaign-wide QR codes"),
+        ("Batch Processing", "enable_batch_processing", 200, "Multi-batch automation"),
+        ("Email Sign Off", "enable_email_sign_off", 50, "Custom sign-off review"),
+        ("VO Amends", "enable_pers_vo_amends", 55, "Voiceover script changes"),
+        ("Text Amends", "enable_text_amends", 30, "Landing page text changes"),
+        ("RE-proof", "enable_re_proof", 30, "Second stage proofing"),
+        ("Add. Programming", "enable_add_programming", 120, "Custom logic requests"),
+        ("Data Cleaning", "enable_data_cleaning", 60, "Formatting & cleansing"),
+        ("Audio Cleanup", "enable_audio_cleanup", 65, "Client audio optimization"),
+        ("Analytics Report", "enable_analytics_report", 30, "Full insight breakdown"),
+        ("Bounce Log", "enable_bounce_log", 30, "Error tracking report"),
+        ("Donate Page", "enable_add_donate_page", 50, "Additional landing page"),
+    ]
+    context["services_meta"] = services_meta
+
     if request.method == "POST":
         action = request.POST.get("action", "next")
         if action == "back":
@@ -251,12 +268,13 @@ def create_invoice_view(request):
                 ]
                 for field, name, price in service_prices:
                     if d.get(field):
+                        qty = max(1, int(request.POST.get(f"{field}_qty") or 1))
                         line_items.append(
                             {
                                 "description": name,
-                                "quantity": 1,
+                                "quantity": qty,
                                 "unit_price": price,
-                                "total": price,
+                                "total": price * qty,
                             }
                         )
 
