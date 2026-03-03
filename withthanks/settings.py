@@ -27,6 +27,7 @@ _local_commands = {
     "collectstatic",
     "seed_services",
     "seed_data",
+    "seed_analytics",
     "tailwind",
 }
 _is_local_command = any(cmd in sys.argv for cmd in _local_commands)
