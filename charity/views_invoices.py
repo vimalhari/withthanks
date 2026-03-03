@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import InvoiceForm, InvoiceStep1Form, InvoiceStep2Form
-from .models import Campaign, Charity, Invoice, InvoiceLineItem
+from .models import Campaign, Charity, DonationBatch, DonationJob, Invoice, InvoiceLineItem
 from .utils.access_control import get_active_charity
 
 logger = logging.getLogger(__name__)
@@ -86,8 +86,16 @@ def invoices_view(request):
     )
 
 
-def get_slab_price(volume, personalized=True):
-    """Calculate base campaign price based on volume and personalization"""
+def get_slab_price(volume: int, personalized: bool = True) -> "float | str":
+    """Calculate base campaign price based on volume and personalization.
+
+    Args:
+        volume: Number of DonationJob records in the billing period.
+        personalized: True for PERSONALIZED video mode, False for TEMPLATE.
+
+    Returns:
+        Price as a float, or the string ``"POA"`` when volume > 3000.
+    """
     slabs = {
         "personalized": [(99, 110), (300, 265), (500, 375), (1000, 575), (3000, 1025)],
         "standard":     [(99, 99),  (300, 250), (500, 350), (1000, 550), (3000, 1000)],
@@ -129,22 +137,54 @@ def create_invoice_view(request):
             form = InvoiceStep1Form(request.POST, charity=wizard_charity)
             if form.is_valid():
                 d = form.cleaned_data
+                campaign = d["campaign"]
+                start_date = d["billing_start_date"]
+                end_date = d["billing_end_date"]
+
+                # Auto-detect personalization from campaign's video mode
+                is_personalized = campaign.video_mode == Campaign.VideoMode.PERSONALIZED
+
+                # Auto-calculate volume from DonationJob records in the date range
+                campaign_volume = DonationJob.objects.filter(
+                    campaign=campaign,
+                    created_at__date__gte=start_date,
+                    created_at__date__lte=end_date,
+                ).count()
+
+                # Auto-calculate CSV file count (exclude manual entries), £10/file
+                auto_csv_file_qty = DonationBatch.objects.filter(
+                    campaign=campaign,
+                    created_at__date__gte=start_date,
+                    created_at__date__lte=end_date,
+                ).exclude(csv_filename__icontains="manual_entry").count()
+
+                # Auto-set one-time package defaults from campaign appeal type
+                auto_vdm_package = "standard" if campaign.appeal_type == "VDM" else "none"
+                auto_gratitude_card = campaign.appeal_type == "WithThanks"
+
                 wizard_data.update(
                     {
                         "client_id": str(d["client"].id),
-                        "campaign_id": str(d["campaign"].id),
-                        "campaign_name": d["campaign"].name,
-                        "period_start": str(d["billing_start_date"]),
-                        "period_end": str(d["billing_end_date"]),
-                        "campaign_volume": d["campaign_volume"],
-                        "pricing_tier": d["pricing_tier"],
+                        "campaign_id": str(campaign.id),
+                        "campaign_name": campaign.name,
+                        "campaign_appeal_type": campaign.appeal_type or "",
+                        "period_start": str(start_date),
+                        "period_end": str(end_date),
+                        "campaign_volume": campaign_volume,
+                        "is_personalized": is_personalized,
+                        # Legacy field kept for Invoice model compatibility
+                        "pricing_tier": "premium" if is_personalized else "standard",
                         "due_days": d["payment_due_days"],
                         "billing_email": d["billing_email"],
                         "billing_address": d["billing_address"],
+                        # Auto-detected defaults for Step 2
+                        "auto_csv_file_qty": auto_csv_file_qty,
+                        "auto_vdm_package": auto_vdm_package,
+                        "auto_gratitude_card": auto_gratitude_card,
                     }
                 )
                 wizard_data["base_campaign_price"] = get_slab_price(
-                    d["campaign_volume"], d["pricing_tier"]
+                    campaign_volume, is_personalized
                 )
                 step = 2
             else:
@@ -159,13 +199,21 @@ def create_invoice_view(request):
 
                 # Logic to generate line items...
                 line_items = []
-                base_price = wizard_data.get("base_campaign_price") or 0
+                raw_base = wizard_data.get("base_campaign_price")
+                is_poa = raw_base == "POA"
+                base_price = 0.0 if is_poa else float(raw_base or 0)
+                campaign_desc = wizard_data.get("campaign_name", "")
+                base_description = (
+                    f"Campaign Charge — POA ({campaign_desc})"
+                    if is_poa
+                    else f"Campaign Charge ({campaign_desc})"
+                )
                 line_items.append(
                     {
-                        "description": f"Campaign Charge ({wizard_data['campaign_name']})",
+                        "description": base_description,
                         "quantity": 1,
-                        "unit_price": float(base_price),
-                        "total": float(base_price),
+                        "unit_price": base_price,
+                        "total": base_price,
                     }
                 )
                 if d["setup_costs"] > 0:
@@ -337,8 +385,6 @@ def create_invoice_view(request):
                 "campaign_id",
                 "period_start",
                 "period_end",
-                "campaign_volume",
-                "pricing_tier",
                 "due_days",
                 "billing_email",
                 "billing_address",
@@ -350,7 +396,18 @@ def create_invoice_view(request):
             context["form"] = InvoiceStep1Form(initial=initial, charity=wizard_charity)
     elif step == 2:
         if "form" not in context:
-            context["form"] = InvoiceStep2Form(initial=wizard_data)
+            # Pre-populate with auto-detected values on first visit to Step 2.
+            # On back-navigation from Step 3, wizard_data already holds the user's
+            # selections (csv_file_qty, vdm_package, enable_gratitude_card), so the
+            # auto values are only used as fallbacks when those keys are absent.
+            step2_initial = dict(wizard_data)
+            if "csv_file_qty" not in step2_initial:
+                step2_initial["csv_file_qty"] = wizard_data.get("auto_csv_file_qty", 0)
+            if "vdm_package" not in step2_initial:
+                step2_initial["vdm_package"] = wizard_data.get("auto_vdm_package", "none")
+            if "enable_gratitude_card" not in step2_initial:
+                step2_initial["enable_gratitude_card"] = wizard_data.get("auto_gratitude_card", False)
+            context["form"] = InvoiceStep2Form(initial=step2_initial)
     elif step == 3:
         line_items = wizard_data.get("line_items", [])
         subtotal = sum(item.get("total", 0) for item in line_items)

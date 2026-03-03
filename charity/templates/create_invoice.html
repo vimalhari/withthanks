@@ -67,6 +67,10 @@
                             <label class="form-label">Client</label>
                             {{ form.client }}
                         </div>
+                        <div class="col-span-2">
+                            <label class="form-label">Campaign</label>
+                            {{ form.campaign }}
+                        </div>
                         <div>
                             <label class="form-label">Billing Start Date</label>
                             {{ form.billing_start_date }}
@@ -78,20 +82,6 @@
                         <div>
                             <label class="form-label">Payment Due Within (Days)</label>
                             {{ form.payment_due_days }}
-                        </div>
-                    </div>
-
-                    <div class="mt-5">
-                        <div class="flex gap-6 items-center mb-6">
-                            <label class="form-label mb-0">Pricing Tier</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-                                    <input type="radio" name="pricing_tier" value="standard" {% if form.pricing_tier.value == 'standard' %}checked{% endif %} class="accent-brand"> Standard
-                                </label>
-                                <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-                                    <input type="radio" name="pricing_tier" value="premium" {% if form.pricing_tier.value == 'premium' %}checked{% endif %} class="accent-brand"> Premium
-                                </label>
-                            </div>
                         </div>
                     </div>
 
@@ -107,16 +97,35 @@
                         </div>
                     </div>
 
-                    <div id="slabPreview" class="bg-brand/5 border border-brand rounded-lg p-4 mt-3 flex justify-between items-center">
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mt-5 flex items-start gap-3">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-indigo-500 mt-0.5 shrink-0"></i>
                         <div>
-                            <div class="text-[11px] font-bold text-gray-700 uppercase">Estimated Unit Price</div>
-                            <div class="text-sm text-gray-400">Based on volume slab pricing</div>
+                            <div class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mb-0.5">Auto-Calculation</div>
+                            <div class="text-xs text-indigo-600">Campaign volume, pricing tier, VDM package, and Gratitude Card will be auto-detected from the selected Campaign and date range when you continue.</div>
                         </div>
-                        <div id="unitPriceDisplay" class="text-2xl font-extrabold text-brand">£{{ base_campaign_price|default:"0.00" }}</div>
                     </div>
 
                     {% elif step == 2 %}
                     <h2 class="text-xl font-extrabold text-gray-900 tracking-tight mb-6">Services & Add-Ons</h2>
+
+                    <!-- Auto-detected summary card -->
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-8 grid grid-cols-3 gap-4">
+                        <div>
+                            <div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Detected Volume</div>
+                            <div class="text-xl font-extrabold text-gray-900">{{ wizard_data.campaign_volume }}</div>
+                            <div class="text-[10px] text-gray-400">donation jobs in period</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Pricing Type</div>
+                            <div class="text-xl font-extrabold text-gray-900">{% if wizard_data.is_personalized %}Personalised{% else %}Standard{% endif %}</div>
+                            <div class="text-[10px] text-gray-400">from campaign video mode</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Base Campaign Price</div>
+                            <div class="text-xl font-extrabold text-brand">{% if wizard_data.base_campaign_price == 'POA' %}POA{% else %}£{{ wizard_data.base_campaign_price|default:'0' }}{% endif %}</div>
+                            <div class="text-[10px] text-gray-400">auto-calculated slab price</div>
+                        </div>
+                    </div>
 
                     <!-- Core Campaign Upgrades -->
                     <div class="mb-8">
@@ -409,8 +418,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!liveSummary) return;
         liveSummary.classList.remove('hidden');
 
-        let total = parseFloat("{{ wizard_data.base_campaign_price|default:0 }}");
-        let itemsHtml = `<div class="flex justify-between text-xs"><span class="text-gray-400">Base Campaign</span><span class="font-semibold">£${total.toFixed(2)}</span></div>`;
+        let rawBase = "{{ wizard_data.base_campaign_price|default:0 }}";
+        let total = (rawBase === "POA") ? 0 : parseFloat(rawBase) || 0;
+        let itemsHtml = `<div class="flex justify-between text-xs"><span class="text-gray-400">Base Campaign</span><span class="font-semibold">${rawBase === "POA" ? "POA" : "£" + total.toFixed(2)}</span></div>`;
 
         const prices = {
             'vdm_package_standard': 575, 'vdm_package_client_supplied': 450,

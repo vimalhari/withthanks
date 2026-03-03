@@ -99,13 +99,6 @@ class InvoiceStep1Form(forms.Form):
     billing_end_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"})
     )
-    campaign_volume = forms.IntegerField(
-        min_value=0, widget=forms.NumberInput(attrs={"class": "form-control"})
-    )
-    pricing_tier = forms.ChoiceField(
-        choices=[("standard", "Standard"), ("premium", "Premium")],
-        widget=forms.Select(attrs={"class": "form-select"}),
-    )
     payment_due_days = forms.IntegerField(
         initial=30, widget=forms.NumberInput(attrs={"class": "form-control"})
     )
