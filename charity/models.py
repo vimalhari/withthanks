@@ -412,19 +412,19 @@ class DonationJob(models.Model):
 
     @property
     def video_url(self):
+        """Return the cloud URL for this job's video (R2 or Cloudflare Stream)."""
         if not self.video_path:
             return None
-        # Handle absolute paths by making them relative to MEDIA_ROOT
-        from django.conf import settings
-
         path_str = str(self.video_path)
-        if os.path.isabs(path_str):
-            try:
-                rel_path = os.path.relpath(path_str, settings.MEDIA_ROOT)
-                return os.path.join(settings.MEDIA_URL, rel_path).replace("\\", "/")
-            except ValueError:
-                return None
-        return os.path.join(settings.MEDIA_URL, path_str).replace("\\", "/")
+        # video_path is always a full cloud URL (R2 or Stream) — return it directly.
+        if path_str.startswith(("http://", "https://")):
+            return path_str
+        # Legacy: relative R2 key — construct URL via storage backend.
+        from django.core.files.storage import default_storage
+        try:
+            return default_storage.url(path_str)
+        except Exception:
+            return None
 
     class Meta:
         indexes = [

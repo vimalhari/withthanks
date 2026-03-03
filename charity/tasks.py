@@ -1,5 +1,6 @@
 import contextlib
 import csv
+import io
 import logging
 import os
 import time
@@ -67,17 +68,17 @@ def validate_and_prep_job(self, job_id):
 
     logger.info("Prep Job %s — mode: %s", job_id, mode)
 
-    # Resolve base video path
+    # Resolve base video R2 storage key (use .name not .path — no local filesystem).
     base_video_path = None
     if campaign:
         if mode == "VDM" and campaign.charity_video:
-            base_video_path = campaign.charity_video.path
+            base_video_path = campaign.charity_video.name
         elif mode == "WithThanks" and campaign.gratitude_video:
-            base_video_path = campaign.gratitude_video.path
+            base_video_path = campaign.gratitude_video.name
         elif campaign.video_template_override:
-            base_video_path = campaign.video_template_override.path
+            base_video_path = campaign.video_template_override.name
     if not base_video_path and client and client.default_template_video:
-        base_video_path = client.default_template_video.path
+        base_video_path = client.default_template_video.name
 
     # Per-mode template / image defaults
     is_card_only = False
@@ -155,31 +156,44 @@ def generate_video_for_job(self, context):
     final_video_path = None
     intermediate_files = []
 
+    from .utils.video_utils import download_base_video_to_tmp, upload_output_to_r2
+
     try:
         if mode == "VDM":
-            if not base_video_path or not os.path.exists(base_video_path):
+            if not base_video_path:
                 raise FatalTaskError(f"Base video template missing for VDM Job {job_id}")
-            final_video_path = base_video_path
+            # Download R2 key to /tmp/ so Stage 3 (Stream upload) has a local file.
+            local_base = download_base_video_to_tmp(base_video_path)
+            intermediate_files.append(local_base)
+            final_video_path = local_base
 
         elif mode == "Gratitude":
-            if not base_video_path or not os.path.exists(base_video_path):
+            if not base_video_path:
                 if campaign and campaign.gratitude_video:
-                    base_video_path = campaign.gratitude_video.path
+                    base_video_path = campaign.gratitude_video.name
                 elif campaign and campaign.charity_video:
-                    base_video_path = campaign.charity_video.path
-            final_video_path = base_video_path
+                    base_video_path = campaign.charity_video.name
+            if base_video_path:
+                local_base = download_base_video_to_tmp(base_video_path)
+                intermediate_files.append(local_base)
+                final_video_path = local_base
 
         elif mode == "WithThanks":
             if is_card_only:
+                card_r2_key = None
                 if campaign and campaign.gratitude_video:
-                    final_video_path = campaign.gratitude_video.path
+                    card_r2_key = campaign.gratitude_video.name
                 elif client and client.gratitude_card:
-                    final_video_path = client.gratitude_card.path
+                    card_r2_key = client.gratitude_card.name
+                if card_r2_key:
+                    local_card = download_base_video_to_tmp(card_r2_key)
+                    intermediate_files.append(local_card)
+                    final_video_path = local_card
                 # else None — template falls back to a default image
             else:
                 is_personalized = campaign.is_personalized if campaign else False
                 if is_personalized:
-                    if not base_video_path or not os.path.exists(base_video_path):
+                    if not base_video_path:
                         raise FatalTaskError(
                             f"Base video template missing for stitching Job {job_id}"
                         )
@@ -190,10 +204,9 @@ def generate_video_for_job(self, context):
                     elif client and client.default_voiceover_script:
                         raw_script = client.default_voiceover_script
 
-                    # Ensure base video is on this worker's local filesystem
-                    from .utils.video_utils import download_base_video_to_tmp, upload_output_to_r2
-
+                    # Download base video from R2 to /tmp/.
                     local_base = download_base_video_to_tmp(base_video_path)
+                    intermediate_files.append(local_base)
 
                     spec = VideoSpec(
                         donor_name=str(job.donor_name),
@@ -208,7 +221,7 @@ def generate_video_for_job(self, context):
                     final_video_path, tts_path = build_personalized_video(spec)
                     intermediate_files.append(tts_path)
 
-                    # Upload to R2 immediately so Stage 3 retries are idempotent
+                    # Upload generated video to R2 immediately so Stage 3 retries are idempotent.
                     r2_url = upload_output_to_r2(
                         final_video_path,
                         f"videos/{os.path.basename(final_video_path)}",
@@ -216,32 +229,29 @@ def generate_video_for_job(self, context):
                     job.video_path = r2_url
                     job.save(update_fields=["video_path"])
 
-                    # Clean up the /tmp copy of the base video
-                    if local_base != base_video_path:
-                        with contextlib.suppress(Exception):
-                            os.remove(local_base)
-
-                    # VideoEvent created *after* successful generation
+                    # VideoEvent created *after* successful generation.
                     VideoEvent.objects.create(
                         job=job, campaign=campaign, event_type="GENERATED"
                     )
 
                 else:
-                    # Default (non-personalised) video
-                    if not base_video_path or not os.path.exists(base_video_path):
+                    # Default (non-personalised) video.
+                    if not base_video_path:
                         logger.warning(
                             "Job %s: base video missing for default mode — card-only fallback.",
                             job_id,
                         )
                         is_card_only = True
                         template_name = "withthanks_card_only.html"
-                        final_video_path = (
-                            client.gratitude_card.path
-                            if (client and client.gratitude_card)
-                            else None
-                        )
+                        card_r2_key = client.gratitude_card.name if (client and client.gratitude_card) else None
+                        if card_r2_key:
+                            local_card = download_base_video_to_tmp(card_r2_key)
+                            intermediate_files.append(local_card)
+                            final_video_path = local_card
                     else:
-                        final_video_path = base_video_path
+                        local_base = download_base_video_to_tmp(base_video_path)
+                        intermediate_files.append(local_base)
+                        final_video_path = local_base
 
     except FatalTaskError:
         with contextlib.suppress(Exception):
@@ -293,7 +303,6 @@ def dispatch_email_for_job(self, context):
     image_url = context["image_url"]
     server_url = context["server_url"]
     is_card_only = context["is_card_only"]
-    base_video_path = context.get("base_video_path")
 
     try:
         job = DonationJob.objects.select_related(
@@ -412,11 +421,13 @@ def dispatch_email_for_job(self, context):
         job.completed_at = now()
         job.save()
 
-        # Clean up intermediate TTS / tmp files — never the base video
-        if final_video_path and final_video_path != base_video_path:
-            cleanup_intermediate(intermediate_files, final_video_path)
-        else:
-            cleanup_intermediate(intermediate_files, None)
+        # Clean up ALL /tmp/ files — intermediate TTS, downloaded base copies, and
+        # generated output (already uploaded to R2/Stream before this point).
+        # final_video_path is added to the list so it is also removed.
+        all_tmp = list(intermediate_files)
+        if final_video_path and final_video_path not in all_tmp:
+            all_tmp.append(final_video_path)
+        cleanup_intermediate(all_tmp, None)
 
         logger.info("✅ Job %s success in %ss", job_id, generation_time)
         sync_job_to_normalized_models(job)
@@ -619,19 +630,15 @@ def batch_process_csv(self, batch_id):
 
         from django.core.files.storage import default_storage
 
-        file_path = (
-            default_storage.path(batch.csv_filename)
-            if not os.path.isabs(batch.csv_filename)
-            else batch.csv_filename
-        )
-
-        if not os.path.exists(file_path):
-            logger.error("Batch %s: CSV file not found at %s", batch_id, file_path)
+        try:
+            csv_binary = default_storage.open(batch.csv_filename, "rb")
+        except (FileNotFoundError, Exception) as exc:
+            logger.error("Batch %s: CSV file not found in storage (%s): %s", batch_id, batch.csv_filename, exc)
             batch.status = DonationBatch.BatchStatus.FAILED
             batch.save(update_fields=["status"])
             return
 
-        with open(file_path, encoding="utf-8-sig") as f:
+        with io.TextIOWrapper(csv_binary, encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             if reader.fieldnames:
                 reader.fieldnames = [h.strip().lower() for h in reader.fieldnames]

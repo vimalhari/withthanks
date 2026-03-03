@@ -80,22 +80,9 @@ def send_video_email(
 
     server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com")
 
+    # video_url is used only as a fallback when no Stream URL is available;
+    # the caller should prefer passing an html kwarg with Cloud Stream URLs.
     video_url = ""
-    if file:
-        try:
-            # Calculate relative path from MEDIA_ROOT to support any subdirectory (outputs, clients, etc)
-            rel_path = os.path.relpath(file, settings.MEDIA_ROOT)
-            clean_rel_path = rel_path.replace("\\", "/")
-            video_url = f"{server_url}{settings.MEDIA_URL}{clean_rel_path}".replace("//", "/")
-
-            # Double check server_url doesn't double slash with MEDIA_URL if MEDIA_URL is just /media/
-            # Simple robust construction:
-            s_url = server_url.rstrip("/")
-            m_url = settings.MEDIA_URL.strip("/")
-            video_url = f"{s_url}/{m_url}/{clean_rel_path}"
-        except ValueError:
-            # Fallback if file is not inside MEDIA_ROOT (e.g. temp dir)
-            video_url = f"{server_url}/media/outputs/{file.name}"
 
     tracking_pixel_url = f"{server_url}/track/email/{job_id}/"
     unsubscribe_url = f"{server_url}/charity/unsubscribe/{job_id}/"

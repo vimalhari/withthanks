@@ -1,5 +1,4 @@
 import logging
-import os
 import subprocess
 import time
 import uuid
@@ -56,13 +55,13 @@ def stitch_voice_and_overlay(
     output_dir.mkdir(parents=True, exist_ok=True)
     final_path = output_dir / out_filename
 
-    # If input_video is absolute, use it; otherwise assume relative to BASE_VIDEO_PATH's parent or similar
-    # The original code assumed relative to settings.MEDIA_ROOT/base_videos
-    # We'll stick to that logic unless it looks like an absolute path
-    if Path(input_video).is_absolute():
-        input_video_path = Path(input_video)
-    else:
-        input_video_path = Path(settings.MEDIA_ROOT) / "base_videos" / input_video
+    # input_video must always be an absolute local path (guaranteed by download_base_video_to_tmp).
+    input_video_path = Path(input_video)
+    if not input_video_path.is_absolute():
+        raise ValueError(
+            f"stitch_voice_and_overlay requires an absolute input_video path, got: {input_video!r}. "
+            "Call download_base_video_to_tmp() first to fetch the file from R2 into /tmp/."
+        )
 
     tts_mp3_path = Path(tts_mp3)
 
@@ -240,28 +239,14 @@ def merge_video_audio_no_reencode(
 
 def download_base_video_to_tmp(base_video_path: str) -> str:
     """
-    Make the base video available on the local filesystem.
+    Stream a base video from R2 (via ``default_storage``) into a unique
+    ``/tmp/`` file and return that path for FFmpeg to consume.
 
-    When Cloudflare R2 storage is configured (``CLOUDFLARE_R2_BUCKET_NAME``
-    is set) and *base_video_path* is not already an absolute local path that
-    exists on disk, the file is streamed from R2 (via Django's
-    ``default_storage``) into a unique ``/tmp/`` file so that FFmpeg workers
-    remain stateless — no shared NFS/EFS mount required.
-
-    In local-dev environments where R2 is not configured, the path is
-    returned unchanged so the existing behaviour is preserved.
-
-    Returns the local path to use as the FFmpeg input.
+    R2 is unconditionally the storage backend — there is no local-filesystem
+    fallback.  Every Celery worker downloads the file fresh on each task so
+    that no shared volume mount is required.
     """
     from django.core.files.storage import default_storage
-
-    # Already an accessible absolute path — no download needed
-    if os.path.isabs(base_video_path) and os.path.exists(base_video_path):
-        return base_video_path
-
-    # No R2 bucket configured — fall back to treating the path as local
-    if not getattr(settings, "CLOUDFLARE_R2_BUCKET_NAME", None):
-        return base_video_path
 
     tmp_path = f"/tmp/{uuid.uuid4().hex}_base.mp4"
     logger.info("Downloading base video from R2: %s → %s", base_video_path, tmp_path)

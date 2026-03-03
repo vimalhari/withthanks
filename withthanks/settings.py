@@ -401,15 +401,8 @@ MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 # ------------------------------------------------------------
 # Video processing paths
 # ------------------------------------------------------------
-# Base video used when no campaign VideoTemplate is configured.
+# Base video fallback path (used only for local dev without R2).
 BASE_VIDEO_PATH = MEDIA_ROOT / "base_videos" / "newbase3.mp4"
-
-# Output directory for generated / stitched videos.
-VIDEO_OUTPUT_DIR = MEDIA_ROOT / "videos"
-try:
-    VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-except Exception as _e:
-    print(f"⚠️ Could not create VIDEO_OUTPUT_DIR: {_e}")
 
 # ------------------------------------------------------------
 # Cloudflare Stream
@@ -614,15 +607,9 @@ SERVER_BASE_URL = os.environ.get("SERVER_BASE_URL", "http://127.0.0.1:8000")
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", ELEVENLABS_DEFAULT_VOICE_ID)
 
 # ------------------------------------------------------------
-# Ensure media folders exist
+# Ensure base media root exists (R2 handles all sub-directories)
 # ------------------------------------------------------------
 try:
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
-    (MEDIA_ROOT / "videos").mkdir(parents=True, exist_ok=True)
-    (MEDIA_ROOT / "voiceovers").mkdir(parents=True, exist_ok=True)
-    (MEDIA_ROOT / "base_videos").mkdir(parents=True, exist_ok=True)
-    (MEDIA_ROOT / "temp").mkdir(parents=True, exist_ok=True)
-    (MEDIA_ROOT / "outputs").mkdir(parents=True, exist_ok=True)
-    (MEDIA_ROOT / "voiceover_cache").mkdir(parents=True, exist_ok=True)
 except Exception as _e:
-    print(f"⚠️ Could not ensure media folders exist: {_e}")
+    print(f"⚠️ Could not ensure MEDIA_ROOT exists: {_e}")

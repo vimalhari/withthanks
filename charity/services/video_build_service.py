@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import logging
 import re
+import tempfile
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from django.conf import settings
 from django.utils import timezone
 
 from charity.utils.filenames import safe_filename
@@ -116,7 +116,14 @@ def build_personalized_video(spec: VideoSpec) -> tuple[str, str]:
         text = default_personalized_text(spec.donor_name, spec.donation_amount)
 
     # --- Resolve base video --------------------------------------------- #
-    input_video = spec.base_video_path or str(settings.BASE_VIDEO_PATH)
+    # base_video_path must be an absolute /tmp/ path (downloaded from R2 by the caller).
+    if not spec.base_video_path:
+        raise ValueError(
+            "VideoSpec.base_video_path is required. "
+            "Download the base video from R2 via download_base_video_to_tmp() before calling "
+            "build_personalized_video()."
+        )
+    input_video = spec.base_video_path
 
     # --- Generate TTS --------------------------------------------------- #
     file_base = safe_filename(
@@ -128,12 +135,14 @@ def build_personalized_video(spec: VideoSpec) -> tuple[str, str]:
     )
 
     # --- Stitch video --------------------------------------------------- #
+    # Write output to an isolated /tmp/ directory — nothing goes to MEDIA_ROOT.
+    tmp_output_dir = tempfile.mkdtemp(prefix="wt_video_")
     output_path, _elapsed = stitch_voice_and_overlay(
         input_video=input_video,
         tts_mp3=voiceover_path,
         overlay_text=spec.overlay_text if spec.overlay_text is not None else text,
         out_filename=f"{file_base}.mp4",
-        output_dir=settings.VIDEO_OUTPUT_DIR,
+        output_dir=tmp_output_dir,
         intro_duration=spec.intro_duration,
         logo_path=spec.logo_path,
     )

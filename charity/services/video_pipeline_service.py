@@ -196,23 +196,10 @@ def resolve_public_video_url(
     Return the public-facing URL to embed in the outbound email.
 
     Prefers the Cloudflare Stream CDN URL when available; falls back to
-    constructing a server-relative media URL from the local file path.
+    ``final_video_path`` which is now always an R2 URL (never a local path).
     """
     if stream_delivery.is_uploaded:
         return stream_delivery.playback_url
 
-    if not final_video_path:
-        return ""
-
-    import os
-
-    try:
-        rel_path = os.path.relpath(final_video_path, settings.MEDIA_ROOT)
-        clean_rel = rel_path.replace("\\", "/")
-        s_url = server_url.rstrip("/")
-        m_url = settings.MEDIA_URL.strip("/")
-        return f"{s_url}/{m_url}/{clean_rel}"
-    except ValueError:
-        import os.path
-
-        return f"{server_url}/media/outputs/{os.path.basename(final_video_path)}"
+    # final_video_path is an R2 URL when set; return it directly.
+    return final_video_path or ""
