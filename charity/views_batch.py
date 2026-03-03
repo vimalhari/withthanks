@@ -61,7 +61,7 @@ def upload_csv_and_process(request):
     """Upload CSV and enqueue Celery tasks (Standard + Campaign Blast)."""
     current_charity = get_active_charity(request)
     if not current_charity:
-        return redirect("dashboard" if request.user.is_superuser else "client_setup")
+        return redirect("dashboard")
 
     if request.method == "POST":
         # MODE 1: CAMPAIGN BLAST
@@ -315,7 +315,7 @@ def export_donation_report(request):
     """Export DonationJob records as CSV."""
     current_charity = get_active_charity(request)
     if not current_charity and not request.user.is_superuser:
-        return redirect("client_setup")
+        return redirect("dashboard")
 
     jobs = (
         DonationJob.objects.filter(donation_batch__charity=current_charity)

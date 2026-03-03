@@ -23,7 +23,7 @@ def invoices_view(request):
     """
     charity = get_active_charity(request)
     if not charity and not request.user.is_superuser:
-        return redirect("client_setup")
+        return redirect("dashboard")
 
     # Base queryset with optimization
     if not charity:
@@ -370,7 +370,7 @@ def create_invoice_view(request):
 def invoice_detail_view(request, invoice_id):
     charity = get_active_charity(request)
     if not charity and not request.user.is_superuser:
-        return redirect("client_setup")
+        return redirect("dashboard")
     if request.user.is_superuser and not charity:
         invoice = get_object_or_404(Invoice, id=invoice_id)
     else:
@@ -382,7 +382,7 @@ def invoice_detail_view(request, invoice_id):
 def invoice_edit_view(request, invoice_id):
     charity = get_active_charity(request)
     if not charity and not request.user.is_superuser:
-        return redirect("client_setup")
+        return redirect("dashboard")
     if request.user.is_superuser and not charity:
         invoice = get_object_or_404(Invoice, id=invoice_id)
     else:

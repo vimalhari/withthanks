@@ -1,83 +1,14 @@
+from __future__ import annotations
+
 import json
 from decimal import Decimal
 
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.views import View
 
 from .models import Charity, Invoice, InvoiceLineItem, InvoiceService
-
-
-class ServiceCatalogAPI(LoginRequiredMixin, View):
-    """
-    CRUD API for global services available to all clients.
-    """
-
-    def get(self, request):
-        services = InvoiceService.objects.all().order_by("category", "name")
-        data = [
-            {
-                "id": s.id,
-                "name": s.name,
-                "category": s.get_category_display(),
-                "category_raw": s.category,
-                "unit_price": float(s.unit_price),
-                "description": s.description,
-                "active": s.is_active,
-            }
-            for s in services
-        ]
-        return JsonResponse({"services": data})
-
-    def post(self, request):
-        if not request.user.is_superuser:
-            return JsonResponse({"error": "Unauthorized"}, status=403)
-
-        try:
-            data = json.loads(request.body)
-            service = InvoiceService.objects.create(
-                name=data.get("name"),
-                category=data.get("category"),
-                unit_price=Decimal(str(data.get("unit_price", 0))),
-                description=data.get("description", ""),
-                is_active=data.get("active", True),
-            )
-            return JsonResponse({"success": True, "id": service.id})
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    def put(self, request, service_id=None):
-        if not request.user.is_superuser:
-            return JsonResponse({"error": "Unauthorized"}, status=403)
-
-        if not service_id:
-            return JsonResponse({"error": "Service ID required"}, status=400)
-
-        service = get_object_or_404(InvoiceService, id=service_id)
-        try:
-            data = json.loads(request.body)
-            service.name = data.get("name", service.name)
-            service.category = data.get("category", service.category)
-            service.unit_price = Decimal(str(data.get("unit_price", service.unit_price)))
-            service.description = data.get("description", service.description)
-            service.is_active = data.get("active", service.is_active)
-            service.save()
-            return JsonResponse({"success": True})
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    def delete(self, request, service_id=None):
-        if not request.user.is_superuser:
-            return JsonResponse({"error": "Unauthorized"}, status=403)
-
-        if not service_id:
-            return JsonResponse({"error": "Service ID required"}, status=400)
-
-        service = get_object_or_404(InvoiceService, id=service_id)
-        service.delete()
-        return JsonResponse({"success": True})
 
 
 class InvoiceCalculationAPI(LoginRequiredMixin, View):
@@ -180,9 +111,3 @@ class CreateInvoiceAPI(LoginRequiredMixin, View):
             return JsonResponse({"error": str(e)}, status=400)
 
 
-@login_required(login_url="charity_login")
-def services_management_view(request):
-    """
-    Dedicated view to host the React-based Service Management UI.
-    """
-    return render(request, "charity/services_management.html")

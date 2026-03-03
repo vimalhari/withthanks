@@ -54,6 +54,10 @@ ALLOWED_HOSTS = [
 # Installed apps
 # ------------------------------------------------------------
 INSTALLED_APPS = [
+    # Unfold admin theme — must come before django.contrib.admin
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -86,6 +90,176 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# ------------------------------------------------------------
+# Django Unfold Admin
+# ------------------------------------------------------------
+UNFOLD = {
+    "SITE_TITLE": "WithThanks",
+    "SITE_HEADER": "WithThanks Admin",
+    "SITE_URL": "/charity/",
+    "SITE_ICON": None,
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "Client Management",
+                "items": [
+                    {
+                        "title": "Charities (Clients)",
+                        "icon": "business",
+                        "link": "/admin/charity/charity/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": "Members",
+                        "icon": "group",
+                        "link": "/admin/charity/charitymember/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": "Campaigns & Donations",
+                "items": [
+                    {
+                        "title": "Campaigns",
+                        "icon": "campaign",
+                        "link": "/admin/charity/campaign/",
+                    },
+                    {
+                        "title": "Campaign Fields",
+                        "icon": "list",
+                        "link": "/admin/charity/campaignfield/",
+                    },
+                    {
+                        "title": "Donation Batches",
+                        "icon": "folder",
+                        "link": "/admin/charity/donationbatch/",
+                    },
+                    {
+                        "title": "Donation Jobs",
+                        "icon": "work",
+                        "link": "/admin/charity/donationjob/",
+                    },
+                    {
+                        "title": "Donors",
+                        "icon": "person",
+                        "link": "/admin/charity/donor/",
+                    },
+                    {
+                        "title": "Donations",
+                        "icon": "attach_money",
+                        "link": "/admin/charity/donation/",
+                    },
+                ],
+            },
+            {
+                "title": "Billing & Invoicing",
+                "items": [
+                    {
+                        "title": "Invoices",
+                        "icon": "receipt",
+                        "link": "/admin/charity/invoice/",
+                    },
+                    {
+                        "title": "Services",
+                        "icon": "sell",
+                        "link": "/admin/charity/invoiceservice/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": "Line Items",
+                        "icon": "format_list_bulleted",
+                        "link": "/admin/charity/invoicelineitem/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": "Templates & Assets",
+                "items": [
+                    {
+                        "title": "Text Templates",
+                        "icon": "text_fields",
+                        "link": "/admin/charity/texttemplate/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": "Video Templates",
+                        "icon": "video_library",
+                        "link": "/admin/charity/videotemplate/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": "Package Codes",
+                        "icon": "qr_code",
+                        "link": "/admin/charity/packagecode/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": "Analytics & Logs",
+                "items": [
+                    {
+                        "title": "Video Send Log",
+                        "icon": "send",
+                        "link": "/admin/charity/videosendlog/",
+                    },
+                    {
+                        "title": "Unsubscribed Users",
+                        "icon": "unsubscribe",
+                        "link": "/admin/charity/unsubscribeduser/",
+                    },
+                    {
+                        "title": "Received Emails",
+                        "icon": "mark_email_read",
+                        "link": "/admin/charity/receivedemail/",
+                    },
+                    {
+                        "title": "Campaign Stats",
+                        "icon": "bar_chart",
+                        "link": "/admin/charity/campaignstats/",
+                    },
+                    {
+                        "title": "Email Events",
+                        "icon": "email",
+                        "link": "/admin/charity/emailevent/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": "Video Events",
+                        "icon": "play_circle",
+                        "link": "/admin/charity/videoevent/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": "Watch Sessions",
+                        "icon": "timer",
+                        "link": "/admin/charity/watchsession/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+            {
+                "title": "Celery Beat",
+                "items": [
+                    {
+                        "title": "Periodic Tasks",
+                        "icon": "schedule",
+                        "link": "/admin/django_celery_beat/periodictask/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 # ------------------------------------------------------------
 # URL configuration

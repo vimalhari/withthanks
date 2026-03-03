@@ -516,6 +516,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-unfold"
+version = "0.81.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/96/54e3852a562fb5da3a626ae7992f2427945cadf7d45325b8dff42c418a3d/django_unfold-0.81.0.tar.gz", hash = "sha256:4746a2e78210d174c556b8dcf6cbc87642b86282a37406d820d6c1b4f6c160be", size = 1111379, upload-time = "2026-02-25T09:48:42.197Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/03/f3b11452636bcb8f8fb4b2daa3301781eca7ea1b2ee5781fdc888e315b43/django_unfold-0.81.0-py3-none-any.whl", hash = "sha256:7a800fcf7ac438ae473ffa51cdfbb22ef0e6e8455dad84ce1e1846ddd21deac9", size = 1226399, upload-time = "2026-02-25T09:48:40.646Z" },
+]
+
+[[package]]
 name = "djangorestframework"
 version = "3.16.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1803,6 +1815,7 @@ dependencies = [
     { name = "django-celery-beat" },
     { name = "django-storages", extra = ["s3"] },
     { name = "django-tailwind-cli" },
+    { name = "django-unfold" },
     { name = "djangorestframework" },
     { name = "djangorestframework-simplejwt" },
     { name = "drf-yasg" },
@@ -1837,6 +1850,7 @@ requires-dist = [
     { name = "django-celery-beat", specifier = ">=2.7.0" },
     { name = "django-storages", extras = ["s3"], specifier = ">=1.14.6" },
     { name = "django-tailwind-cli", specifier = ">=4.5.1" },
+    { name = "django-unfold", specifier = ">=0.51.0" },
     { name = "djangorestframework", specifier = ">=3.16.1" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.5.1" },
     { name = "drf-yasg", specifier = ">=1.21.15" },

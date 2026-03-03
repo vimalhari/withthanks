@@ -11,10 +11,6 @@ from .views_admin import (
     api_campaigns,
     api_clients,
     clear_client_context,
-    client_create_view,
-    client_setup_view,
-    manage_user_password,
-    remove_member,
     switch_client,
 )
 from .views_auth import (
@@ -23,16 +19,6 @@ from .views_auth import (
     logout_view,
     profile_view,
     register_view,
-)
-from .views_tracking import (
-    favicon_view,
-    robots_view,
-    track_click_view,
-    track_invoice_open,
-    track_open_view,
-    track_unsubscribe_full_view,
-    track_video_event_view,
-    video_landing_view,
 )
 from .views_batch import (
     batch_detail_view,
@@ -58,6 +44,16 @@ from .views_invoices import (
     invoice_edit_view,
     invoices_view,
 )
+from .views_tracking import (
+    favicon_view,
+    robots_view,
+    track_click_view,
+    track_invoice_open,
+    track_open_view,
+    track_unsubscribe_full_view,
+    track_video_event_view,
+    video_landing_view,
+)
 
 # All names below are intentional re-exports consumed by urls.py via `views.<name>`.
 __all__ = [  # noqa: RUF022
@@ -65,10 +61,6 @@ __all__ = [  # noqa: RUF022
     "api_campaigns",
     "api_clients",
     "clear_client_context",
-    "client_create_view",
-    "client_setup_view",
-    "manage_user_password",
-    "remove_member",
     "switch_client",
     # views_auth
     "change_password",
@@ -116,7 +108,7 @@ def dashboard_view(request):
     """Core dashboard with performance optimizations."""
     current_charity = get_active_charity(request)
     if not current_charity and not request.user.is_superuser:
-        return redirect("client_setup")
+        return redirect("dashboard")
 
     view_mode = request.GET.get("view", "campaigns")
     # Base query optimized with select_related

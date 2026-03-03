@@ -69,14 +69,14 @@
                             <span>Dashboard</span>
                         </a>
                         {% if request.user.is_superuser %}
-                        <a href="{% url 'clients' %}"
-                           class="nav-link {% if '/clients/' in request.path %}active{% endif %}">
+                        <a href="/admin/charity/charity/"
+                           class="nav-link {% if '/admin/charity/charity/' in request.path %}active{% endif %}">
                             <i data-lucide="users" class="w-5 h-5"></i>
                             <span>Clients</span>
                         </a>
                         {% endif %}
-                        <a href="{% url 'admin_campaigns' %}"
-                           class="nav-link {% if '/campaigns/' in request.path %}active{% endif %}">
+                        <a href="/admin/charity/campaign/"
+                           class="nav-link {% if '/admin/charity/campaign/' in request.path %}active{% endif %}">
                             <i data-lucide="megaphone" class="w-5 h-5"></i>
                             <span>Campaigns</span>
                         </a>

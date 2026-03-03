@@ -35,7 +35,7 @@
                 <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'charity_home' %}active{% endif %}">
                     <i data-lucide="mail" class="w-4 h-4"></i> Emails
                 </a>
-                <a href="{% url 'admin_campaigns' %}" class="nav-link {% if 'campaigns' in request.path %}active{% endif %}">
+                <a href="/admin/charity/campaign/" class="nav-link {% if '/admin/charity/campaign' in request.path %}active{% endif %}">
                     <i data-lucide="megaphone" class="w-4 h-4"></i> Campaigns
                 </a>
                 <a href="{% url 'analytics_unified' %}" class="nav-link {% if '/analytics/unified/' in request.path %}active{% endif %}">
@@ -62,9 +62,11 @@
             </div>
 
             <div class="space-y-0.5 mb-6">
-                <a href="{% url 'client_setup' %}" class="nav-link {% if request.resolver_match.url_name == 'client_setup' %}active{% endif %}">
-                    <i data-lucide="settings" class="w-4 h-4"></i> Client Setup
+                {% if user.is_superuser %}
+                <a href="/admin/" class="nav-link {% if request.path|slice:':7' == '/admin/' %}active{% endif %}">
+                    <i data-lucide="shield" class="w-4 h-4"></i> Admin Panel
                 </a>
+                {% endif %}
             </div>
             
             <a href="{% url 'logout' %}" class="nav-link !text-red-600 mt-auto">
