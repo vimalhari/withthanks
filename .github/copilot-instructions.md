@@ -34,7 +34,7 @@
 withthanks/          ← Django project config (settings, urls, celery, wsgi)
 charity/             ← Main (and only) Django app
   api/               ← DRF API views + serializers (JSON ingest endpoints)
-  services/          ← Business logic services (video build, pipeline, stripe, invoicing)
+  services/          ← Business logic services (video build, pipeline, invoicing)
   utils/             ← Utility modules (media, resend, cloudflare, exports, access control)
   templates/         ← Django HTML templates (Tailwind CSS)
   templatetags/      ← Custom template tags
@@ -95,7 +95,6 @@ All secrets and configuration are loaded from `.env` via `python-dotenv`. Never 
 - `ELEVENLABS_API_KEY`, `RESEND_API_KEY`
 - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`
 - `CLOUDFLARE_R2_*` (access key, secret, bucket, account)
-- `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
 - `SERVER_BASE_URL`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`
 
 ## Response Guidelines

@@ -1589,19 +1589,6 @@ wheels = [
 ]
 
 [[package]]
-name = "stripe"
-version = "14.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/ec/0f17cff3f7c91b0215266959c5a2a96b0bf9f45ac041c50b99ad8f9b5047/stripe-14.4.0.tar.gz", hash = "sha256:ddaa06f5e38a582bef7e93e06fc304ba8ae3b4c0c2aac43da02c84926f05fa0a", size = 1472370, upload-time = "2026-02-25T17:52:40.905Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/09/fcecad01d76dbe027015dd559ec1b6dccfc319c2540991dde4b1de81ba34/stripe-14.4.0-py3-none-any.whl", hash = "sha256:357151a816cd0bb012d6cb29f108fae50b9f6eece8530d7bc31dfa90c9ceb84c", size = 2115405, upload-time = "2026-02-25T17:52:39.128Z" },
-]
-
-[[package]]
 name = "svglib"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1828,7 +1815,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "redis" },
     { name = "resend" },
-    { name = "stripe" },
     { name = "whitenoise" },
     { name = "xhtml2pdf" },
 ]
@@ -1863,7 +1849,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "redis", specifier = ">=7.2.1" },
     { name = "resend", specifier = ">=2.23.0" },
-    { name = "stripe", specifier = ">=12.0.0" },
     { name = "whitenoise", specifier = ">=6.12.0" },
     { name = "xhtml2pdf", specifier = ">=0.2.17" },
 ]

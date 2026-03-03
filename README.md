@@ -39,7 +39,7 @@ A Django web application that helps charities send personalised thank-you videos
 - **Resend email delivery** — personalised HTML emails with embedded video links sent via the Resend API.
 - **Admin notifications** — when a batch finishes, an email is sent to `ADMIN_NOTIFICATION_EMAIL` with job totals and pass/fail counts.
 - **Multi-tenant** — each charity has its own campaigns, templates, member users, and job history; superadmin can switch context.
-- **Billing** — Stripe-based invoicing with webhook-driven status updates.
+- **Billing** — Internal invoicing with PDF export and email delivery.
 - **Django Admin** — full admin interface for managing charities, campaigns, donors, donations, invoices, and send logs.
 
 ---
@@ -107,7 +107,7 @@ ElevenLabs   FFmpeg          Cloudflare Stream
 | Video hosting | Cloudflare Stream |
 | Email delivery | Resend 2.23 |
 | Object storage | Cloudflare R2 (S3-compatible via `boto3` + `django-storages`) |
-| Billing | Stripe |
+| Billing | Internal invoicing (PDF + Resend) |
 | Scheduled tasks | Celery Beat (`django-celery-beat`) |
 | Database (dev) | SQLite |
 | Database (prod) | PostgreSQL 17 (psycopg 3.3) |
@@ -131,7 +131,7 @@ WithThanks/
 │   │                           #   and all periodic maintenance tasks
 │   ├── views.py                # General views (dashboard, profile, etc.)
 │   ├── views_batches.py        # CSV upload, campaign blast, send wizard
-│   ├── views_billing.py        # Stripe billing views
+│   ├── views_billing.py        # Invoice billing views
 │   ├── views_campaign.py       # Campaign CRUD
 │   ├── views_analytics.py      # Analytics views
 │   ├── forms.py                # Django forms
@@ -144,8 +144,7 @@ WithThanks/
 │   ├── services/
 │   │   ├── video_builder.py    # TTS + FFmpeg stitching (VideoSpec, build_personalized_video)
 │   │   ├── video_dispatch.py   # Stage-3 API pipeline service (Donor/Donation/VideoSendLog)
-│   │   ├── sync_bridge.py      # Sync DonationJob → normalised Donor/Donation/VideoSendLog
-│   │   └── stripe_billing.py   # Stripe invoice & webhook handling
+│   │   └── sync_bridge.py      # Sync DonationJob → normalised Donor/Donation/VideoSendLog
 │   ├── utils/
 │   │   ├── video_utils.py      # FFmpeg stitching helpers
 │   │   ├── voiceover.py        # ElevenLabs TTS wrapper
@@ -253,10 +252,6 @@ CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-r2-secret-key
 CLOUDFLARE_R2_BUCKET_NAME=your-bucket
 CLOUDFLARE_R2_ACCOUNT_ID=your-account-id
 
-# Stripe (optional — only needed for billing features)
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 ---
@@ -525,5 +520,5 @@ Runs the full CI suite first, then triggers the Coolify **prod** application web
 | `Donor` | Normalised donor record scoped to a charity (`unique_together: charity + email`). |
 | `Donation` | A financial donation record linking `Donor`, `Charity`, amount, and campaign type. |
 | `VideoSendLog` | Audit log of every video send attempt, including Cloudflare Stream metadata, Resend message ID, send kind, and error details. |
-| `Invoice` | Stripe-backed invoice record with status lifecycle (`Draft → Sent → Paid / Overdue`). |
+| `Invoice` | Invoice record with status lifecycle (`Draft → Sent → Paid / Overdue`). |
 | `UnsubscribedUser` | Per-charity unsubscribe list; checked before every job is processed. |

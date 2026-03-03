@@ -45,7 +45,6 @@ applyTo: "charity/tasks.py,charity/services/**/*.py"
   - `video_build_service.py` — FFmpeg video composition
   - `video_pipeline_service.py` — Cloudflare Stream upload, URL resolution
   - `video_dispatch_service.py` — orchestration of video processing
-  - `stripe_service.py` — Stripe API interactions
   - `invoice_service.py` — invoice generation and management
   - `batch_service.py` — batch processing logic
   - `cleanup_service.py` — file and data cleanup

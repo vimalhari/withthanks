@@ -45,7 +45,6 @@ class MyFeatureTests(TestCase):
   - ElevenLabs TTS API → `charity.utils.voiceover_utils`
   - Resend email API → `charity.utils.resend_utils`
   - Cloudflare Stream → `charity.utils.cloudflare_stream`
-  - Stripe API → `charity.services.stripe_service`
 - Use `@override_settings` for storage backend overrides:
   ```python
   @override_settings(

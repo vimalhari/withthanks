@@ -46,7 +46,7 @@ from __future__ import annotations
   - `views.py` — dashboard, imports/re-exports
   - `views_auth.py` — login, register, password
   - `views_batch.py` — CSV upload, batch reports
-  - `views_billing.py` — Stripe billing
+  - `views_billing.py` — invoice billing views
   - `views_campaign.py` — campaign CRUD
   - `views_clients.py` — client management
   - `views_invoices.py` — invoice CRUD
@@ -54,7 +54,7 @@ from __future__ import annotations
   - `views_invoice_exports.py` — PDF, CSV, JSON export
   - `views_revenue.py` — revenue intelligence
   - `views_tracking.py` — open/click tracking pixels
-  - `views_webhooks.py` — Stripe webhooks
+  - `views_webhooks.py` — Cloudflare and Resend webhooks
   - `views_admin.py` — superuser admin views
   - `views_analytics.py` — analytics dashboard
 

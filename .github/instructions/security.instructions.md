@@ -54,7 +54,3 @@ applyTo: "**"
 - Redis as Celery broker and result backend.
 - PostgreSQL as production database.
 
-## Stripe Webhook Security
-- Verify webhook signatures using `STRIPE_WEBHOOK_SECRET`.
-- Webhook endpoint is CSRF-exempt (decorated appropriately).
-- Handle idempotency — webhooks may be delivered multiple times.

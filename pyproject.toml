@@ -26,8 +26,6 @@ dependencies = [
     "django-storages[s3]>=1.14.6",
     # Celery Beat (periodic task scheduler)
     "django-celery-beat>=2.7.0",
-    # Stripe billing
-    "stripe>=12.0.0",
     "defusedcsv>=3.0.0",
     # Admin UI
     "django-unfold>=0.51.0",
