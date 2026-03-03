@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -41,7 +43,7 @@ class MultiTenancyIsolationTest(TestCase):
             donation_batch=self.batch_a,
             donor_name="Donor A",
             email="donor_a@example.com",
-            donation_amount="10.00",
+            donation_amount=Decimal("10.00"),
             status="success",
             charity=self.charity_a,
         )
@@ -59,7 +61,7 @@ class MultiTenancyIsolationTest(TestCase):
             donation_batch=self.batch_b,
             donor_name="Donor B",
             email="donor_b@example.com",
-            donation_amount="20.00",
+            donation_amount=Decimal("20.00"),
             status="success",
             charity=self.charity_b,
         )

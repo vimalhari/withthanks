@@ -365,7 +365,12 @@ class DonationJob(models.Model):
     # CORE FIELDS
     donor_name = models.CharField(max_length=255)
     email = models.EmailField()
-    donation_amount = models.CharField(max_length=50)
+    donation_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
 
     # REFERENCES
     charity = models.ForeignKey(
@@ -426,6 +431,11 @@ class DonationJob(models.Model):
             models.Index(fields=["status"]),
             models.Index(fields=["email"]),
             models.Index(fields=["created_at"]),
+            # Compound index covering the 30-day deduplication query in Stage 1
+            models.Index(
+                fields=["charity", "email", "status", "completed_at"],
+                name="donationjob_dedup_idx",
+            ),
         ]
 
     def get_status_badge_class(self):

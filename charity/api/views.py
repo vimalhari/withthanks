@@ -1,4 +1,4 @@
-from celery import chord, group
+from celery import chain, chord, group
 from celery.result import AsyncResult
 from rest_framework import status
 from rest_framework.response import Response
@@ -7,7 +7,12 @@ from rest_framework.views import APIView
 from charity.api.serializers import BulkDonationIngestSerializer, DonationIngestSerializer
 from charity.models import Campaign, Charity, DonationBatch, DonationJob
 from charity.permissions import IsCharityMember
-from charity.tasks import on_batch_complete, process_donation_row
+from charity.tasks import (
+    dispatch_email_for_job,
+    generate_video_for_job,
+    on_batch_complete,
+    validate_and_prep_job,
+)
 
 
 def _resolve_campaign(charity, campaign_type):
@@ -49,14 +54,18 @@ class DonationIngestAPIView(APIView):
         job = DonationJob.objects.create(
             donor_name=payload["donor_name"],
             email=payload["donor_email"],
-            donation_amount=str(payload["amount"]),
+            donation_amount=payload["amount"],
             status="pending",
             charity=charity,
             campaign=campaign,
             donation_batch=batch,
         )
 
-        task_result = process_donation_row.apply_async(args=(job.id,), queue="video")
+        task_result = chain(
+            validate_and_prep_job.s(job.id).set(queue="default"),
+            generate_video_for_job.s().set(queue="video"),
+            dispatch_email_for_job.s().set(queue="default"),
+        ).apply_async()
 
         return Response(
             {
@@ -110,7 +119,7 @@ class BulkDonationIngestAPIView(APIView):
             DonationJob(
                 donor_name=d["donor_name"],
                 email=d["donor_email"],
-                donation_amount=str(d["amount"]),
+                donation_amount=d["amount"],
                 status="pending",
                 charity=charity,
                 campaign=campaign,
@@ -122,7 +131,12 @@ class BulkDonationIngestAPIView(APIView):
         job_ids = [j.id for j in created_jobs]
 
         header = group(
-            process_donation_row.s(jid).set(queue="video") for jid in job_ids
+            chain(
+                validate_and_prep_job.s(jid).set(queue="default"),
+                generate_video_for_job.s().set(queue="video"),
+                dispatch_email_for_job.s().set(queue="default"),
+            )
+            for jid in job_ids
         )
         callback = on_batch_complete.s(batch_id=batch.id).set(queue="default")
         chord_result = chord(header)(callback)

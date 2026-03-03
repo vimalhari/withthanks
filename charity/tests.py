@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -25,7 +26,7 @@ class MultiTenantIsolationTests(TestCase):
             donation_batch=self.batch_a,
             donor_name="Donor A",
             email="a@test.com",
-            donation_amount="10",
+            donation_amount=Decimal("10"),
         )
 
         # Create data for Charity B
@@ -34,7 +35,7 @@ class MultiTenantIsolationTests(TestCase):
             donation_batch=self.batch_b,
             donor_name="Donor B",
             email="b@test.com",
-            donation_amount="20",
+            donation_amount=Decimal("20"),
         )
 
     def test_dashboard_isolation(self):
@@ -103,7 +104,7 @@ class VideoProcessingIsolationTests(TestCase):
             donation_batch=self.batch_a,
             donor_name="Donor A",
             email="donor@a.com",
-            donation_amount="10",
+            donation_amount=Decimal("10"),
             charity=self.charity_a,
             campaign=self.campaign_a,
         )
@@ -116,26 +117,29 @@ class VideoProcessingIsolationTests(TestCase):
             donation_batch=self.batch_b,
             donor_name="Donor B",
             email="donor@b.com",
-            donation_amount="20",
+            donation_amount=Decimal("20"),
             charity=self.charity_b,
             campaign=self.campaign_b,
         )
 
-    @patch("charity.services.video_builder.generate_voiceover")
-    @patch("charity.services.video_builder.stitch_voice_and_overlay")
+    @patch("charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4")
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.stitch_voice_and_overlay")
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.stream_safe_upload", return_value=None)
     @patch("os.path.exists")
-    def test_processing_isolation(self, mock_exists, mock_stream, mock_send, mock_stitch, mock_tts):
+    def test_processing_isolation(self, mock_exists, mock_stream, mock_send, mock_stitch, mock_tts, mock_upload):
         """Verify that jobs for different charities use their respective templates/branding"""
-        from charity.tasks import process_donation_row
+        from charity.tasks import dispatch_email_for_job, generate_video_for_job, validate_and_prep_job
 
         mock_exists.return_value = True
         mock_tts.return_value = "/tmp/tts.mp3"
         mock_stitch.return_value = ("/tmp/final.mp4", 10)
 
-        # Process Job A
-        process_donation_row(self.job_a.id)  # pylint: disable=no-value-for-parameter
+        # Process Job A through all 3 stages
+        ctx = validate_and_prep_job(self.job_a.id)
+        ctx = generate_video_for_job(ctx)
+        dispatch_email_for_job(ctx)
 
         # Verify Job A used Script A and Sender A
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
@@ -145,8 +149,10 @@ class VideoProcessingIsolationTests(TestCase):
         mock_tts.reset_mock()
         mock_send.reset_mock()
 
-        # Process Job B
-        process_donation_row(self.job_b.id)  # pylint: disable=no-value-for-parameter
+        # Process Job B through all 3 stages
+        ctx = validate_and_prep_job(self.job_b.id)
+        ctx = generate_video_for_job(ctx)
+        dispatch_email_for_job(ctx)
 
         # Verify Job B used Script B and Sender B
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])

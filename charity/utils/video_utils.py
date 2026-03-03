@@ -1,6 +1,8 @@
 import logging
+import os
 import subprocess
 import time
+import uuid
 from pathlib import Path
 
 from django.conf import settings
@@ -229,3 +231,55 @@ def merge_video_audio_no_reencode(
         raise RuntimeError(f"FFmpeg merge failed: {result.stderr}")
 
     return str(output_path)
+
+
+# ---------------------------------------------------------------------------
+# Stateless-worker helpers — R2-backed base-video download / output upload
+# ---------------------------------------------------------------------------
+
+
+def download_base_video_to_tmp(base_video_path: str) -> str:
+    """
+    Make the base video available on the local filesystem.
+
+    When Cloudflare R2 storage is configured (``CLOUDFLARE_R2_BUCKET_NAME``
+    is set) and *base_video_path* is not already an absolute local path that
+    exists on disk, the file is streamed from R2 (via Django's
+    ``default_storage``) into a unique ``/tmp/`` file so that FFmpeg workers
+    remain stateless — no shared NFS/EFS mount required.
+
+    In local-dev environments where R2 is not configured, the path is
+    returned unchanged so the existing behaviour is preserved.
+
+    Returns the local path to use as the FFmpeg input.
+    """
+    from django.core.files.storage import default_storage
+
+    # Already an accessible absolute path — no download needed
+    if os.path.isabs(base_video_path) and os.path.exists(base_video_path):
+        return base_video_path
+
+    # No R2 bucket configured — fall back to treating the path as local
+    if not getattr(settings, "CLOUDFLARE_R2_BUCKET_NAME", None):
+        return base_video_path
+
+    tmp_path = f"/tmp/{uuid.uuid4().hex}_base.mp4"
+    logger.info("Downloading base video from R2: %s → %s", base_video_path, tmp_path)
+    with default_storage.open(base_video_path, "rb") as src, open(tmp_path, "wb") as dst:
+        dst.write(src.read())
+    return tmp_path
+
+
+def upload_output_to_r2(local_path: str, dest_key: str) -> str:
+    """
+    Upload a finished output video to the configured storage backend (R2 in
+    production, local ``FileSystemStorage`` in dev) and return the public URL.
+
+    The local file is *not* deleted here — callers are responsible for cleanup
+    after they have persisted the returned URL.
+    """
+    from django.core.files.storage import default_storage
+
+    with open(local_path, "rb") as f:
+        saved_key = default_storage.save(dest_key, f)
+    return default_storage.url(saved_key)

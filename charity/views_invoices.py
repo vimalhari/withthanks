@@ -86,17 +86,17 @@ def invoices_view(request):
     )
 
 
-def get_slab_price(volume, tier="standard"):
-    """Calculate base campaign price based on volume and tier slabs"""
+def get_slab_price(volume, personalized=True):
+    """Calculate base campaign price based on volume and personalization"""
     slabs = {
-        "standard": [(99, 99), (300, 250), (500, 350), (1000, 550), (3000, 1000)],
-        "premium": [(99, 110), (300, 265), (500, 375), (1000, 575), (3000, 1025)],
+        "personalized": [(99, 110), (300, 265), (500, 375), (1000, 575), (3000, 1025)],
+        "standard":     [(99, 99),  (300, 250), (500, 350), (1000, 550), (3000, 1000)],
     }
-    tier_slabs = slabs.get(tier, slabs["standard"])
+    tier_slabs = slabs.get("personalized" if personalized else "standard")
     for limit, price in tier_slabs:
         if volume <= limit:
             return price
-    return 0
+    return "POA" # Price on Application for > 3000
 
 
 @login_required(login_url="charity_login")

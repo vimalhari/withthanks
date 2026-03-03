@@ -3,7 +3,7 @@ import json
 import logging
 import uuid
 
-from celery import chord, group
+from celery import chain, chord, group
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Q, Sum
@@ -13,7 +13,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Campaign, Charity, DonationBatch, DonationJob
 from .analytics_models import EmailEvent, VideoEvent
-from .tasks import batch_process_csv, on_batch_complete, process_donation_row
+from .tasks import (
+    batch_process_csv,
+    dispatch_email_for_job,
+    generate_video_for_job,
+    on_batch_complete,
+    validate_and_prep_job,
+)
 from .utils.access_control import get_active_charity
 
 logger = logging.getLogger(__name__)
@@ -32,13 +38,20 @@ def get_col(row, *keys):
 
 def _dispatch_batch_chord(batch, job_ids):
     """
-    Mark ``batch`` as processing, then fire a Celery group of
-    ``process_donation_row`` tasks (routed to the *video* queue) with an
+    Mark ``batch`` as processing, then fire a Celery group of per-job
+    3-stage chains (validate → generate → dispatch) with an
     ``on_batch_complete`` chord callback.
     """
     batch.status = DonationBatch.BatchStatus.PROCESSING
     batch.save(update_fields=["status"])
-    header = group(process_donation_row.s(jid).set(queue="video") for jid in job_ids)
+    header = group(
+        chain(
+            validate_and_prep_job.s(jid).set(queue="default"),
+            generate_video_for_job.s().set(queue="video"),
+            dispatch_email_for_job.s().set(queue="default"),
+        )
+        for jid in job_ids
+    )
     callback = on_batch_complete.s(batch_id=batch.id).set(queue="default")
     chord(header)(callback)
 
