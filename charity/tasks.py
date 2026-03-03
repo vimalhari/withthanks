@@ -12,9 +12,9 @@ from django.urls import reverse
 from django.utils.timezone import now
 
 from .models import DonationBatch, DonationJob, EmailTracking, UnsubscribedUser
-from .models_analytics import EmailEvent, VideoEvent
-from .services.video_builder import VideoSpec, build_personalized_video
-from .services.video_pipeline import (
+from .analytics_models import EmailEvent, VideoEvent
+from .services.video_build_service import VideoSpec, build_personalized_video
+from .services.video_pipeline_service import (
     StreamDelivery,
     build_tracking_urls,
     get_or_upload_campaign_stream,

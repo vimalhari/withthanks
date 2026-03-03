@@ -13,8 +13,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from charity.models import Campaign, Charity, Donation, Donor, VideoSendLog
-from charity.services.video_builder import VideoSpec, build_personalized_video
-from charity.services.video_pipeline import stream_safe_upload
+from charity.services.video_build_service import VideoSpec, build_personalized_video
+from charity.services.video_pipeline_service import stream_safe_upload
 from charity.utils.resend_utils import send_video_email
 
 logger = logging.getLogger(__name__)

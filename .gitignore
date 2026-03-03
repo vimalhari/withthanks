@@ -61,6 +61,7 @@ instance/
 
 # Temporary video processing artefacts
 /tmp/
+*.mp4
 
 # Tailwind CLI binary (downloaded automatically)
 .django_tailwind_cli/

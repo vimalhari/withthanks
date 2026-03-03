@@ -2,7 +2,7 @@
 Shared video delivery utilities used by both pipelines.
 
 Both the CSV batch pipeline (``tasks.py``) and the API pipeline
-(``video_dispatch.py``) delegate their Cloudflare Stream upload and
+(``video_dispatch_service.py``) delegate their Cloudflare Stream upload and
 tracking-URL construction here so the logic is defined in exactly one place.
 
 Neither pipeline is forced into a single entry-point because their

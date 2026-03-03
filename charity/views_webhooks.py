@@ -10,7 +10,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Campaign, DonationJob
-from .models_analytics import CampaignStats, VideoEvent
+from .analytics_models import CampaignStats, VideoEvent
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class StripeWebhookView(View):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        from .services.stripe_billing import handle_webhook_event, is_enabled
+        from .services.stripe_service import handle_webhook_event, is_enabled
 
         if not is_enabled():
             return JsonResponse({"error": "Stripe is not enabled"}, status=503)

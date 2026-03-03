@@ -19,7 +19,7 @@ def rebuild_all_campaign_stats() -> dict[str, int]:
     Returns a dict with the count of refreshed campaigns.
     """
     from charity.models import Campaign
-    from charity.models_analytics import CampaignStats
+    from charity.analytics_models import CampaignStats
 
     campaigns = Campaign.objects.all()
     refreshed = 0

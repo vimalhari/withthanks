@@ -3,7 +3,7 @@ Shared video production service.
 
 Pure functions that handle TTS generation and FFmpeg stitching without any
 model or ORM dependencies.  Both the CSV batch pipeline (``tasks.py``) and the
-API pipeline (``video_dispatch.py``) delegate their video work here so that
+API pipeline (``video_dispatch_service.py``) delegate their video work here so that
 production logic is defined in exactly one place.
 """
 
@@ -19,7 +19,7 @@ from django.utils import timezone
 
 from charity.utils.filenames import safe_filename
 from charity.utils.video_utils import stitch_voice_and_overlay
-from charity.utils.voiceover import generate_voiceover
+from charity.utils.voiceover_utils import generate_voiceover
 
 if TYPE_CHECKING:
     from decimal import Decimal

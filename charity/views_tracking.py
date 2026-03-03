@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
-from .models_analytics import EmailEvent, VideoEvent
+from .analytics_models import EmailEvent, VideoEvent
 
 logger = logging.getLogger(__name__)
 

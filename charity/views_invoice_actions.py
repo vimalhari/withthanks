@@ -43,8 +43,8 @@ def invoice_void(request, invoice_id):
     if request.method == "POST":
         invoice = _get_invoice_for_request(request, invoice_id)
 
-        from .services.stripe_billing import is_enabled as stripe_enabled
-        from .services.stripe_billing import void_stripe_invoice
+        from .services.stripe_service import is_enabled as stripe_enabled
+        from .services.stripe_service import void_stripe_invoice
 
         if stripe_enabled() and invoice.stripe_invoice_id:
             void_stripe_invoice(invoice)
@@ -105,10 +105,10 @@ def invoice_send_email(request, invoice_id):
 @login_required(login_url="charity_login")
 def invoice_stripe_send(request, invoice_id):
     """Create and send an invoice via Stripe."""
-    from .services.stripe_billing import (
+    from .services.stripe_service import (
         finalize_and_send_invoice,
     )
-    from .services.stripe_billing import (
+    from .services.stripe_service import (
         is_enabled as stripe_enabled,
     )
 

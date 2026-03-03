@@ -12,7 +12,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Campaign, Charity, DonationBatch, DonationJob
-from .models_analytics import EmailEvent, VideoEvent
+from .analytics_models import EmailEvent, VideoEvent
 from .tasks import batch_process_csv, on_batch_complete, process_donation_row
 from .utils.access_control import get_active_charity
 

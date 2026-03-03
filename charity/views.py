@@ -24,7 +24,7 @@ from .views_auth import (
     profile_view,
     register_view,
 )
-from .views_automation import (
+from .views_tracking import (
     favicon_view,
     robots_view,
     track_click_view,
@@ -34,7 +34,7 @@ from .views_automation import (
     track_video_event_view,
     video_landing_view,
 )
-from .views_batches import (
+from .views_batch import (
     batch_detail_view,
     batch_tracking_report,
     export_donation_report,
@@ -76,7 +76,7 @@ __all__ = [  # noqa: RUF022
     "logout_view",
     "profile_view",
     "register_view",
-    # views_automation
+    # views_tracking
     "favicon_view",
     "robots_view",
     "track_click_view",
@@ -85,7 +85,7 @@ __all__ = [  # noqa: RUF022
     "track_unsubscribe_full_view",
     "track_video_event_view",
     "video_landing_view",
-    # views_batches
+    # views_batch
     "batch_detail_view",
     "batch_tracking_report",
     "export_donation_report",

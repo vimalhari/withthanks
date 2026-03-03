@@ -12,22 +12,15 @@ import defusedcsv
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
 
 from .models import Invoice
 from .utils.access_control import get_active_charity
+from .views_invoice_actions import _get_invoice_for_request
 
 logger = logging.getLogger(__name__)
-
-
-def _get_invoice_for_request(request, invoice_id) -> Invoice:
-    """Return the Invoice, enforcing per-charity access restrictions."""
-    charity = get_active_charity(request)
-    if request.user.is_superuser and not charity:
-        return get_object_or_404(Invoice, id=invoice_id)
-    return get_object_or_404(Invoice, id=invoice_id, charity=charity)
 
 
 def _render_invoice_to_pdf(invoice: Invoice) -> bytes:

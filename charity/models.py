@@ -3,8 +3,6 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
 
 from charity.utils.media_utils import get_client_media_path
 
@@ -714,35 +712,6 @@ class CampaignField(models.Model):
 
     def __str__(self):
         return f"{self.label} ({self.field_type}) - {self.campaign.name}"
-
-
-@receiver(post_delete, sender=Charity)
-def cleanup_charity_media(sender, instance, **kwargs):
-    """
-    Delete individual media files attached to a Charity row when it is deleted.
-    Also removes the per-client media folder if it exists.
-    """
-    import logging
-    import shutil
-
-    from django.conf import settings
-
-    _log = logging.getLogger(__name__)
-
-    for field in (instance.default_template_video, instance.gratitude_card):
-        if field:
-            try:
-                field.delete(save=False)
-            except Exception as exc:
-                _log.warning("cleanup_charity_media: could not delete %s: %s", field.name, exc)
-
-    client_dir = os.path.join(settings.MEDIA_ROOT, "clients", f"client_{instance.id}")
-    if os.path.isdir(client_dir):
-        try:
-            shutil.rmtree(client_dir)
-            _log.info("cleanup_charity_media: removed %s", client_dir)
-        except Exception as exc:
-            _log.warning("cleanup_charity_media: could not remove %s: %s", client_dir, exc)
 
 
 # ---------------------------------------------------------------------------

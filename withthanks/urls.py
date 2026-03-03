@@ -40,7 +40,7 @@ urlpatterns = [
     # REST API (DRF) — async video dispatch via Celery
     path("api/", include("charity.api.urls")),
     # Analytics
-    path("analytics/", include("charity.analytics_urls")),
+    path("analytics/", include("charity.urls_analytics")),
     # Charity frontend (dashboard, campaigns, clients, invoices, etc.)
     path("charity/", include("charity.urls")),
     # Root → dashboard (login_required in the view handles auth)

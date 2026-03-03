@@ -20,7 +20,7 @@ from .models import (
     VideoSendLog,
     VideoTemplate,
 )
-from .models_analytics import (
+from .analytics_models import (
     CampaignStats,
     EmailEvent,
     VideoEvent,

@@ -19,7 +19,7 @@ from .cleanup_service import prune_voiceover_cache, remove_old_videos
 from .invoice_service import calculate_invoice_totals, generate_invoice_number, mark_overdue_bulk
 
 # Shared video delivery layer
-from .video_pipeline import (
+from .video_pipeline_service import (
     StreamDelivery,
     TrackingUrls,
     build_tracking_urls,

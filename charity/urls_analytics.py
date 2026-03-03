@@ -1,6 +1,7 @@
 from django.urls import path
 
-from . import api_reports, views_analytics
+from . import views_analytics
+from .api import views_reports
 
 urlpatterns = [
     path("", views_analytics.AnalyticsHomeView.as_view(), name="analytics_home"),
@@ -41,7 +42,7 @@ urlpatterns = [
     # Advanced Analytics Webhooks & Reports
     path(
         "api/reports/campaign/<uuid:campaign_id>/",
-        api_reports.CampaignReportAPIView.as_view(),
+        views_reports.CampaignReportAPIView.as_view(),
         name="api_campaign_report",
     ),
 ]

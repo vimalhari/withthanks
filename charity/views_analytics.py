@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView, View
 
 from .models import Campaign, Charity, CharityMember
-from .models_analytics import CampaignStats, EmailEvent, VideoEvent
+from .analytics_models import CampaignStats, EmailEvent, VideoEvent
 from .utils.exports import export_analytics_csv, export_analytics_excel
 
 

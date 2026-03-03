@@ -3,8 +3,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
 
-from .models import Campaign
-from .models_analytics import CampaignStats
+from ..models import Campaign
+from ..analytics_models import CampaignStats
 
 
 class CampaignReportAPIView(LoginRequiredMixin, View):
