@@ -195,12 +195,6 @@ UNFOLD = {
                         "link": "/admin/charity/videotemplate/",
                         "permission": lambda request: request.user.is_superuser,
                     },
-                    {
-                        "title": "Package Codes",
-                        "icon": "qr_code",
-                        "link": "/admin/charity/packagecode/",
-                        "permission": lambda request: request.user.is_superuser,
-                    },
                 ],
             },
             {

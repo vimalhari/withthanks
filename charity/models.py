@@ -505,13 +505,6 @@ class ReceivedEmail(models.Model):
 # Import Analytics Models for discovery (moved to bottom to avoid circular imports during forms initialization)
 
 
-class PackageCode(models.Model):
-    code = models.CharField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.code
-
-
 # ---------------------------------------------------------------------------
 # Stage 3 — Template models (used by API pipeline / video_dispatch service)
 # ---------------------------------------------------------------------------
@@ -673,16 +666,6 @@ class Campaign(models.Model):
 
     def __str__(self):
         return self.name
-
-    @property
-    def package_codes_list(self):
-        return [pc.code for pc in self.package_codes.all()]
-
-    @property
-    def package_codes_json(self):
-        import json
-
-        return json.dumps([{"code": pc.code} for pc in self.package_codes.all()])
 
     # Compatibility properties — video_dispatch.py uses `charity` while the
     # CSV pipeline uses `client`.  Both refer to the same FK.

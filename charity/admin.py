@@ -30,7 +30,6 @@ from .models import (
     InvoiceBatch,
     InvoiceLineItem,
     InvoiceService,
-    PackageCode,
     ReceivedEmail,
     TextTemplate,
     UnsubscribedUser,
@@ -354,12 +353,6 @@ class TextTemplateAdmin(ModelAdmin):
 class VideoTemplateAdmin(ModelAdmin):
     list_display = ("name", "video_file", "created_at")
     search_fields = ("name",)
-
-
-@admin.register(PackageCode)
-class PackageCodeAdmin(ModelAdmin):
-    list_display = ("code",)
-    search_fields = ("code",)
 
 
 # ---------------------------------------------------------------------------
