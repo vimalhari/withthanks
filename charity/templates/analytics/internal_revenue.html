@@ -1,0 +1,146 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Revenue Health — Internal{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Revenue Health{% endblock %}
+
+{% block layout_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Revenue Health</h1>
+        <p class="text-gray-400 text-sm">Invoice totals, collection rate, and 12-month MRR trend</p>
+    </div>
+    <form method="get" class="flex items-center gap-2">
+        <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+    </form>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Total Invoiced</div>
+        <div class="text-3xl font-extrabold text-gray-900">£{{ totals.total_invoiced|floatformat:2 }}</div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Collected</div>
+        <div class="text-3xl font-extrabold text-emerald-600">£{{ totals.collected|floatformat:2 }}</div>
+        <div class="text-[11px] text-emerald-400 mt-1">{{ collection_rate }}% collection rate</div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Outstanding</div>
+        <div class="text-3xl font-extrabold text-amber-500">£{{ totals.outstanding|floatformat:2 }}</div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Overdue</div>
+        <div class="text-3xl font-extrabold text-red-600">£{{ totals.overdue|floatformat:2 }}</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-8">
+    <!-- 12-Month Revenue Trend -->
+    <div class="card p-6">
+        <h3 class="text-base font-bold text-gray-900 mb-4">12-Month Revenue Trend</h3>
+        <div class="h-[280px]">
+            <canvas id="monthlyRevenueChart"></canvas>
+        </div>
+    </div>
+    <!-- Revenue by Category -->
+    <div class="card p-6">
+        <h3 class="text-base font-bold text-gray-900 mb-4">Revenue by Category</h3>
+        {% if category_breakdown %}
+        <div class="space-y-3 mt-2">
+            {% for cat in category_breakdown %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-semibold text-gray-700 capitalize">{{ cat.category }}</span>
+                    <span class="font-bold text-gray-900">£{{ cat.total|floatformat:2 }}</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-brand rounded-full" style="width: {% widthratio cat.total totals.total_invoiced 100 %}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-sm mt-4">No category data for this period.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Per-Charity Revenue Table -->
+<div class="card overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+        <h3 class="text-base font-bold text-gray-900">Revenue by Charity</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Charity</th>
+                    <th>Total Invoiced</th>
+                    <th>Paid</th>
+                    <th>Outstanding</th>
+                    <th>Invoices</th>
+                    <th>Collection Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in per_charity %}
+                <tr>
+                    <td class="font-semibold text-gray-900">{{ row.charity__client_name }}</td>
+                    <td>£{{ row.total|floatformat:2 }}</td>
+                    <td class="text-emerald-600 font-bold">£{{ row.paid|default:0|floatformat:2 }}</td>
+                    <td class="text-amber-500 font-bold">£{{ row.outstanding|default:0|floatformat:2 }}</td>
+                    <td>{{ row.invoice_count }}</td>
+                    <td>
+                        {% if row.total %}
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[60px] overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: {% widthratio row.paid|default:0 row.total 100 %}%"></div>
+                            </div>
+                            <span class="text-sm font-bold">{% widthratio row.paid|default:0 row.total 100 %}%</span>
+                        </div>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-10 text-gray-400">No invoice data found for this period.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const monthly = {{ monthly_revenue|safe }};
+    new Chart(document.getElementById('monthlyRevenueChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: monthly.map(d => d.month),
+            datasets: [{
+                label: 'Revenue (£)',
+                data: monthly.map(d => d.revenue),
+                backgroundColor: '#6366f1',
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { ticks: { callback: v => '£' + v.toLocaleString() } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

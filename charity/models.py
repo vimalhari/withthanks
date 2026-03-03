@@ -398,6 +398,15 @@ class DonationJob(models.Model):
     real_views = models.PositiveIntegerField(default=0)
     real_clicks = models.PositiveIntegerField(default=0)
 
+    # Resend message ID — populated after email dispatch; used to link webhook events back
+    resend_message_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="ID returned by Resend API after email dispatch; used to correlate webhook events",
+    )
+
     @property
     def total_views(self):
         return self.real_views

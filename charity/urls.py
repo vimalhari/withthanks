@@ -81,4 +81,9 @@ urlpatterns = [
         views_webhooks.CloudflareWebhookView.as_view(),
         name="cloudflare_webhook",
     ),
+    path(
+        "webhooks/resend/",
+        views_webhooks.ResendWebhookView.as_view(),
+        name="resend_webhook",
+    ),
 ]

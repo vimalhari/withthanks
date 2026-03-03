@@ -1,0 +1,105 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Billing Snapshot{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Billing Snapshot{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Billing Snapshot</h1>
+    {% if active_charity %}
+    <p class="text-gray-400 text-sm">{{ active_charity.client_name }} — recent invoices and current period usage</p>
+    {% endif %}
+</div>
+
+<!-- Current Period KPIs -->
+<div class="mb-3">
+    <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 mb-3">
+        <i data-lucide="calendar" class="w-3.5 h-3.5"></i> This Month
+        <div class="h-px flex-1 bg-gray-200"></div>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Total Jobs</div>
+            <div class="text-3xl font-extrabold text-gray-900">{{ period_totals.total }}</div>
+        </div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Sent OK</div>
+            <div class="text-3xl font-extrabold text-emerald-600">{{ period_totals.sent }}</div>
+        </div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Failed</div>
+            <div class="text-3xl font-extrabold text-red-500">{{ period_totals.failed }}</div>
+        </div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Outstanding Balance</div>
+            <div class="text-3xl font-extrabold text-amber-500">£{{ outstanding_balance|floatformat:2 }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Invoices -->
+<div class="card overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+        <h3 class="text-base font-bold text-gray-900">Recent Invoices</h3>
+    </div>
+    {% if not invoices %}
+    <div class="p-12 text-center text-gray-400">
+        <i data-lucide="file-text" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+        <p class="font-semibold">No invoices found.</p>
+    </div>
+    {% else %}
+    <div class="divide-y divide-gray-100">
+        {% for invoice in invoices %}
+        <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <div class="font-bold text-gray-900 flex items-center gap-2">
+                        {{ invoice.invoice_number }}
+                        <span class="badge text-[10px]
+                            {% if invoice.status == 'Paid' %}badge-success
+                            {% elif invoice.status == 'Overdue' %}badge-error
+                            {% elif invoice.status == 'Sent' %}badge-warning
+                            {% else %}bg-gray-100 text-gray-500{% endif %}">
+                            {{ invoice.status }}
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-0.5">Issued {{ invoice.issue_date|date:"d M Y" }}{% if invoice.due_date %} · Due {{ invoice.due_date|date:"d M Y" }}{% endif %}</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-extrabold text-gray-900">£{{ invoice.amount|floatformat:2 }}</div>
+                </div>
+            </div>
+            {% if invoice.line_items.all %}
+            <div class="bg-gray-50 rounded-lg p-3 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs text-gray-400 font-bold uppercase">
+                            <th class="text-left py-1 pr-4">Description</th>
+                            <th class="text-right py-1 pr-4">Qty</th>
+                            <th class="text-right py-1 pr-4">Unit</th>
+                            <th class="text-right py-1">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for item in invoice.line_items.all %}
+                        <tr>
+                            <td class="py-1.5 pr-4 font-medium text-gray-700">
+                                {{ item.service.name|default:item.description }}
+                            </td>
+                            <td class="py-1.5 pr-4 text-right text-gray-600">{{ item.quantity }}</td>
+                            <td class="py-1.5 pr-4 text-right text-gray-600">£{{ item.unit_price|floatformat:2 }}</td>
+                            <td class="py-1.5 text-right font-bold">£{{ item.total_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -38,7 +38,7 @@
                 <a href="/admin/charity/campaign/" class="nav-link {% if '/admin/charity/campaign' in request.path %}active{% endif %}">
                     <i data-lucide="megaphone" class="w-4 h-4"></i> Campaigns
                 </a>
-                <a href="{% url 'analytics_unified' %}" class="nav-link {% if '/analytics/unified/' in request.path %}active{% endif %}">
+                <a href="{% url 'analytics_home' %}" class="nav-link {% if '/analytics/' in request.path %}active{% endif %}">
                     <i data-lucide="file-text" class="w-4 h-4"></i> Reports
                 </a>
                 <a href="{% url 'invoices' %}" class="nav-link {% if request.resolver_match.url_name == 'invoices' %}active{% endif %}">

@@ -1,0 +1,130 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}List Hygiene{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}List Hygiene{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">List Hygiene</h1>
+        {% if active_charity %}
+        <p class="text-gray-400 text-sm">{{ active_charity.client_name }} — bounces, failures, complaints, unsubscribes</p>
+        {% endif %}
+    </div>
+    <form method="get" class="flex items-center gap-2">
+        <input type="hidden" name="tab" value="{{ request.GET.tab|default:'bounces' }}">
+        <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+    </form>
+</div>
+
+<!-- Summary KPIs -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+    <a href="?tab=bounces&date_from={{ date_from }}&date_to={{ date_to }}" class="card p-5 {% if request.GET.tab == 'bounces' or not request.GET.tab %}border-red-300 bg-red-50{% endif %}">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Bounces</div>
+        <div class="text-3xl font-extrabold text-red-600">{{ bounce_count }}</div>
+    </a>
+    <a href="?tab=failures&date_from={{ date_from }}&date_to={{ date_to }}" class="card p-5 {% if request.GET.tab == 'failures' %}border-orange-300 bg-orange-50{% endif %}">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Failures / Suppressed</div>
+        <div class="text-3xl font-extrabold text-orange-500">{{ failure_count }}</div>
+    </a>
+    <a href="?tab=complaints&date_from={{ date_from }}&date_to={{ date_to }}" class="card p-5 {% if request.GET.tab == 'complaints' %}border-purple-300 bg-purple-50{% endif %}">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Spam Complaints</div>
+        <div class="text-3xl font-extrabold text-purple-600">{{ complaint_count }}</div>
+    </a>
+    <a href="?tab=unsubs&date_from={{ date_from }}&date_to={{ date_to }}" class="card p-5 {% if request.GET.tab == 'unsubs' %}border-amber-300 bg-amber-50{% endif %}">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Unsubscribes</div>
+        <div class="text-3xl font-extrabold text-amber-500">{{ unsub_count }}</div>
+    </a>
+</div>
+
+<!-- Tab content -->
+{% with active_tab=request.GET.tab|default:"bounces" %}
+
+<div class="flex items-center justify-between mb-3">
+    <h3 class="text-base font-bold text-gray-900 capitalize">{{ active_tab }}</h3>
+    {% if active_tab != "unsubs" %}
+    <a href="?tab={{ active_tab }}&date_from={{ date_from }}&date_to={{ date_to }}&format=csv" class="btn-secondary btn-sm">
+        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+    </a>
+    {% endif %}
+</div>
+
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        {% if active_tab == "bounces" %}
+        <table class="data-table">
+            <thead><tr><th>Email</th><th>Donor</th><th>Campaign</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for ev in bounces %}
+                <tr>
+                    <td>{% if ev.job %}{{ ev.job.email }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.job %}{{ ev.job.donor_name }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.campaign %}{{ ev.campaign.name }}{% else %}—{% endif %}</td>
+                    <td class="text-gray-400 text-xs">{{ ev.timestamp|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-10 text-gray-400">No bounces found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% elif active_tab == "failures" %}
+        <table class="data-table">
+            <thead><tr><th>Email</th><th>Donor</th><th>Campaign</th><th>Type</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for ev in failures %}
+                <tr>
+                    <td>{% if ev.job %}{{ ev.job.email }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.job %}{{ ev.job.donor_name }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.campaign %}{{ ev.campaign.name }}{% else %}—{% endif %}</td>
+                    <td><span class="badge badge-error text-[10px]">{{ ev.event_type }}</span></td>
+                    <td class="text-gray-400 text-xs">{{ ev.timestamp|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center py-10 text-gray-400">No failures found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% elif active_tab == "complaints" %}
+        <table class="data-table">
+            <thead><tr><th>Email</th><th>Donor</th><th>Campaign</th><th>Time</th></tr></thead>
+            <tbody>
+                {% for ev in complaints %}
+                <tr>
+                    <td>{% if ev.job %}{{ ev.job.email }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.job %}{{ ev.job.donor_name }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.campaign %}{{ ev.campaign.name }}{% else %}—{% endif %}</td>
+                    <td class="text-gray-400 text-xs">{{ ev.timestamp|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-10 text-gray-400">No spam complaints found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% elif active_tab == "unsubs" %}
+        <table class="data-table">
+            <thead><tr><th>Email</th><th>Unsubscribed</th></tr></thead>
+            <tbody>
+                {% for unsub in unsubs %}
+                <tr>
+                    <td>{{ unsub.email }}</td>
+                    <td class="text-gray-400 text-xs">{{ unsub.created_at|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="text-center py-10 text-gray-400">No unsubscribes found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+
+{% endwith %}
+{% endblock %}

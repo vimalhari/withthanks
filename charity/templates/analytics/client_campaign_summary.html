@@ -1,0 +1,125 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Campaign Summary{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Campaign Summary{% endblock %}
+
+{% block layout_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Campaign Summary</h1>
+        {% if active_charity %}
+        <p class="text-gray-400 text-sm">{{ active_charity.client_name }}</p>
+        {% else %}
+        <p class="text-amber-500 text-sm font-semibold">No charity selected — showing all campaigns</p>
+        {% endif %}
+    </div>
+    <form method="get" class="flex flex-wrap items-center gap-2">
+        {% if request.user.is_superuser and all_charities %}
+        <select name="charity_id" class="form-select w-[180px]" onchange="this.form.submit()">
+            <option value="">All Charities</option>
+            {% for ch in all_charities %}
+            <option value="{{ ch.id }}" {% if active_charity and active_charity.id == ch.id %}selected{% endif %}>{{ ch.client_name }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+    </form>
+</div>
+
+{% if not campaign_perf %}
+<div class="card p-12 text-center text-gray-400">
+    <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+    <p class="font-semibold">No campaign data available for this period.</p>
+</div>
+{% else %}
+
+<!-- Summary Chart -->
+<div class="card p-6 mb-6">
+    <h3 class="text-base font-bold text-gray-900 mb-4">Open Rate vs Video Play Rate by Campaign</h3>
+    <div class="h-[260px]">
+        <canvas id="campaignRatesChart"></canvas>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Campaign</th>
+                    <th>Sent</th>
+                    <th>Delivered</th>
+                    <th>Open Rate</th>
+                    <th>Click Rate</th>
+                    <th>Video Play Rate</th>
+                    <th>Bounce Rate</th>
+                    <th>Completion</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in campaign_perf %}
+                <tr>
+                    <td>
+                        <div class="font-bold text-gray-900">{{ row.campaign.name }}</div>
+                        <div class="text-xs text-gray-400">{{ row.campaign.created_at|date:"d M Y" }}</div>
+                    </td>
+                    <td>{{ row.sent }}</td>
+                    <td>{{ row.delivered }}</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[50px] overflow-hidden">
+                                <div class="h-full bg-blue-500 rounded-full" style="width: {{ row.open_rate }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold">{{ row.open_rate }}%</span>
+                        </div>
+                    </td>
+                    <td><span class="font-bold text-sm">{{ row.click_rate }}%</span></td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[50px] overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: {{ row.video_rate }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold text-emerald-600">{{ row.video_rate }}%</span>
+                        </div>
+                    </td>
+                    <td><span class="font-bold text-sm text-red-500">{{ row.bounce_rate }}%</span></td>
+                    <td><span class="font-bold text-sm">{{ row.completion_rate }}%</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const data = [{% for row in campaign_perf %}{ name: "{{ row.campaign.name|escapejs }}", open: {{ row.open_rate }}, video: {{ row.video_rate }} },{% endfor %}];
+    new Chart(document.getElementById('campaignRatesChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [
+                { label: 'Open Rate %', data: data.map(d => d.open), backgroundColor: '#6366f1', borderRadius: 4 },
+                { label: 'Video Play Rate %', data: data.map(d => d.video), backgroundColor: '#10b981', borderRadius: 4 },
+            ]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6 } } },
+            scales: { y: { max: 100, ticks: { callback: v => v + '%' } } }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

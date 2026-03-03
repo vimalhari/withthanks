@@ -1,0 +1,81 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Storage Costs — Internal{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Storage Costs{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Storage Costs</h1>
+    <p class="text-gray-400 text-sm">Cloudflare R2 storage breakdown by bucket prefix — live data</p>
+</div>
+
+{% if not configured %}
+<div class="card p-8 text-center text-gray-400">
+    <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-3 text-amber-400"></i>
+    <p class="font-semibold">R2 storage is not configured or credentials are missing.</p>
+    <p class="text-sm mt-1">Set <code class="bg-gray-100 px-1 rounded">CLOUDFLARE_R2_*</code> environment variables to enable this report.</p>
+</div>
+{% else %}
+
+<!-- Summary KPIs -->
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Total Storage</div>
+        <div class="text-3xl font-extrabold text-gray-900">{{ total_gb }} <span class="text-base font-semibold text-gray-400">GB</span></div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Est. Monthly Cost</div>
+        <div class="text-3xl font-extrabold text-brand">£{{ total_cost_gbp }}</div>
+        <div class="text-[11px] text-gray-400 mt-1">At £0.015 / GB</div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Prefixes</div>
+        <div class="text-3xl font-extrabold text-gray-900">{{ storage_by_prefix|length }}</div>
+    </div>
+</div>
+
+<!-- Storage Breakdown Table -->
+<div class="card overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+        <h3 class="text-base font-bold text-gray-900">Breakdown by Prefix</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Prefix</th>
+                    <th>Objects</th>
+                    <th>Size (GB)</th>
+                    <th>Est. Cost / Month</th>
+                    <th>Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in storage_by_prefix %}
+                <tr>
+                    <td><code class="text-sm bg-gray-100 px-2 py-0.5 rounded text-gray-700">{{ row.prefix }}/</code></td>
+                    <td>{{ row.objects }}</td>
+                    <td class="font-semibold">{{ row.gb }}</td>
+                    <td class="text-brand font-bold">£{{ row.cost_gbp }}</td>
+                    <td>
+                        {% if total_gb %}
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[80px] overflow-hidden">
+                                <div class="h-full bg-brand rounded-full" style="width: {% widthratio row.bytes total_gb|add:0 100 %}%"></div>
+                            </div>
+                            <span class="text-xs font-bold text-gray-600">{% widthratio row.gb total_gb 100 %}%</span>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center py-10 text-gray-400">No storage data found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

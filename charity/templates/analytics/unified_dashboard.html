@@ -28,11 +28,14 @@
             </div>
         </div>
         <div class="flex gap-2">
-            <select x-model="filters.days" @change="refreshData()" class="form-select">
-                <option value="7">Last 7 Days</option>
-                <option value="30">Last 30 Days</option>
-                <option value="90">Last 90 Days</option>
-            </select>
+            <div class="flex items-center gap-1 text-sm text-gray-500 font-semibold">
+                <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+                <input type="date" x-model="filters.date_from" @change="refreshData()" class="form-input w-[145px]">
+            </div>
+            <div class="flex items-center gap-1 text-sm text-gray-500 font-semibold">
+                <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+                <input type="date" x-model="filters.date_to" @change="refreshData()" class="form-input w-[145px]">
+            </div>
             <button class="btn-secondary flex items-center gap-2" @click="refreshData()" :disabled="loading">
                 <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading && 'spin'"></i>
                 <span class="text-sm font-bold">Sync Data</span>
@@ -241,7 +244,7 @@ function enterpriseDashboard() {
     return {
         loading: false,
         campaignType: 'THANKYOU',
-        filters: { charity_id: 'all', campaign_id: 'all', days: '30' },
+        filters: { charity_id: 'all', campaign_id: 'all', date_from: '', date_to: '' },
         campaigns: [],
         metrics: {
             total_sent: 0, total_failed: 0, total_opened: 0, total_views: 0,
@@ -257,8 +260,13 @@ function enterpriseDashboard() {
         chartInstances: {},
 
         async init() {
+            const today = new Date();
+            const d90 = new Date(); d90.setDate(today.getDate() - 90);
+            const fmt = d => d.toISOString().split('T')[0];
             const params = new URLSearchParams(window.location.search);
-            this.filters.charity_id = params.get('charity_id') || 'all';
+            this.filters.date_from = params.get('date_from') || fmt(d90);
+            this.filters.date_to   = params.get('date_to')   || fmt(today);
+            this.filters.charity_id  = params.get('charity_id')  || 'all';
             this.filters.campaign_id = params.get('campaign_id') || 'all';
             if (this.filters.charity_id !== 'all') {
                 await this.fetchCampaigns();

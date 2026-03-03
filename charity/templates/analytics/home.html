@@ -1,145 +1,179 @@
 {% extends 'layouts/admin_layout.html' %}
 {% load static %}
 
-{% block title %}Analytics & Reports - Home{% endblock %}
+{% block title %}Analytics & Reports{% endblock %}
 {% block breadcrumb_parent %}Analytics{% endblock %}
 {% block breadcrumb_child %}Home{% endblock %}
 
 {% block page_content %}
-<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-    <div>
-        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Analytics & Reports</h1>
-        <p class="text-gray-400 text-base">Enterprise-grade tracking and engagement insights</p>
-    </div>
-    <select class="form-select w-[200px]">
-        <option value="30">Last 30 Days</option>
-        <option value="7">Last 7 Days</option>
-        <option value="90">Last 90 Days</option>
-    </select>
+<div class="mb-8">
+    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Analytics & Reports</h1>
+    <p class="text-gray-400 text-base">Enterprise-grade tracking and engagement insights</p>
 </div>
 
-<!-- Quick Insights -->
-<div class="grid grid-cols-3 gap-6 mb-10">
-    <div class="stat-card">
-        <div class="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Total Emails Sent</div>
-        <div class="text-3xl font-extrabold text-gray-900">{{ stats.total_sent }}</div>
+<!-- Client / External Reports — visible to all charity members -->
+<div class="mb-10">
+    <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 mb-5">
+        <i data-lucide="users" class="w-3.5 h-3.5"></i> Charity Reports
+        <div class="h-px flex-1 bg-gray-200"></div>
     </div>
-    <div class="stat-card">
-        <div class="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Total Opens</div>
-        <div class="text-3xl font-extrabold text-brand">{{ stats.total_opened }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="text-xs font-semibold uppercase text-gray-400 tracking-wider mb-2">Video Plays</div>
-        <div class="text-3xl font-extrabold text-emerald-600">{{ stats.total_plays }}</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <a href="{% url 'analytics_unified' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-indigo-50 text-brand flex items-center justify-center">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Unified Report Dashboard</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Interactive campaign-level KPIs, email intelligence, and video analytics in one view.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
+                    <span>Open Dashboard</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'client_campaign_summary' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-indigo-50 text-brand flex items-center justify-center">
+                    <i data-lucide="megaphone" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Campaign Summary</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Open rates, click rates, and video play rates across all campaigns with trend comparison.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'client_video_engagement' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i data-lucide="play-circle" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Video Engagement</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Real watch-time, completion rates, and rewatch data pulled live from Cloudflare Stream.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-emerald-600">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'client_donor_heatmap' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                    <i data-lucide="flame" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Donor Engagement Heatmap</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Engagement scores per donor — identify champions, at-risk givers, and cold contacts.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-amber-500">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'client_list_hygiene' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-red-50 text-red-500 flex items-center justify-center">
+                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">List Hygiene</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Bounces, complaints, failures, and unsubscribes — keep your sender reputation clean.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-red-500">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'client_billing_snapshot' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Billing Snapshot</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Recent invoices, usage in current period, and outstanding balance at a glance.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-sky-600">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+        </a>
+
     </div>
 </div>
 
-<h2 class="text-xl font-bold text-gray-900 mb-6">Select Report</h2>
+<!-- Internal / Business Reports — superuser only -->
+{% if request.user.is_superuser %}
+<div class="mb-10">
+    <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 mb-5">
+        <i data-lucide="shield" class="w-3.5 h-3.5"></i> Business Reports
+        <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full ml-1">Superuser</span>
+        <div class="h-px flex-1 bg-gray-200"></div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    <a href="{% url 'analytics_video' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="play" class="w-6 h-6"></i>
+        <a href="{% url 'internal_revenue' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-gray-900 transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gray-100 text-gray-800 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Revenue Health</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">MRR, ARR, revenue by category, and 12-month invoice trend.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-gray-700">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Video Engagement Report</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Analyze completion funnels, play rates, and viewer retention across your video campaigns.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>View Dashboard</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
+        </a>
 
-    <a href="{% url 'analytics_delivery' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="mailbox" class="w-6 h-6"></i>
+        <a href="{% url 'internal_volume' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-gray-900 transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gray-100 text-gray-800 flex items-center justify-center">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Platform Volume</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Total videos generated, emails dispatched, and delivery rates across all clients.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-gray-700">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Delivery & Bounce Report</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Track email deliverability, bounce reasons, and provider response codes in real-time.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>View Dashboard</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
+        </a>
 
-    <a href="{% url 'analytics_video' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="clock" class="w-6 h-6"></i>
+        <a href="{% url 'internal_adoption' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-gray-900 transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gray-100 text-gray-800 flex items-center justify-center">
+                    <i data-lucide="user-check" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Team Adoption</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">Member roles, active charities, and adoption score across the platform.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-gray-700">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Watch Duration Report</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Deep dive into how long viewers stay engaged and average completion percentages.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>View Dashboard</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
+        </a>
 
-    <a href="{% url 'analytics_campaigns' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="megaphone" class="w-6 h-6"></i>
+        <a href="{% url 'internal_storage' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-gray-900 transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="p-6 flex flex-col gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gray-100 text-gray-800 flex items-center justify-center">
+                    <i data-lucide="hard-drive" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-gray-900">Storage Costs</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">R2 storage breakdown by prefix with GB usage and estimated cost per bucket.</p>
+                <div class="mt-auto flex items-center justify-between text-sm font-semibold text-gray-700">
+                    <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Campaign Performance</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Compare different campaigns to identify top-performing content and delivery strategies.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>View Dashboard</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
+        </a>
 
-    <a href="{% url 'analytics_video' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="user-check" class="w-6 h-6"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900">User Engagement Report</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Individual behavior tracking, repeat views, and click-through analysis per recipient.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>View Dashboard</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
-
-    <a href="{% url 'analytics_delivery' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900">Failure & Error Report</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Consolidated view of all video generation and delivery failures with detailed error logs.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>View Dashboard</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
-
-    <a href="{% url 'analytics_advanced' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden bg-gradient-to-br from-white to-gray-50">
-        <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="p-6 flex flex-col gap-4">
-            <div class="w-12 h-12 rounded-xl bg-gray-100 text-brand flex items-center justify-center">
-                <i data-lucide="shield" class="w-6 h-6"></i>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900">Executive Overview</h3>
-            <p class="text-sm text-gray-400 leading-relaxed">Advanced high-level summary dashboards powered by Metabase BI for stakeholders.</p>
-            <div class="mt-auto flex items-center justify-between text-sm font-semibold text-brand">
-                <span>Open Advanced Module</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </div>
-        </div>
-    </a>
+    </div>
 </div>
+{% endif %}
+
 {% endblock %}

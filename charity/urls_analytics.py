@@ -45,4 +45,15 @@ urlpatterns = [
         views_reports.CampaignReportAPIView.as_view(),
         name="api_campaign_report",
     ),
+    # --- Internal Reports (superuser only) ---
+    path("internal/revenue/", views_analytics.InternalRevenueReportView.as_view(), name="internal_revenue"),
+    path("internal/volume/", views_analytics.InternalVolumeReportView.as_view(), name="internal_volume"),
+    path("internal/adoption/", views_analytics.InternalAdoptionReportView.as_view(), name="internal_adoption"),
+    path("internal/storage/", views_analytics.InternalStorageReportView.as_view(), name="internal_storage"),
+    # --- Client / External Reports (charity-scoped) ---
+    path("client/campaign-summary/", views_analytics.ClientCampaignSummaryView.as_view(), name="client_campaign_summary"),
+    path("client/video-engagement/", views_analytics.ClientVideoEngagementView.as_view(), name="client_video_engagement"),
+    path("client/donor-heatmap/", views_analytics.ClientDonorHeatmapView.as_view(), name="client_donor_heatmap"),
+    path("client/list-hygiene/", views_analytics.ClientListHygieneView.as_view(), name="client_list_hygiene"),
+    path("client/billing-snapshot/", views_analytics.ClientBillingSnapshotView.as_view(), name="client_billing_snapshot"),
 ]

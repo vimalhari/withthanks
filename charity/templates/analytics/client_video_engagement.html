@@ -1,0 +1,97 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Video Engagement{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Video Engagement{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Video Engagement</h1>
+        {% if active_charity %}
+        <p class="text-gray-400 text-sm">{{ active_charity.client_name }}
+            {% if cf_configured %}
+            <span class="ml-2 text-[11px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">Live Cloudflare Stream Data</span>
+            {% else %}
+            <span class="ml-2 text-[11px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Local Data Only</span>
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+    <form method="get" class="flex items-center gap-2">
+        <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+    </form>
+</div>
+
+<!-- Total Summary -->
+{% if total_cf_minutes %}
+<div class="card p-5 mb-6 bg-gray-900 text-white flex items-center gap-6">
+    <div>
+        <div class="text-xs font-bold text-white/50 uppercase mb-1">Total Minutes Watched</div>
+        <div class="text-4xl font-extrabold">{{ total_cf_minutes }}</div>
+        <div class="text-xs text-white/50 mt-1">Across all campaigns · Cloudflare Stream</div>
+    </div>
+</div>
+{% endif %}
+
+{% if not video_rows %}
+<div class="card p-12 text-center text-gray-400">
+    <i data-lucide="video-off" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+    <p class="font-semibold">No video engagement data available for this period.</p>
+</div>
+{% else %}
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Campaign</th>
+                    <th>CF Plays</th>
+                    <th>CF Minutes Watched</th>
+                    <th>CF Avg Min/Play</th>
+                    <th>Local Plays</th>
+                    <th>Local Avg Duration</th>
+                    <th>Completion Rate</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in video_rows %}
+                <tr>
+                    <td>
+                        <div class="font-bold text-gray-900">{{ row.campaign.name }}</div>
+                    </td>
+                    <td class="font-bold {% if row.cf_plays %}text-brand{% else %}text-gray-300{% endif %}">{{ row.cf_plays|default:"—" }}</td>
+                    <td class="font-semibold">{% if row.cf_minutes %}{{ row.cf_minutes }}m{% else %}—{% endif %}</td>
+                    <td>{% if row.cf_avg_minutes %}{{ row.cf_avg_minutes }}m{% else %}—{% endif %}</td>
+                    <td>{{ row.local_plays }}</td>
+                    <td>{{ row.local_avg_duration }}s</td>
+                    <td>
+                        {% if row.completion_rate %}
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[50px] overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: {{ row.completion_rate }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold text-emerald-600">{{ row.completion_rate }}%</span>
+                        </div>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if row.source == "cloudflare" %}
+                        <span class="badge badge-success text-[10px]">CF Stream</span>
+                        {% else %}
+                        <span class="badge badge-warning text-[10px]">Local</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

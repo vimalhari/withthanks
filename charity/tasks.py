@@ -390,7 +390,7 @@ def dispatch_email_for_job(self, context):
 
         # --- Send via Resend ------------------------------------------------ #
         try:
-            send_video_email(
+            resend_response = send_video_email(
                 to_email=job.email,
                 file_path=final_video_path,
                 job_id=str(job.id),
@@ -402,6 +402,14 @@ def dispatch_email_for_job(self, context):
                 is_card_only=is_card_only,
                 html=email_html,
             )
+            # Persist Resend message ID so webhook events can be correlated back
+            resend_id = None
+            if isinstance(resend_response, dict):
+                resend_id = resend_response.get("id")
+            elif hasattr(resend_response, "id"):
+                resend_id = resend_response.id
+            if resend_id:
+                job.resend_message_id = resend_id
         except Exception as send_exc:
             job.status = "failed"
             job.error_message = f"Resend failed: {send_exc!s}"
@@ -723,6 +731,21 @@ def refresh_all_campaign_stats():
     from .services.analytics_service import rebuild_all_campaign_stats
 
     return rebuild_all_campaign_stats()
+
+
+@shared_task(queue="default")
+def async_refresh_campaign_stats(campaign_id: str) -> bool:
+    """Refresh CampaignStats for a single campaign. Called from webhook handlers."""
+    from .analytics_models import CampaignStats
+    from .models import Campaign
+
+    try:
+        campaign = Campaign.objects.get(id=campaign_id)
+        stats, _ = CampaignStats.objects.get_or_create(campaign=campaign)
+        stats.update_stats()
+        return True
+    except Campaign.DoesNotExist:
+        return False
 
 
 @shared_task

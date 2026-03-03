@@ -8,11 +8,14 @@ from django.utils import timezone
 class EmailEvent(models.Model):
     EVENT_TYPES = [
         ("SENT", "Sent"),
+        ("DELIVERED", "Delivered"),
         ("FAILED", "Failed"),
         ("BOUNCED", "Bounced"),
         ("OPEN", "Open"),
         ("CLICK", "Click"),
         ("UNSUB", "Unsubscribe"),
+        ("COMPLAINED", "Complained / Spam"),
+        ("SUPPRESSED", "Suppressed"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

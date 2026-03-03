@@ -8,9 +8,17 @@
 {% block page_content %}
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-extrabold text-gray-900">Campaign Performance</h1>
-    <a href="{% url 'analytics_export_excel' %}?days={{ request.GET.days|default:'30' }}" class="btn-secondary btn-sm">
-        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export Comparison
-    </a>
+    <div class="flex gap-2 items-center">
+        <a href="{% url 'analytics_export_excel' %}?date_from={{ date_from }}&date_to={{ date_to }}" class="btn-secondary btn-sm">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Export Comparison
+        </a>
+        <form method="get" class="flex items-center gap-2">
+            <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+            <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+            <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+            <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        </form>
+    </div>
 </div>
 
 <div class="card overflow-hidden">

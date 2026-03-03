@@ -1,0 +1,74 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Team Adoption — Internal{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Team Adoption{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Team Adoption</h1>
+    <p class="text-gray-400 text-sm">Member roles, active status, and adoption score per charity</p>
+</div>
+
+<!-- Summary KPIs -->
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Total Members</div>
+        <div class="text-3xl font-extrabold text-gray-900">{{ total_members }}</div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Active Members</div>
+        <div class="text-3xl font-extrabold text-emerald-600">{{ total_active }}</div>
+    </div>
+    <div class="card p-6">
+        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Platform Adoption</div>
+        <div class="text-3xl font-extrabold text-brand">
+            {% if total_members %}{% widthratio total_active total_members 100 %}{% else %}0{% endif %}%
+        </div>
+    </div>
+</div>
+
+<!-- Per-Charity Adoption Table -->
+<div class="card overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+        <h3 class="text-base font-bold text-gray-900">Adoption by Charity</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Charity</th>
+                    <th>Total</th>
+                    <th>Active</th>
+                    <th>Pending</th>
+                    <th>Admins</th>
+                    <th>Adoption Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in charities %}
+                <tr>
+                    <td class="font-semibold text-gray-900">{{ row.charity__client_name }}</td>
+                    <td>{{ row.total_members }}</td>
+                    <td class="text-emerald-600 font-bold">{{ row.active }}</td>
+                    <td class="text-amber-500">{{ row.pending }}</td>
+                    <td>{{ row.admins }}</td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-2 bg-gray-100 rounded-full w-[80px] overflow-hidden">
+                                <div class="h-full rounded-full {% if row.adoption_score >= 75 %}bg-emerald-500{% elif row.adoption_score >= 40 %}bg-amber-400{% else %}bg-red-400{% endif %}"
+                                     style="width: {{ row.adoption_score }}%"></div>
+                            </div>
+                            <span class="text-sm font-bold">{{ row.adoption_score }}</span>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-10 text-gray-400">No member data found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

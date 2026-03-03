@@ -1,0 +1,175 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Platform Volume — Internal{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Platform Volume{% endblock %}
+
+{% block layout_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Platform Volume</h1>
+        <p class="text-gray-400 text-sm">Video jobs, email dispatch, and delivery health across all clients</p>
+    </div>
+    <form method="get" class="flex items-center gap-2">
+        <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+    </form>
+</div>
+
+<!-- Job KPIs -->
+<div class="mb-3">
+    <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 mb-3">
+        <i data-lucide="film" class="w-3.5 h-3.5"></i> Video Jobs
+        <div class="h-px flex-1 bg-gray-200"></div>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Total Jobs</div>
+            <div class="text-3xl font-extrabold text-gray-900">{{ job_totals.total }}</div>
+        </div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Successful</div>
+            <div class="text-3xl font-extrabold text-emerald-600">{{ job_totals.success }}</div>
+            <div class="text-[11px] text-emerald-400 mt-1">{{ success_rate }}% success rate</div>
+        </div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Failed</div>
+            <div class="text-3xl font-extrabold text-red-600">{{ job_totals.failed }}</div>
+        </div>
+        <div class="card p-6">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Pending</div>
+            <div class="text-3xl font-extrabold text-amber-500">{{ job_totals.pending }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Email KPIs -->
+<div class="mb-8">
+    <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 mb-3">
+        <i data-lucide="mail" class="w-3.5 h-3.5"></i> Email Delivery
+        <div class="h-px flex-1 bg-gray-200"></div>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <div class="card p-5">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Sent</div>
+            <div class="text-2xl font-extrabold text-gray-900">{{ email_totals.sent }}</div>
+        </div>
+        <div class="card p-5">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Delivered</div>
+            <div class="text-2xl font-extrabold text-emerald-600">{{ email_totals.delivered }}</div>
+        </div>
+        <div class="card p-5">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Opened</div>
+            <div class="text-2xl font-extrabold text-brand">{{ email_totals.opened }}</div>
+        </div>
+        <div class="card p-5">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Bounced</div>
+            <div class="text-2xl font-extrabold text-amber-500">{{ email_totals.bounced }}</div>
+        </div>
+        <div class="card p-5">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Failed</div>
+            <div class="text-2xl font-extrabold text-red-600">{{ email_totals.failed }}</div>
+        </div>
+        <div class="card p-5">
+            <div class="text-xs font-bold text-gray-400 uppercase mb-1">Complaints</div>
+            <div class="text-2xl font-extrabold text-red-700">{{ email_totals.complained }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Volume Chart + Per-Charity Table -->
+<div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-8">
+    <div class="card p-6">
+        <h3 class="text-base font-bold text-gray-900 mb-4">Daily Job Volume</h3>
+        <div class="h-[280px]">
+            <canvas id="dailyVolumeChart"></canvas>
+        </div>
+    </div>
+    <div class="card p-6">
+        <h3 class="text-base font-bold text-gray-900 mb-4">Video Send Queue</h3>
+        <div class="space-y-3">
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Total VSL Records</span>
+                <span class="font-bold">{{ vsl_totals.total }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-emerald-600">Sent</span>
+                <span class="font-bold text-emerald-600">{{ vsl_totals.sent }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-red-500">Failed</span>
+                <span class="font-bold text-red-500">{{ vsl_totals.failed }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Per-Charity Volume Table -->
+<div class="card overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+        <h3 class="text-base font-bold text-gray-900">Volume by Charity</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Charity</th>
+                    <th>Total Jobs</th>
+                    <th>Success</th>
+                    <th>Failed</th>
+                    <th>Success Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in per_charity %}
+                <tr>
+                    <td class="font-semibold text-gray-900">{{ row.charity__client_name }}</td>
+                    <td>{{ row.total }}</td>
+                    <td class="text-emerald-600 font-bold">{{ row.success }}</td>
+                    <td class="text-red-500 font-bold">{{ row.failed }}</td>
+                    <td>
+                        {% if row.total %}
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[60px] overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full" style="width: {% widthratio row.success row.total 100 %}%"></div>
+                            </div>
+                            <span class="text-sm font-bold">{% widthratio row.success row.total 100 %}%</span>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center py-10 text-gray-400">No volume data for this period.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const daily = {{ daily_volume|safe }};
+    new Chart(document.getElementById('dailyVolumeChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: daily.map(d => d.day),
+            datasets: [
+                { label: 'Total', data: daily.map(d => d.total), backgroundColor: '#e0e7ff', borderRadius: 3 },
+                { label: 'Success', data: daily.map(d => d.success), backgroundColor: '#10b981', borderRadius: 3 },
+            ]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6 } } },
+        }
+    });
+});
+</script>
+{% endblock %}

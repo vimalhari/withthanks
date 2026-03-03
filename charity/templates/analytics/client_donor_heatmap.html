@@ -1,0 +1,87 @@
+{% extends 'layouts/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Donor Engagement Heatmap{% endblock %}
+{% block breadcrumb_parent %}Reports{% endblock %}
+{% block breadcrumb_child %}Donor Heatmap{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Donor Engagement Heatmap</h1>
+        {% if active_charity %}
+        <p class="text-gray-400 text-sm">{{ active_charity.client_name }} — top 100 donors ranked by engagement</p>
+        {% endif %}
+    </div>
+    <div class="flex gap-2 items-center">
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&format=csv" class="btn-secondary btn-sm">
+            <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+        </a>
+        <form method="get" class="flex items-center gap-2">
+            <label class="text-xs text-gray-400 font-bold uppercase">From</label>
+            <input type="date" name="date_from" value="{{ date_from }}" class="form-input w-[140px]" onchange="this.form.submit()">
+            <label class="text-xs text-gray-400 font-bold uppercase">To</label>
+            <input type="date" name="date_to" value="{{ date_to }}" class="form-input w-[140px]" onchange="this.form.submit()">
+        </form>
+    </div>
+</div>
+
+<div class="card p-4 mb-5 bg-indigo-50 border border-indigo-100 text-sm text-indigo-700">
+    <strong>Engagement Score</strong> = Clicks &times; 3 + Video Views + Campaigns &times; 2. Higher is more engaged.
+</div>
+
+{% if not donors %}
+<div class="card p-12 text-center text-gray-400">
+    <i data-lucide="users" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+    <p class="font-semibold">No donor data found for this period.</p>
+</div>
+{% else %}
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Donor</th>
+                    <th>Campaigns</th>
+                    <th>Video Views</th>
+                    <th>Clicks</th>
+                    <th>Engagement Score</th>
+                    <th>Tier</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for donor in donors %}
+                <tr>
+                    <td class="text-gray-400 font-bold text-sm">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="font-bold text-gray-900">{{ donor.donor_name|default:"Unknown" }}</div>
+                        <div class="text-xs text-gray-400">{{ donor.email }}</div>
+                    </td>
+                    <td>{{ donor.campaigns }}</td>
+                    <td>{{ donor.total_views }}</td>
+                    <td>{{ donor.total_clicks }}</td>
+                    <td>
+                        <span class="font-extrabold text-lg {% if donor.engagement_score >= 20 %}text-emerald-600{% elif donor.engagement_score >= 8 %}text-brand{% elif donor.engagement_score >= 3 %}text-amber-500{% else %}text-gray-400{% endif %}">
+                            {{ donor.engagement_score }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if donor.engagement_score >= 20 %}
+                        <span class="badge badge-success text-[10px]">Champion</span>
+                        {% elif donor.engagement_score >= 8 %}
+                        <span class="badge badge-info text-[10px]">Engaged</span>
+                        {% elif donor.engagement_score >= 3 %}
+                        <span class="badge badge-warning text-[10px]">Warm</span>
+                        {% else %}
+                        <span class="badge bg-gray-100 text-gray-500 text-[10px]">Cold</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

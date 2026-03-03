@@ -456,6 +456,10 @@ STORAGES = {
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 ELEVENLABS_DEFAULT_VOICE_ID = os.environ.get("ELEVENLABS_DEFAULT_VOICE_ID", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+# Resend webhook signing secret (starts with "whsec_" from your Resend dashboard)
+RESEND_WEBHOOK_SECRET = os.environ.get("RESEND_WEBHOOK_SECRET", "")
+# Cloudflare webhook secret
+CLOUDFLARE_WEBHOOK_SECRET = os.environ.get("CLOUDFLARE_WEBHOOK_SECRET", "")
 
 # ------------------------------------------------------------
 # Email defaults
