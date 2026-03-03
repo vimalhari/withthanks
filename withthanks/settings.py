@@ -26,6 +26,7 @@ _local_commands = {
     "createsuperuser",
     "collectstatic",
     "seed_services",
+    "seed_data",
     "tailwind",
 }
 _is_local_command = any(cmd in sys.argv for cmd in _local_commands)
@@ -513,14 +514,6 @@ CELERY_TASK_ROUTES = {
 # Optional: e-mail address that receives batch-completion admin notifications.
 # If unset, admin e-mail notifications are silently skipped.
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
-
-# ------------------------------------------------------------
-# Stripe
-# ------------------------------------------------------------
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_ENABLED = bool(STRIPE_SECRET_KEY)
 
 # ------------------------------------------------------------
 # Timezone / internationalization

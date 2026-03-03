@@ -23,6 +23,7 @@ class ClientSetupForm(forms.ModelForm):
             "postcode",
             "billing_email",
             "billing_address",
+            "additional_emails",
             "default_voiceover_script",
             "default_voice_id",
         ]
@@ -35,6 +36,12 @@ class ClientSetupForm(forms.ModelForm):
             ),
             "organization_name": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Organization Name"}
+            ),
+            "additional_emails": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "cc@example.com, finance@example.com",
+                }
             ),
         }
 
@@ -77,11 +84,20 @@ class InvoiceForm(forms.ModelForm):
             "period_end",
             "status",
             "invoice_type",
+            "billing_email",
+            "additional_billing_emails",
             "notes",
         ]
         widgets = {
             "period_start": forms.DateInput(attrs={"type": "date", "class": "fin-input"}),
             "period_end": forms.DateInput(attrs={"type": "date", "class": "fin-input"}),
+            "billing_email": forms.EmailInput(attrs={"class": "fin-input"}),
+            "additional_billing_emails": forms.TextInput(
+                attrs={
+                    "class": "fin-input",
+                    "placeholder": "cc@example.com, finance@example.com",
+                }
+            ),
             "notes": forms.Textarea(attrs={"class": "fin-textarea", "rows": 3}),
         }
 

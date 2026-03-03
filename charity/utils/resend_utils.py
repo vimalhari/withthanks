@@ -236,8 +236,43 @@ def send_video_email(
         raise
 
 
+def _resolve_invoice_recipients(to_email: str | list[str]) -> list[str]:
+    """Normalise *to_email* to a validated, non-empty list of addresses."""
+    if isinstance(to_email, list):
+        resolved = [_normalize_email(e) for e in to_email if e and e.strip()]
+    else:
+        resolved = [_normalize_email(to_email)]
+    if not resolved:
+        raise ValueError("No valid recipient email addresses provided.")
+    return resolved
+
+
+def _build_invoice_html(invoice_number: str, invoice_id: str | None) -> str:
+    """Return a simple HTML email body for an invoice delivery."""
+    tracking_pixel_url = ""
+    if invoice_id:
+        server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com")
+        tracking_pixel_url = f"{server_url}/track/invoice/{invoice_id}/"
+
+    pixel_tag = (
+        f'<img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />'
+        if tracking_pixel_url
+        else ""
+    )
+    return f"""
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+            <h2>Invoice {invoice_number}</h2>
+            <p>Hello,</p>
+            <p>Please find attached invoice <strong>{invoice_number}</strong>.</p>
+            <p>Thank you for your business.</p>
+            <p>Warm regards,<br><strong>WithThanks Team</strong></p>
+            {pixel_tag}
+        </div>
+        """
+
+
 def send_invoice_email(
-    to_email: str,
+    to_email: str | list[str],
     invoice_pdf_bytes: bytes,
     invoice_number: str,
     invoice_id: str | None = None,
@@ -246,21 +281,10 @@ def send_invoice_email(
     from_email: str | None = None,
     filename: str = "invoice.pdf",
 ) -> dict[str, Any]:
-    """
-    Send an invoice PDF via email.
+    """Send an invoice PDF to one or more recipients via Resend.
 
-    Args:
-        to_email: Recipient email address.
-        invoice_pdf_bytes: The PDF content as bytes.
-        invoice_number: The invoice number for display.
-        invoice_id: Optional UUID for tracking opens.
-        subject: Optional custom subject.
-        html: Optional custom HTML body.
-        from_email: Optional sender address.
-        filename: Filename for the attachment.
-
-    Returns:
-        Resend API response.
+    *to_email* may be a single address string or a list; all addresses receive
+    the same PDF in one API call.  Falls back to DEFAULT_FROM_EMAIL as sender.
     """
     _ensure_api_key()
 
@@ -268,46 +292,18 @@ def send_invoice_email(
     if not sender:
         raise RuntimeError("No sender configured — set DEFAULT_FROM_EMAIL or pass 'from_email'.")
 
-    recipient = _normalize_email(to_email)
+    recipients = _resolve_invoice_recipients(to_email)
+    subject = subject or f"Invoice {invoice_number} from WithThanks"
+    html = html or _build_invoice_html(invoice_number, invoice_id)
 
-    # Default Subject
-    if not subject:
-        subject = f"Invoice {invoice_number} from WithThanks"
-
-    # Default HTML
-    if not html:
-        tracking_pixel_url = ""
-        if invoice_id:
-            server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com")
-            tracking_pixel_url = f"{server_url}/track/invoice/{invoice_id}/"
-
-        html = f"""
-        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-            <h2>Invoice {invoice_number}</h2>
-            <p>Hello,</p>
-            <p>Please find attached invoice <strong>{invoice_number}</strong>.</p>
-            <p>Thank you for your business.</p>
-
-            <p>Warm regards,<br><strong>WithThanks Team</strong></p>
-            {f'<img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />' if tracking_pixel_url else ""}
-        </div>
-        """
-
-    # Prepare Attachment
-    # Encode bytes to base64 string
     pdf_b64 = base64.b64encode(invoice_pdf_bytes).decode("utf-8")
 
     params = {
         "from": sender,
-        "to": recipient,
+        "to": recipients,
         "subject": subject,
         "html": html,
-        "attachments": [
-            {
-                "filename": filename,
-                "content": pdf_b64,
-            }
-        ],
+        "attachments": [{"filename": filename, "content": pdf_b64}],
     }
 
     try:
@@ -315,10 +311,10 @@ def send_invoice_email(
         logger.info(
             "✅ Sent invoice %s to %s [Resend ID: %s]",
             invoice_number,
-            recipient,
+            ", ".join(recipients),
             response.get("id"),
         )
         return response
     except Exception as e:
-        logger.exception("❌ Failed to send invoice to %s: %s", recipient, e)
+        logger.exception("❌ Failed to send invoice to %s: %s", recipients, e)
         raise

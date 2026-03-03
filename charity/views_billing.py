@@ -71,6 +71,9 @@ class CreateInvoiceAPI(LoginRequiredMixin, View):
                 status="Draft",
                 discount_percent=Decimal(str(data.get("discount_percent", 0))),
                 tax_percent=Decimal(str(data.get("tax_percent", 20))),
+                # Pre-fill billing contact from the charity
+                billing_email=charity.billing_email or charity.contact_email or "",
+                additional_billing_emails=charity.additional_emails or "",
             )
 
             invoice.generate_invoice_number()

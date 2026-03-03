@@ -431,6 +431,8 @@ def create_invoice_view(request):
 
 @login_required(login_url="charity_login")
 def invoice_detail_view(request, invoice_id):
+    import json
+
     charity = get_active_charity(request)
     if not charity and not request.user.is_superuser:
         return redirect("dashboard")
@@ -438,7 +440,25 @@ def invoice_detail_view(request, invoice_id):
         invoice = get_object_or_404(Invoice, id=invoice_id)
     else:
         invoice = get_object_or_404(Invoice, id=invoice_id, charity=charity)
-    return render(request, "invoice_detail.html", {"invoice": invoice})
+
+    # Build initial recipient list for the send-email modal
+    recipients: list[str] = []
+    if invoice.billing_email:
+        recipients.append(invoice.billing_email)
+    if invoice.additional_billing_emails:
+        for addr in invoice.additional_billing_emails.split(","):
+            addr = addr.strip()
+            if addr and addr not in recipients:
+                recipients.append(addr)
+
+    return render(
+        request,
+        "invoice_detail.html",
+        {
+            "invoice": invoice,
+            "send_recipients_json": json.dumps(recipients),
+        },
+    )
 
 
 @login_required(login_url="charity_login")

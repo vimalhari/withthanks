@@ -64,9 +64,11 @@ class Charity(models.Model):
     county = models.CharField(max_length=100, blank=True, null=True)
     postcode = models.CharField(max_length=20, blank=True, null=True)
 
-    # Stripe
-    stripe_customer_id = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Stripe Customer ID (cus_xxx)"
+    # Additional billing contacts (comma-separated; inherited by new invoices)
+    additional_emails = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Comma-separated default CC email addresses for invoice delivery",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -205,22 +207,15 @@ class Invoice(models.Model):
     billing_email = models.EmailField(blank=True)
     billing_address = models.TextField(blank=True)
 
+    # Additional recipients (comma-separated; pre-filled from charity.additional_emails)
+    additional_billing_emails = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Comma-separated CC email addresses for this invoice",
+    )
+
     # Additional metadata
     notes = models.TextField(blank=True)
-
-    # Stripe integration
-    stripe_invoice_id = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Stripe Invoice ID (in_xxx)"
-    )
-    stripe_hosted_url = models.URLField(
-        max_length=512, blank=True, null=True, help_text="Stripe hosted invoice payment page URL"
-    )
-    stripe_pdf_url = models.URLField(
-        max_length=512, blank=True, null=True, help_text="Stripe-generated PDF URL"
-    )
-    stripe_payment_intent_id = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Stripe PaymentIntent ID (pi_xxx)"
-    )
 
     class Meta:
         ordering = ["-issue_date"]

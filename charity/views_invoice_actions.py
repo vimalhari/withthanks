@@ -1,5 +1,5 @@
 """
-Invoice action views — status transitions and outbound email/Stripe sends.
+Invoice action views — status transitions and outbound email sends.
 
 Extracted from views_invoices.py to keep that module focused on CRUD.
 """
@@ -42,13 +42,6 @@ def invoice_mark_paid(request, invoice_id):
 def invoice_void(request, invoice_id):
     if request.method == "POST":
         invoice = _get_invoice_for_request(request, invoice_id)
-
-        from .services.stripe_service import is_enabled as stripe_enabled
-        from .services.stripe_service import void_stripe_invoice
-
-        if stripe_enabled() and invoice.stripe_invoice_id:
-            void_stripe_invoice(invoice)
-
         invoice.status = "Void"
         invoice.save()
         messages.success(request, f"Invoice {invoice.invoice_number} has been voided.")
@@ -72,21 +65,46 @@ def _generate_invoice_pdf_bytes(invoice: Invoice) -> bytes:
     return buffer.getvalue()
 
 
+def _collect_recipients(request, invoice) -> list[str]:
+    """Return the de-duplicated recipient list from the POST form.
+
+    Priority:
+    1. Addresses submitted via the send-email modal (``recipients`` multi-value field).
+    2. Fall back to ``invoice.billing_email`` when the form sends nothing.
+    """
+    submitted = [e.strip() for e in request.POST.getlist("recipients") if e.strip()]
+    if submitted:
+        return submitted
+    if invoice.billing_email:
+        return [invoice.billing_email]
+    return []
+
+
 @login_required(login_url="charity_login")
 def invoice_send_email(request, invoice_id):
+    """Send invoice PDF via email to one or more recipients.
+
+    Accepts POST only. Recipients come from the modal form:
+      - 'recipients' (multi-value): explicit list submitted by the send modal.
+    Falls back to invoice.billing_email when the form sends no recipients.
+    """
+    if request.method != "POST":
+        return redirect("invoice_detail", invoice_id=invoice_id)
+
     invoice = _get_invoice_for_request(request, invoice_id)
+    recipients = _collect_recipients(request, invoice)
+
+    if not recipients:
+        messages.error(request, "Invoice has no billing email address.")
+        return redirect("invoice_detail", invoice_id=invoice.id)
 
     try:
-        recipient = invoice.billing_email
-        if not recipient:
-            messages.error(request, "Invoice has no billing email address.")
-            return redirect("invoice_detail", invoice_id=invoice.id)
-
         pdf_bytes = _generate_invoice_pdf_bytes(invoice)
         resend_utils.send_invoice_email(
-            to_email=recipient,
+            to_email=recipients,
             invoice_pdf_bytes=pdf_bytes,
             invoice_number=invoice.invoice_number,
+            invoice_id=str(invoice.id),
             subject=f"Invoice {invoice.invoice_number} from {invoice.charity.client_name}",
             from_email=None,
             filename=f"Invoice_{invoice.invoice_number}.pdf",
@@ -94,40 +112,9 @@ def invoice_send_email(request, invoice_id):
         if invoice.status == "Draft":
             invoice.status = "Sent"
             invoice.save()
-        messages.success(request, f"Invoice sent to {recipient} successfully.")
+        messages.success(request, f"Invoice sent to {', '.join(recipients)} successfully.")
     except Exception as exc:
         logger.error("Failed to send invoice email: %s", exc)
         messages.error(request, f"Failed to send email: {exc}")
 
     return redirect("invoice_detail", invoice_id=invoice.id)
-
-
-@login_required(login_url="charity_login")
-def invoice_stripe_send(request, invoice_id):
-    """Create and send an invoice via Stripe."""
-    from .services.stripe_service import (
-        finalize_and_send_invoice,
-    )
-    from .services.stripe_service import (
-        is_enabled as stripe_enabled,
-    )
-
-    if not stripe_enabled():
-        messages.error(request, "Stripe is not configured. Set STRIPE_SECRET_KEY in your .env.")
-        return redirect("invoice_detail", invoice_id=invoice_id)
-
-    invoice = _get_invoice_for_request(request, invoice_id)
-
-    if request.method == "POST":
-        try:
-            hosted_url = finalize_and_send_invoice(invoice)
-            messages.success(
-                request,
-                f"Invoice {invoice.invoice_number} sent via Stripe. "
-                f'<a href="{hosted_url}" target="_blank">View payment page</a>',
-            )
-        except Exception as exc:
-            logger.error("Stripe send failed for invoice %s: %s", invoice.invoice_number, exc)
-            messages.error(request, f"Failed to send via Stripe: {exc}")
-
-    return redirect("invoice_detail", invoice_id=invoice_id)

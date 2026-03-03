@@ -120,7 +120,7 @@ class CharityAdmin(ModelAdmin):
                 "fields": (
                     "billing_email",
                     "billing_address",
-                    "stripe_customer_id",
+                    "additional_emails",
                 ),
             },
         ),

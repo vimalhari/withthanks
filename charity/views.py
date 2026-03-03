@@ -30,7 +30,6 @@ from .views_batch import (
 from .views_invoice_actions import (
     invoice_mark_paid,
     invoice_send_email,
-    invoice_stripe_send,
     invoice_void,
 )
 from .views_invoice_exports import (
@@ -92,7 +91,6 @@ __all__ = [  # noqa: RUF022
     "invoice_export_pdf",
     "invoice_mark_paid",
     "invoice_send_email",
-    "invoice_stripe_send",
     "invoice_void",
     "invoices_view",
     # local

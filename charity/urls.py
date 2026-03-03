@@ -46,7 +46,7 @@ urlpatterns = [
     path("reports/batch/<int:batch_id>/", views.batch_detail_view, name="batch_detail"),
     # Send wizard
     path("send/", views.send_email_wizard, name="send_email_wizard"),
-    # Invoicing (custom wizard + exports + Stripe actions)
+    # Invoicing (custom wizard + exports + email actions)
     path("invoices/", views.invoices_view, name="invoices"),
     path("invoices/create/", views.create_invoice_view, name="create_invoice"),
     path("invoices/<uuid:invoice_id>/", views.invoice_detail_view, name="invoice_detail"),
@@ -63,11 +63,6 @@ urlpatterns = [
         "invoices/<uuid:invoice_id>/mark-paid/", views.invoice_mark_paid, name="invoice_mark_paid"
     ),
     path("invoices/<uuid:invoice_id>/void/", views.invoice_void, name="invoice_void"),
-    path(
-        "invoices/<uuid:invoice_id>/stripe-send/",
-        views.invoice_stripe_send,
-        name="invoice_stripe_send",
-    ),
     # Revenue intelligence
     path("api/revenue/", views_revenue.RevenueIntelligenceAPI.as_view(), name="api_revenue"),
     path("api/revenue/view/", views_revenue.revenue_dashboard_view, name="revenue_dashboard"),
@@ -81,11 +76,6 @@ urlpatterns = [
         "api/billing/create/", views_billing.CreateInvoiceAPI.as_view(), name="api_billing_create"
     ),
     # Webhooks
-    path(
-        "webhooks/stripe/",
-        views_webhooks.StripeWebhookView.as_view(),
-        name="stripe_webhook",
-    ),
     path(
         "webhooks/cloudflare/",
         views_webhooks.CloudflareWebhookView.as_view(),

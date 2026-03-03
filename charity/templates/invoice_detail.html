@@ -26,7 +26,18 @@
 {% endblock %}
 
 {% block page_content %}
-<div x-data="{ activeTab: 'preview' }">
+<div x-data="{
+    activeTab: 'preview',
+    sendModalOpen: false,
+    recipients: {{ send_recipients_json|safe }},
+    newEmail: '',
+    addEmail() {
+        const e = this.newEmail.trim();
+        if (e && !this.recipients.includes(e)) { this.recipients.push(e); }
+        this.newEmail = '';
+    },
+    removeEmail(e) { this.recipients = this.recipients.filter(r => r !== e); }
+}">
 
     <!-- Status Banner & Actions -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 no-print">
@@ -47,9 +58,9 @@
 
         <div class="flex gap-2 items-center" x-data="{ menuOpen: false }" @click.away="menuOpen = false">
             <a href="{% url 'invoices' %}" class="btn-secondary"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</a>
-            <a href="{% url 'invoice_send_email' invoice.id %}" class="btn-secondary text-brand" onclick="return confirm('Send invoice to {{ invoice.billing_email }}?');">
+            <button @click="sendModalOpen = true" class="btn-secondary text-brand">
                 <i data-lucide="mail" class="w-4 h-4"></i> Send Email
-            </a>
+            </button>
             <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn-secondary text-brand">
                 <i data-lucide="printer" class="w-4 h-4"></i> Print / PDF
             </a>
@@ -218,4 +229,66 @@
     </div>
 
 </div>
+
+<!-- Send Invoice Email Modal -->
+<div x-show="sendModalOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+     @keydown.escape.window="sendModalOpen = false">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4" @click.stop>
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Send Invoice {{ invoice.invoice_number }}</h3>
+            <button @click="sendModalOpen = false" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="px-6 py-5">
+            <!-- Recipient tags -->
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Send To</label>
+            <div class="flex flex-wrap gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 min-h-[3rem] mb-3">
+                <template x-for="(email, index) in recipients" :key="index">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-brand/10 text-brand border border-brand/20">
+                        <span x-text="email"></span>
+                        <button type="button" @click="removeEmail(email)" class="ml-1 text-brand/60 hover:text-red-500 focus:outline-none">
+                            <i data-lucide="x" class="w-3 h-3"></i>
+                        </button>
+                    </span>
+                </template>
+                <template x-if="recipients.length === 0">
+                    <span class="text-gray-400 text-sm italic">No recipients — add one below</span>
+                </template>
+            </div>
+
+            <!-- Add email row -->
+            <div class="flex gap-2">
+                <input type="email" x-model="newEmail"
+                       @keydown.enter.prevent="addEmail()"
+                       placeholder="Add email address"
+                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
+                <button type="button" @click="addEmail()"
+                        class="px-3 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand/90 font-medium">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2">The invoice PDF will be attached and sent to all addresses above.</p>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <button @click="sendModalOpen = false" class="btn-secondary">Cancel</button>
+            <form :action="'{% url 'invoice_send_email' invoice.id %}'" method="post" x-ref="sendForm">
+                {% csrf_token %}
+                <template x-for="email in recipients" :key="email">
+                    <input type="hidden" name="recipients" :value="email" />
+                </template>
+                <button type="submit"
+                        :disabled="recipients.length === 0"
+                        class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i data-lucide="send" class="w-4 h-4 mr-1"></i> Send Invoice
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
