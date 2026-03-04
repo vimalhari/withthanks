@@ -2,16 +2,23 @@
 set -e
 trap 'echo "ERROR: entrypoint.sh failed at line $LINENO (exit code $?)" >&2' ERR
 
+is_true() {
+  case "${1:-}" in
+    [Tt][Rr][Uu][Ee]|1|[Yy][Ee][Ss]|[Oo][Nn]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 echo "Applying database migrations..."
 python manage.py migrate --noinput
 
-if [ "${SEED_DATA_ON_START:-false}" = "true" ]; then
+if is_true "${SEED_DATA_ON_START:-false}"; then
   SEED_MARKER="${SEED_DATA_MARKER_FILE:-/app/media/.seed_data_initialized}"
-  if [ -f "$SEED_MARKER" ]; then
+  if [ -f "$SEED_MARKER" ] && ! is_true "${SEED_DATA_FORCE:-false}"; then
     echo "Seed data already initialized ($SEED_MARKER). Skipping."
   else
     echo "Seeding demo data..."
-    if [ "${SEED_DATA_NO_INVOICES:-false}" = "true" ]; then
+    if is_true "${SEED_DATA_NO_INVOICES:-false}"; then
       python manage.py seed_data --no-invoices
     else
       python manage.py seed_data
