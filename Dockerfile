@@ -17,6 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     ffmpeg \
+    libcairo2-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies before copying source (better layer cache)
@@ -47,6 +49,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     ffmpeg \
+    libcairo2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the entire built app (venv + source + staticfiles) from the build stage
