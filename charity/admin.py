@@ -431,7 +431,7 @@ class CampaignAdmin(ModelAdmin):
     )
     list_filter = ("status", "appeal_type", "campaign_type", "video_mode")
     search_fields = ("name", "client__client_name", "appeal_code")
-    readonly_fields = ("id", "created_at")
+    readonly_fields = ("id", "created_at", "is_personalized")
     warn_unsaved_tabs = True
     inlines = [CampaignFieldInline, DonationBatchCampaignInline]
     fieldsets = (
@@ -455,7 +455,7 @@ class CampaignAdmin(ModelAdmin):
                 "fields": (
                     "campaign_type",
                     "video_mode",
-                    "is_personalized",
+                    "is_personalized",  # read-only — derived from video_mode
                 )
             },
         ),

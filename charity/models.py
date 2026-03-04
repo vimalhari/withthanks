@@ -640,10 +640,11 @@ class Campaign(models.Model):
         blank=True, help_text="Override the default charity voiceover script"
     )
 
-    # Personalization Settings
-    is_personalized = models.BooleanField(
-        default=False, help_text="Use TTS and personalized stitching (WithThanks only)"
-    )
+    # Personalization Settings (derived from video_mode — not a DB column)
+    @property
+    def is_personalized(self) -> bool:
+        """True when the campaign uses TTS + personalised stitching (WithThanks only)."""
+        return self.video_mode == self.VideoMode.PERSONALIZED
 
     # Email Settings
     from_email = models.EmailField(

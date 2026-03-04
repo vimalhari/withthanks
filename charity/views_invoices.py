@@ -159,7 +159,7 @@ def create_invoice_view(request):
                 end_date = d["billing_end_date"]
 
                 # Auto-detect personalization from campaign's video mode
-                is_personalized = campaign.video_mode == Campaign.VideoMode.PERSONALIZED
+                is_personalized = campaign.is_personalized
 
                 # Auto-calculate volume from DonationJob records in the date range
                 campaign_volume = DonationJob.objects.filter(

@@ -74,7 +74,7 @@ class VideoProcessingIsolationTests(TestCase):
             client=self.charity_a,
             appeal_start=date.today(),
             appeal_end=date.today(),
-            is_personalized=True,
+            video_mode=Campaign.VideoMode.PERSONALIZED,
         )
         self.charity_a.default_voiceover_script = "Hello A {{donor_name}}"
         # Provide a fake base video path (os.path.exists is mocked True in tests)
@@ -88,7 +88,7 @@ class VideoProcessingIsolationTests(TestCase):
             client=self.charity_b,
             appeal_start=date.today(),
             appeal_end=date.today(),
-            is_personalized=True,
+            video_mode=Campaign.VideoMode.PERSONALIZED,
         )
         self.charity_b.default_voiceover_script = "Hello B {{donor_name}}"
         self.charity_b.save()
