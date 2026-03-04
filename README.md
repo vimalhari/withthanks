@@ -193,8 +193,8 @@ WithThanks/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Rajachellan/WithThanks.git
-cd WithThanks
+git clone https://github.com/vimalhari/withthanks.git
+cd withthanks
 
 # 2. Install dependencies and create the virtual environment (uv handles both)
 uv sync
