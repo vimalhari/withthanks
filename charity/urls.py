@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_billing, views_revenue, views_webhooks
+from . import views, views_billing, views_crm, views_revenue, views_webhooks
 from .views_admin import (
     api_campaigns,
     api_clients,
@@ -86,4 +86,8 @@ urlpatterns = [
         views_webhooks.ResendWebhookView.as_view(),
         name="resend_webhook",
     ),
+    # CRM integrations — Blackbaud Raiser's Edge NXT OAuth flow
+    path("crm/blackbaud/connect/", views_crm.blackbaud_connect, name="blackbaud_connect"),
+    path("crm/blackbaud/callback/", views_crm.blackbaud_callback, name="blackbaud_callback"),
+    path("crm/blackbaud/disconnect/", views_crm.blackbaud_disconnect, name="blackbaud_disconnect"),
 ]

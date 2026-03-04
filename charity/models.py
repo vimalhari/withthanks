@@ -30,15 +30,29 @@ class Charity(models.Model):
         blank=True, null=True, help_text="Specific billing address for invoices"
     )
 
-    # Blackbaud Integration
-    blackbaud_client_id = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Blackbaud SKY API Client ID"
-    )
-    blackbaud_client_secret = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Blackbaud SKY API Client Secret"
-    )
+    # Blackbaud Raiser's Edge NXT Integration (OAuth 2.0, per-charity tokens)
     blackbaud_enabled = models.BooleanField(
-        default=False, help_text="Enable Raiser's Edge integration"
+        default=False, help_text="Enable Raiser's Edge NXT sync for this charity"
+    )
+    blackbaud_access_token = models.TextField(
+        blank=True, null=True, help_text="OAuth access token for the Blackbaud SKY API"
+    )
+    blackbaud_refresh_token = models.TextField(
+        blank=True, null=True, help_text="OAuth refresh token used to obtain a new access token"
+    )
+    blackbaud_token_expires_at = models.DateTimeField(
+        blank=True, null=True, help_text="UTC expiry time of the current access token"
+    )
+    blackbaud_environment_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Blackbaud environment / subscription ID (returned by the token endpoint)",
+    )
+    blackbaud_last_synced_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Timestamp of the last successful donation sync from Raiser's Edge; used as the incremental cursor",
     )
 
     # Defaults used by processing pipeline

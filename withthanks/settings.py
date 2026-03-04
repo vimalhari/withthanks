@@ -463,6 +463,20 @@ RESEND_WEBHOOK_SECRET = os.environ.get("RESEND_WEBHOOK_SECRET", "")
 CLOUDFLARE_WEBHOOK_SECRET = os.environ.get("CLOUDFLARE_WEBHOOK_SECRET", "")
 
 # ------------------------------------------------------------
+# Blackbaud SKY API (shared application credentials)
+# Per-charity tokens are stored on the Charity model.
+# ------------------------------------------------------------
+BLACKBAUD_CLIENT_ID = os.environ.get("BLACKBAUD_CLIENT_ID", "")
+BLACKBAUD_CLIENT_SECRET = os.environ.get("BLACKBAUD_CLIENT_SECRET", "")
+# Blackbaud Ocp-Apim-Subscription-Key — required header on every SKY API request
+BLACKBAUD_SUBSCRIPTION_KEY = os.environ.get("BLACKBAUD_SUBSCRIPTION_KEY", "")
+# Must match the redirect URI registered in your Blackbaud developer portal
+BLACKBAUD_REDIRECT_URI = os.environ.get(
+    "BLACKBAUD_REDIRECT_URI",
+    f"{os.environ.get('SERVER_BASE_URL', 'http://localhost:8000').rstrip('/')}/charity/crm/blackbaud/callback/",
+)
+
+# ------------------------------------------------------------
 # Email defaults
 # ------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "No Reply <no-reply@example.com>")

@@ -44,9 +44,24 @@
                 </div>
                 <div class="flex-1">
                     <div class="font-bold text-gray-900 text-sm">CRM Integration</div>
-                    <div class="text-gray-400 text-[13px]">Connect Blackbaud Raiser's Edge NXT</div>
+                    {% if current_charity.blackbaud_enabled %}
+                        <div class="text-green-600 text-[13px] font-medium">&#10003; Raiser's Edge NXT connected
+                            {% if current_charity.blackbaud_last_synced_at %}
+                                &mdash; last synced {{ current_charity.blackbaud_last_synced_at|date:"d M Y H:i" }}
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="text-gray-400 text-[13px]">Connect Blackbaud Raiser's Edge NXT</div>
+                    {% endif %}
                 </div>
-                <button class="btn-primary !py-2 !px-4 !text-[13px]">Connect CRM</button>
+                {% if current_charity.blackbaud_enabled %}
+                    <form method="post" action="{% url 'blackbaud_disconnect' %}" onsubmit="return confirm('Disconnect Raiser\'s Edge NXT? Scheduled donation sync will stop.')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-secondary !py-2 !px-4 !text-[13px] !text-red-600 !border-red-200">Disconnect</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'blackbaud_connect' %}" class="btn-primary !py-2 !px-4 !text-[13px]">Connect CRM</a>
+                {% endif %}
             </div>
         </div>
     </div>

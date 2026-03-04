@@ -88,6 +88,7 @@ class CharityAdmin(ModelAdmin):
     warn_unsaved_tabs = True
     inlines = [CharityMemberInline]
     actions = [create_default_campaign]
+    readonly_fields = ("blackbaud_token_expires_at", "blackbaud_last_synced_at")
     fieldsets = (
         (
             "Identity",
@@ -137,13 +138,14 @@ class CharityAdmin(ModelAdmin):
             },
         ),
         (
-            "Blackbaud Integration",
+            "Blackbaud Raiser's Edge NXT",
             {
                 "classes": ("collapse",),
                 "fields": (
                     "blackbaud_enabled",
-                    "blackbaud_client_id",
-                    "blackbaud_client_secret",
+                    "blackbaud_environment_id",
+                    "blackbaud_token_expires_at",
+                    "blackbaud_last_synced_at",
                 ),
             },
         ),

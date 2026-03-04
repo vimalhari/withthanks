@@ -778,3 +778,132 @@ def cleanup_old_videos():
     from .services.cleanup_service import remove_old_videos
 
     return remove_old_videos()
+
+
+# ---------------------------------------------------------------------------
+# CRM Sync — Blackbaud Raiser's Edge NXT
+# ---------------------------------------------------------------------------
+
+
+@shared_task(queue="maintenance")
+def sync_crm_donations():
+    """
+    Fan-out task: find all charities with Blackbaud enabled and dispatch
+    an individual sync task for each.  Runs on the *maintenance* queue via
+    django-celery-beat (recommended cadence: every hour).
+    """
+    from .models import Charity
+
+    charity_ids = list(
+        Charity.objects.filter(blackbaud_enabled=True).values_list("id", flat=True)
+    )
+    if not charity_ids:
+        logger.info("sync_crm_donations: no charities with Blackbaud enabled")
+        return {"dispatched": 0}
+
+    for charity_id in charity_ids:
+        sync_charity_blackbaud.apply_async(args=(charity_id,), queue="default")
+
+    logger.info("sync_crm_donations: dispatched sync for %d charities", len(charity_ids))
+    return {"dispatched": len(charity_ids)}
+
+
+@shared_task(bind=True, queue="default", max_retries=3, default_retry_delay=300)
+def sync_charity_blackbaud(self, charity_id: int):
+    """
+    Pull new donations from Blackbaud Raiser's Edge NXT for a single charity
+    and create DonationJob records (+ fire the video/email pipeline) for each.
+
+    Uses ``blackbaud_last_synced_at`` as an incremental cursor.  Falls back
+    to 24 hours ago if no prior sync has been recorded.
+    """
+    from decimal import Decimal
+
+    from django.utils.timezone import now as dj_now
+
+    from .models import Campaign, Charity, DonationBatch, DonationJob
+    from .utils.crm_adapters.base import CRMError
+    from .utils.crm_adapters.blackbaud import BlackbaudAdapter
+
+    try:
+        charity = Charity.objects.get(id=charity_id)
+    except Charity.DoesNotExist:
+        logger.error("sync_charity_blackbaud: charity %s not found", charity_id)
+        return
+
+    if not charity.blackbaud_enabled:
+        logger.info("sync_charity_blackbaud: charity %s has Blackbaud disabled — skipping", charity_id)
+        return
+
+    # Determine sync window start
+    since = charity.blackbaud_last_synced_at or (dj_now() - timedelta(hours=24))
+
+    logger.info(
+        "sync_charity_blackbaud: starting sync for charity %s since %s",
+        charity_id,
+        since.isoformat(),
+    )
+
+    try:
+        adapter = BlackbaudAdapter(charity)
+        donations = adapter.fetch_new_donations(since=since)
+    except CRMError as exc:
+        logger.exception("CRM fetch failed for charity %s: %s", charity_id, exc)
+        raise self.retry(exc=exc)
+
+    if not donations:
+        logger.info("sync_charity_blackbaud: no new donations for charity %s", charity_id)
+        charity.blackbaud_last_synced_at = dj_now()
+        charity.save(update_fields=["blackbaud_last_synced_at"])
+        return {"charity_id": charity_id, "created": 0}
+
+    # Resolve the active campaign for thank-you sends
+    campaign = Campaign.objects.filter(
+        client=charity,
+        campaign_type=Campaign.CampaignType.THANK_YOU,
+        status="active",
+    ).first()
+
+    batch = DonationBatch.objects.create(
+        charity=charity,
+        campaign=campaign,
+        batch_number=DonationBatch.get_next_batch_number(charity),
+        campaign_name=f"Blackbaud Sync \u2014 {dj_now().strftime('%Y-%m-%d %H:%M')}",
+        status=DonationBatch.BatchStatus.PROCESSING,
+    )
+
+    created_count = 0
+    for donation in donations:
+        try:
+            amount = Decimal(str(donation.get("amount", "0")))
+        except Exception:
+            amount = Decimal("0")
+
+        job = DonationJob.objects.create(
+            donor_name=donation.get("donor_name", ""),
+            email=donation.get("donor_email", ""),
+            donation_amount=amount,
+            status="pending",
+            charity=charity,
+            campaign=campaign,
+            donation_batch=batch,
+        )
+
+        chain(
+            validate_and_prep_job.s(job.id).set(queue="default"),
+            generate_video_for_job.s().set(queue="video"),
+            dispatch_email_for_job.s().set(queue="default"),
+        ).apply_async()
+
+        created_count += 1
+
+    # Advance the sync cursor
+    charity.blackbaud_last_synced_at = dj_now()
+    charity.save(update_fields=["blackbaud_last_synced_at"])
+
+    logger.info(
+        "sync_charity_blackbaud: created %d jobs for charity %s",
+        created_count,
+        charity_id,
+    )
+    return {"charity_id": charity_id, "created": created_count, "batch_id": batch.id}
