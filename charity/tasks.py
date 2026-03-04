@@ -405,11 +405,16 @@ def dispatch_email_for_job(self, context):
                 html=email_html,
             )
             # Persist Resend message ID so webhook events can be correlated back
-            resend_id = None
+            resend_id: str | None = None
             if isinstance(resend_response, dict):
-                resend_id = resend_response.get("id")
-            elif hasattr(resend_response, "id"):
-                resend_id = resend_response.id
+                _id = resend_response.get("id")
+                if isinstance(_id, str) and _id:
+                    resend_id = _id
+            else:
+                _id = getattr(resend_response, "id", None)
+                # In tests/mocks this can be a MagicMock; only accept real strings
+                if isinstance(_id, str) and _id:
+                    resend_id = _id
             if resend_id:
                 job.resend_message_id = resend_id
         except Exception as send_exc:

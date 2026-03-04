@@ -153,6 +153,7 @@ class VideoProcessingIsolationTests(TestCase):
         mock_exists.return_value = True
         mock_tts.return_value = "/tmp/tts.mp3"
         mock_stitch.return_value = ("/tmp/final.mp4", 10)
+        mock_send.return_value = {"id": "test-resend-id"}
 
         # Process Job A through all 3 stages
         ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
