@@ -50,6 +50,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     ffmpeg \
     libcairo2 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the entire built app (venv + source + staticfiles) from the build stage
