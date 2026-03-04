@@ -62,13 +62,10 @@ def calculate_invoice_totals(invoice: Invoice) -> None:
 
     subtotal = invoice.line_items.aggregate(sum=Sum("total_amount"))["sum"] or 0
     invoice.subtotal = subtotal
-
-    invoice.discount_amount = (
-        (invoice.subtotal * invoice.discount_percent) / 100 if invoice.discount_percent > 0 else 0
-    )
-    taxable = invoice.subtotal - invoice.discount_amount
-    invoice.tax_amount = (taxable * invoice.tax_percent) / 100 if invoice.tax_percent > 0 else 0
-    invoice.amount = taxable + invoice.tax_amount
+    invoice.discount_percent = 0
+    invoice.discount_amount = 0
+    invoice.tax_amount = (subtotal * invoice.tax_percent) / 100 if invoice.tax_percent > 0 else 0
+    invoice.amount = subtotal + invoice.tax_amount
     invoice.save()
 
 

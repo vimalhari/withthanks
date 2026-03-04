@@ -20,7 +20,6 @@ class InvoiceCalculationAPI(LoginRequiredMixin, View):
         try:
             data = json.loads(request.body)
             items = data.get("items", [])
-            discount_percent = Decimal(str(data.get("discount_percent", 0)))
             tax_percent = Decimal(str(data.get("tax_percent", 20)))
 
             subtotal = Decimal("0.00")
@@ -29,15 +28,13 @@ class InvoiceCalculationAPI(LoginRequiredMixin, View):
                 price = Decimal(str(item.get("unit_price", 0)))
                 subtotal += qty * price
 
-            discount_amount = (subtotal * discount_percent) / 100
-            taxable_amount = subtotal - discount_amount
-            tax_amount = (taxable_amount * tax_percent) / 100
-            total = taxable_amount + tax_amount
+            tax_amount = (subtotal * tax_percent) / 100
+            total = subtotal + tax_amount
 
             return JsonResponse(
                 {
                     "subtotal": float(subtotal),
-                    "discount_amount": float(discount_amount),
+                    "discount_amount": 0,
                     "tax_amount": float(tax_amount),
                     "total": float(total),
                 }
@@ -69,7 +66,7 @@ class CreateInvoiceAPI(LoginRequiredMixin, View):
                 issue_date=timezone.now().date(),
                 due_date=timezone.now().date() + timedelta(days=30),
                 status="Draft",
-                discount_percent=Decimal(str(data.get("discount_percent", 0))),
+                discount_percent=0,
                 tax_percent=Decimal(str(data.get("tax_percent", 20))),
                 # Pre-fill billing contact from the charity
                 billing_email=charity.billing_email or charity.contact_email or "",

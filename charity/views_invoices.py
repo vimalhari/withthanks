@@ -369,7 +369,6 @@ def create_invoice_view(request):
                 request.POST.getlist("item_qty[]"),
                 request.POST.getlist("item_unit[]"),
             )
-            subtotal = 0
             for n, q, u in zip(item_names, item_qtys, item_units, strict=False):
                 try:
                     qty, unit = float(q), float(u)
@@ -382,14 +381,11 @@ def create_invoice_view(request):
                             unit_price=unit,
                             total_amount=total,
                         )
-                        subtotal += total
                 except Exception:
                     continue
-            invoice.subtotal = subtotal
-            invoice.tax_amount = (subtotal * float(invoice.tax_percent)) / 100
-            invoice.amount = subtotal + invoice.tax_amount
-            invoice.status = "Draft"
-            invoice.save()
+            # Delegate all total calculations (subtotal → tax → amount) to the
+            # service layer so the logic stays in one place.
+            invoice.calculate_totals()
             request.session.pop("invoice_wizard_step", None)
             request.session.pop("invoice_wizard_data", None)
             messages.success(request, f"Invoice {invoice.invoice_number} created successfully.")
