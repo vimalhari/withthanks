@@ -146,10 +146,9 @@ class ResendWebhookView(View):
 
     def post(self, request, *args, **kwargs):
         # 1. Verify signature using svix headers
-        if settings.RESEND_WEBHOOK_SECRET:
-            if not self._verify_signature(request):
-                logger.warning("ResendWebhook: invalid signature")
-                return HttpResponse(status=401)
+        if settings.RESEND_WEBHOOK_SECRET and not self._verify_signature(request):
+            logger.warning("ResendWebhook: invalid signature")
+            return HttpResponse(status=401)
 
         try:
             payload = json.loads(request.body)
@@ -196,6 +195,7 @@ class ResendWebhookView(View):
         if campaign:
             try:
                 from .tasks import async_refresh_campaign_stats
+
                 async_refresh_campaign_stats.delay(str(campaign.id))
             except Exception:
                 pass  # Never block the webhook response for this
@@ -203,9 +203,7 @@ class ResendWebhookView(View):
         logger.info("ResendWebhook: %s job=%s email_id=%s", mapped_event, job, resend_email_id)
         return JsonResponse({"status": "ok", "event": mapped_event})
 
-    def _verify_signature(
-        self, request
-    ) -> bool:
+    def _verify_signature(self, request) -> bool:
         """
         Verify Resend webhook signature using svix headers.
         See: https://resend.com/docs/dashboard/webhooks/verify-payload
@@ -221,11 +219,13 @@ class ResendWebhookView(View):
             # Secret may be prefixed with "whsec_" — strip it
             if secret.startswith("whsec_"):
                 import base64
+
                 key = base64.b64decode(secret[6:])
             else:
                 key = secret.encode("utf-8")
             expected = hmac.new(key, signed_content.encode("utf-8"), hashlib.sha256).digest()
             import base64 as _b64
+
             expected_b64 = _b64.b64encode(expected).decode()
             # svix-signature may be "v1,<sig>" or space-separated multiple
             for sig_part in svix_signature.split(" "):

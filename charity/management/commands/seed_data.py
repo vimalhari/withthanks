@@ -78,8 +78,20 @@ USERS = [
     ("admin", "admin@withthanks.example.com", "changeme123!", None, True),
     # Green Earth staff
     ("green_admin", "green.admin@greenearthfoundation.example.com", "changeme123!", "Admin", False),
-    ("green_member", "green.member@greenearthfoundation.example.com", "changeme123!", "Member", False),
-    ("green_viewer", "green.viewer@greenearthfoundation.example.com", "changeme123!", "Viewer", False),
+    (
+        "green_member",
+        "green.member@greenearthfoundation.example.com",
+        "changeme123!",
+        "Member",
+        False,
+    ),
+    (
+        "green_viewer",
+        "green.viewer@greenearthfoundation.example.com",
+        "changeme123!",
+        "Viewer",
+        False,
+    ),
     # Bright Futures staff
     ("bf_admin", "bf.admin@brightfutures.example.com", "changeme123!", "Admin", False),
     ("bf_member", "bf.member@brightfutures.example.com", "changeme123!", "Member", False),
@@ -259,14 +271,8 @@ class Command(BaseCommand):
         User.objects.filter(is_superuser=False).exclude(username="admin").delete()
         self.stdout.write(self.style.WARNING("  Flush complete."))
 
-    def _create_user(
-        self, username: str, email: str, password: str, is_super: bool
-    ) -> User:
-        user, created = (
-            User.objects.get_or_create(username=username)
-            if not is_super
-            else User.objects.get_or_create(username=username)
-        )
+    def _create_user(self, username: str, email: str, password: str, is_super: bool) -> User:
+        user, created = User.objects.get_or_create(username=username)
         user.email = email
         user.set_password(password)
         user.is_staff = is_super
@@ -334,9 +340,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  {verb} batch #{batch_number} for '{campaign.name}'")
         return batch
 
-    def _create_jobs(
-        self, charity: Charity, campaign: Campaign, batch: DonationBatch
-    ) -> None:
+    def _create_jobs(self, charity: Charity, campaign: Campaign, batch: DonationBatch) -> None:
         sample_donors = random.sample(_DONORS, k=min(6, len(_DONORS)))
         created_count = 0
         for donor_name, email, amount in sample_donors:
@@ -458,7 +462,9 @@ class Command(BaseCommand):
                         unit_price=price,
                     )
                 self.stdout.write(
-                    self.style.SUCCESS(f"  Created invoice {invoice.invoice_number} ({cfg['status']})")
+                    self.style.SUCCESS(
+                        f"  Created invoice {invoice.invoice_number} ({cfg['status']})"
+                    )
                 )
             else:
                 self.stdout.write(f"  Found invoice {invoice.invoice_number}")
@@ -478,8 +484,6 @@ class Command(BaseCommand):
         self.stdout.write("    bf_member     — Bright Futures Trust Member")
         self.stdout.write("")
         self.stdout.write(
-            self.style.WARNING(
-                "  ⚠  Change all passwords before deploying to production!"
-            )
+            self.style.WARNING("  ⚠  Change all passwords before deploying to production!")
         )
         self.stdout.write("")

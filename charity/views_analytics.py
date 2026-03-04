@@ -1,18 +1,26 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.cache import cache
-from django.db.models import Avg, Count, DecimalField, Q, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Avg, Count, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import TemplateView, View
 
 from .analytics_models import CampaignStats, EmailEvent, VideoEvent
-from .models import Campaign, Charity, CharityMember, DonationBatch, DonationJob, Invoice, InvoiceLineItem, UnsubscribedUser, VideoSendLog
+from .models import (
+    Campaign,
+    Charity,
+    CharityMember,
+    DonationJob,
+    Invoice,
+    InvoiceLineItem,
+    UnsubscribedUser,
+    VideoSendLog,
+)
 from .utils.exports import export_analytics_csv, export_analytics_excel
 
 _DATE_FMT = "%Y-%m-%d"
@@ -33,7 +41,11 @@ class AnalyticsBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateVi
         raw_from = self.request.GET.get("date_from", "")
         raw_to = self.request.GET.get("date_to", "")
         try:
-            start = datetime.strptime(raw_from, _DATE_FMT).date() if raw_from else today - timedelta(days=_DEFAULT_DAYS)
+            start = (
+                datetime.strptime(raw_from, _DATE_FMT).date()
+                if raw_from
+                else today - timedelta(days=_DEFAULT_DAYS)
+            )
         except ValueError:
             start = today - timedelta(days=_DEFAULT_DAYS)
         try:
@@ -48,7 +60,9 @@ class AnalyticsBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateVi
     def get_date_params(self) -> dict:
         """Return date_from/date_to as strings for template context."""
         today = timezone.now().date()
-        raw_from = self.request.GET.get("date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT))
+        raw_from = self.request.GET.get(
+            "date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT)
+        )
         raw_to = self.request.GET.get("date_to", today.strftime(_DATE_FMT))
         return {"date_from": raw_from, "date_to": raw_to}
 
@@ -526,6 +540,7 @@ class ChartDataAPIView(AnalyticsBaseView, View):
 # INTERNAL REPORTS — superuser only
 # =============================================================================
 
+
 class SuperuserRequiredMixin(LoginRequiredMixin):
     """Allows only superusers. Redirects others to the analytics home."""
 
@@ -547,7 +562,9 @@ class InternalRevenueReportView(SuperuserRequiredMixin, TemplateView):
         from django.db.models.functions import TruncMonth
 
         today = timezone.now().date()
-        date_from = self.request.GET.get("date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT))
+        date_from = self.request.GET.get(
+            "date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT)
+        )
         date_to = self.request.GET.get("date_to", today.strftime(_DATE_FMT))
         context["date_from"] = date_from
         context["date_to"] = date_to
@@ -569,8 +586,7 @@ class InternalRevenueReportView(SuperuserRequiredMixin, TemplateView):
 
         # Revenue by service category
         category_data = (
-            InvoiceLineItem.objects
-            .filter(invoice__issue_date__range=(date_from, date_to))
+            InvoiceLineItem.objects.filter(invoice__issue_date__range=(date_from, date_to))
             .values("service__category")
             .annotate(total=Sum("total_amount"))
             .order_by("-total")
@@ -583,8 +599,7 @@ class InternalRevenueReportView(SuperuserRequiredMixin, TemplateView):
         # Monthly revenue (last 12 months, always — not date-filtered)
         twelve_months_ago = today - timedelta(days=365)
         monthly = (
-            Invoice.objects
-            .filter(status="Paid", issue_date__gte=twelve_months_ago)
+            Invoice.objects.filter(status="Paid", issue_date__gte=twelve_months_ago)
             .annotate(month=TruncMonth("issue_date"))
             .values("month")
             .annotate(revenue=Sum("amount"))
@@ -618,7 +633,9 @@ class InternalVolumeReportView(SuperuserRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         today = timezone.now().date()
-        date_from = self.request.GET.get("date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT))
+        date_from = self.request.GET.get(
+            "date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT)
+        )
         date_to = self.request.GET.get("date_to", today.strftime(_DATE_FMT))
         context["date_from"] = date_from
         context["date_to"] = date_to
@@ -670,6 +687,7 @@ class InternalVolumeReportView(SuperuserRequiredMixin, TemplateView):
 
         # Daily job volume for chart (last N days)
         from django.db.models.functions import TruncDate as _TruncDate
+
         daily = (
             job_qs.annotate(day=_TruncDate("created_at"))
             .values("day")
@@ -693,8 +711,7 @@ class InternalAdoptionReportView(SuperuserRequiredMixin, TemplateView):
 
         # Per-charity member breakdown (status and role counts)
         charities = (
-            CharityMember.objects
-            .values("charity__id", "charity__client_name")
+            CharityMember.objects.values("charity__id", "charity__client_name")
             .annotate(
                 total_members=Count("id"),
                 active=Count("id", filter=Q(status="ACTIVE")),
@@ -745,9 +762,11 @@ class InternalStorageReportView(SuperuserRequiredMixin, TemplateView):
 # CLIENT / EXTERNAL REPORTS — charity-scoped
 # =============================================================================
 
+
 def _get_active_charity_or_none(request):
     """Return the active charity for scoping, or None for superusers with no context."""
     from .utils.access_control import get_active_charity
+
     return get_active_charity(request)
 
 
@@ -759,7 +778,9 @@ class ClientReportBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, Templat
         charity = _get_active_charity_or_none(self.request)
         context["active_charity"] = charity
         today = timezone.now().date()
-        context["date_from"] = self.request.GET.get("date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT))
+        context["date_from"] = self.request.GET.get(
+            "date_from", (today - timedelta(days=_DEFAULT_DAYS)).strftime(_DATE_FMT)
+        )
         context["date_to"] = self.request.GET.get("date_to", today.strftime(_DATE_FMT))
         if self.request.user.is_superuser:
             context["all_charities"] = Charity.objects.all().order_by("client_name")
@@ -777,7 +798,11 @@ class ClientCampaignSummaryView(ClientReportBaseView):
         date_from = context["date_from"]
         date_to = context["date_to"]
 
-        campaigns = Campaign.objects.filter(client=charity).order_by("-created_at") if charity else Campaign.objects.none()
+        campaigns = (
+            Campaign.objects.filter(client=charity).order_by("-created_at")
+            if charity
+            else Campaign.objects.none()
+        )
 
         perf = []
         for camp in campaigns:
@@ -790,20 +815,24 @@ class ClientCampaignSummaryView(ClientReportBaseView):
                 campaign=camp, timestamp__date__range=(date_from, date_to)
             )
             sent = email_qs.filter(event_type="SENT").count()
-            perf.append({
-                "campaign": camp,
-                "sent": stats.total_sent,
-                "delivered": stats.total_sent - stats.total_failed,
-                "opened": stats.unique_opens,
-                "clicked": stats.total_clicks,
-                "video_plays": stats.total_video_views,
-                "open_rate": stats.open_rate,
-                "click_rate": stats.click_rate,
-                "video_rate": round(stats.total_video_views / stats.total_sent * 100, 1) if stats.total_sent > 0 else 0,
-                "bounce_rate": stats.bounce_rate,
-                "completion_rate": stats.completion_rate,
-                "period_sent": sent,
-            })
+            perf.append(
+                {
+                    "campaign": camp,
+                    "sent": stats.total_sent,
+                    "delivered": stats.total_sent - stats.total_failed,
+                    "opened": stats.unique_opens,
+                    "clicked": stats.total_clicks,
+                    "video_plays": stats.total_video_views,
+                    "open_rate": stats.open_rate,
+                    "click_rate": stats.click_rate,
+                    "video_rate": round(stats.total_video_views / stats.total_sent * 100, 1)
+                    if stats.total_sent > 0
+                    else 0,
+                    "bounce_rate": stats.bounce_rate,
+                    "completion_rate": stats.completion_rate,
+                    "period_sent": sent,
+                }
+            )
 
         context["campaign_perf"] = perf
         return context
@@ -820,11 +849,16 @@ class ClientVideoEngagementView(ClientReportBaseView):
         date_from = context["date_from"]
         date_to = context["date_to"]
 
-        campaigns = Campaign.objects.filter(client=charity).exclude(cf_stream_video_id="") if charity else Campaign.objects.none()
+        campaigns = (
+            Campaign.objects.filter(client=charity).exclude(cf_stream_video_id="")
+            if charity
+            else Campaign.objects.none()
+        )
         video_uids = [c.cf_stream_video_id for c in campaigns if c.cf_stream_video_id]
 
         # Try Cloudflare Stream GraphQL for real watch-time data
         from .utils.cloudflare_stream import get_stream_video_analytics
+
         stream_data = get_stream_video_analytics(video_uids, date_from, date_to)
 
         rows = []
@@ -836,20 +870,26 @@ class ClientVideoEngagementView(ClientReportBaseView):
             )
             local_plays = local_qs.filter(event_type="PLAY").count()
             local_completions = local_qs.filter(event_type="COMPLETE").count()
-            local_avg_duration = local_qs.filter(event_type="PLAY").aggregate(
-                avg=Avg("watch_duration")
-            )["avg"] or 0
-            rows.append({
-                "campaign": camp,
-                "cf_plays": cf.get("plays", 0),
-                "cf_minutes": cf.get("minutes_viewed", 0.0),
-                "cf_avg_minutes": round(cf["minutes_viewed"] / cf["plays"], 2) if cf.get("plays") else 0,
-                "local_plays": local_plays,
-                "local_avg_duration": round(local_avg_duration, 1),
-                "local_completions": local_completions,
-                "completion_rate": round(local_completions / local_plays * 100, 1) if local_plays > 0 else 0,
-                "source": "cloudflare" if cf else "local",
-            })
+            local_avg_duration = (
+                local_qs.filter(event_type="PLAY").aggregate(avg=Avg("watch_duration"))["avg"] or 0
+            )
+            rows.append(
+                {
+                    "campaign": camp,
+                    "cf_plays": cf.get("plays", 0),
+                    "cf_minutes": cf.get("minutes_viewed", 0.0),
+                    "cf_avg_minutes": round(cf["minutes_viewed"] / cf["plays"], 2)
+                    if cf.get("plays")
+                    else 0,
+                    "local_plays": local_plays,
+                    "local_avg_duration": round(local_avg_duration, 1),
+                    "local_completions": local_completions,
+                    "completion_rate": round(local_completions / local_plays * 100, 1)
+                    if local_plays > 0
+                    else 0,
+                    "source": "cloudflare" if cf else "local",
+                }
+            )
         context["video_rows"] = rows
         context["total_cf_minutes"] = round(sum(r["cf_minutes"] for r in rows), 2)
         context["cf_configured"] = bool(stream_data) or bool(video_uids)
@@ -873,8 +913,9 @@ class ClientDonorHeatmapView(ClientReportBaseView):
         date_to = context["date_to"]
 
         donors = (
-            DonationJob.objects
-            .filter(charity=charity, status="success", created_at__date__range=(date_from, date_to))
+            DonationJob.objects.filter(
+                charity=charity, status="success", created_at__date__range=(date_from, date_to)
+            )
             .values("email", "donor_name")
             .annotate(
                 total_views=Sum("real_views"),
@@ -889,7 +930,9 @@ class ClientDonorHeatmapView(ClientReportBaseView):
         )
         rows = []
         for d in donors:
-            score = (d["total_clicks"] or 0) * 3 + (d["total_views"] or 0) + (d["campaigns"] or 0) * 2
+            score = (
+                (d["total_clicks"] or 0) * 3 + (d["total_views"] or 0) + (d["campaigns"] or 0) * 2
+            )
             rows.append({**d, "engagement_score": score})
         rows.sort(key=lambda x: x["engagement_score"], reverse=True)
         context["donors"] = rows
@@ -897,23 +940,42 @@ class ClientDonorHeatmapView(ClientReportBaseView):
 
     def _export_csv(self, request) -> HttpResponse:
         import csv as _csv
+
         charity = _get_active_charity_or_none(request)
         date_from = request.GET.get("date_from", "")
         date_to = request.GET.get("date_to", "")
         donors = (
-            DonationJob.objects
-            .filter(charity=charity, status="success", created_at__date__range=(date_from, date_to))
+            DonationJob.objects.filter(
+                charity=charity, status="success", created_at__date__range=(date_from, date_to)
+            )
             .values("email", "donor_name")
-            .annotate(total_views=Sum("real_views"), total_clicks=Sum("real_clicks"), campaigns=Count("campaign", distinct=True))
+            .annotate(
+                total_views=Sum("real_views"),
+                total_clicks=Sum("real_clicks"),
+                campaigns=Count("campaign", distinct=True),
+            )
             .order_by("-total_clicks")[:500]
         )
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=donor_heatmap.csv"
         writer = _csv.writer(response)
-        writer.writerow(["Email", "Donor Name", "Campaigns", "Total Views", "Total Clicks", "Engagement Score"])
+        writer.writerow(
+            ["Email", "Donor Name", "Campaigns", "Total Views", "Total Clicks", "Engagement Score"]
+        )
         for d in donors:
-            score = (d["total_clicks"] or 0) * 3 + (d["total_views"] or 0) + (d["campaigns"] or 0) * 2
-            writer.writerow([d["email"], d["donor_name"], d["campaigns"], d["total_views"], d["total_clicks"], score])
+            score = (
+                (d["total_clicks"] or 0) * 3 + (d["total_views"] or 0) + (d["campaigns"] or 0) * 2
+            )
+            writer.writerow(
+                [
+                    d["email"],
+                    d["donor_name"],
+                    d["campaigns"],
+                    d["total_views"],
+                    d["total_clicks"],
+                    score,
+                ]
+            )
         return response
 
 
@@ -936,45 +998,59 @@ class ClientListHygieneView(ClientReportBaseView):
         if charity:
             # Bounces from EmailEvent
             bounces = (
-                EmailEvent.objects
-                .filter(campaign__client=charity, event_type="BOUNCED", timestamp__date__range=(date_from, date_to))
+                EmailEvent.objects.filter(
+                    campaign__client=charity,
+                    event_type="BOUNCED",
+                    timestamp__date__range=(date_from, date_to),
+                )
                 .select_related("job", "campaign")
                 .order_by("-timestamp")[:200]
             )
             # Resend-style failures
             failures = (
-                EmailEvent.objects
-                .filter(campaign__client=charity, event_type__in=["FAILED", "SUPPRESSED"], timestamp__date__range=(date_from, date_to))
+                EmailEvent.objects.filter(
+                    campaign__client=charity,
+                    event_type__in=["FAILED", "SUPPRESSED"],
+                    timestamp__date__range=(date_from, date_to),
+                )
                 .select_related("job", "campaign")
                 .order_by("-timestamp")[:200]
             )
             # Spam complaints from Resend
             complaints = (
-                EmailEvent.objects
-                .filter(campaign__client=charity, event_type="COMPLAINED", timestamp__date__range=(date_from, date_to))
+                EmailEvent.objects.filter(
+                    campaign__client=charity,
+                    event_type="COMPLAINED",
+                    timestamp__date__range=(date_from, date_to),
+                )
                 .select_related("job", "campaign")
                 .order_by("-timestamp")[:200]
             )
             # Unsubscribes
-            unsubs = UnsubscribedUser.objects.filter(charity=charity, created_at__date__range=(date_from, date_to)).order_by("-created_at")[:200]
+            unsubs = UnsubscribedUser.objects.filter(
+                charity=charity, created_at__date__range=(date_from, date_to)
+            ).order_by("-created_at")[:200]
         else:
             bounces = failures = complaints = EmailEvent.objects.none()
             unsubs = UnsubscribedUser.objects.none()
 
-        context.update({
-            "bounces": bounces,
-            "failures": failures,
-            "complaints": complaints,
-            "unsubs": unsubs,
-            "bounce_count": bounces.count() if hasattr(bounces, "count") else 0,
-            "failure_count": failures.count() if hasattr(failures, "count") else 0,
-            "complaint_count": complaints.count() if hasattr(complaints, "count") else 0,
-            "unsub_count": unsubs.count() if hasattr(unsubs, "count") else 0,
-        })
+        context.update(
+            {
+                "bounces": bounces,
+                "failures": failures,
+                "complaints": complaints,
+                "unsubs": unsubs,
+                "bounce_count": bounces.count() if hasattr(bounces, "count") else 0,
+                "failure_count": failures.count() if hasattr(failures, "count") else 0,
+                "complaint_count": complaints.count() if hasattr(complaints, "count") else 0,
+                "unsub_count": unsubs.count() if hasattr(unsubs, "count") else 0,
+            }
+        )
         return context
 
     def _export_csv(self, request) -> HttpResponse:
         import csv as _csv
+
         charity = _get_active_charity_or_none(request)
         tab = request.GET.get("tab", "bounces")
         date_from = request.GET.get("date_from", "")
@@ -982,8 +1058,11 @@ class ClientListHygieneView(ClientReportBaseView):
         type_map = {"bounces": "BOUNCED", "failures": "FAILED", "complaints": "COMPLAINED"}
         event_type = type_map.get(tab, "BOUNCED")
         qs = (
-            EmailEvent.objects
-            .filter(campaign__client=charity, event_type=event_type, timestamp__date__range=(date_from, date_to))
+            EmailEvent.objects.filter(
+                campaign__client=charity,
+                event_type=event_type,
+                timestamp__date__range=(date_from, date_to),
+            )
             .select_related("job")
             .order_by("-timestamp")
         )
@@ -1010,15 +1089,16 @@ class ClientBillingSnapshotView(ClientReportBaseView):
 
         if charity:
             invoices = (
-                Invoice.objects
-                .filter(charity=charity)
+                Invoice.objects.filter(charity=charity)
                 .prefetch_related("line_items__service")
                 .order_by("-issue_date")[:10]
             )
             # Current period: current month
             today = timezone.now().date()
             month_start = today.replace(day=1)
-            period_jobs = DonationJob.objects.filter(charity=charity, created_at__date__gte=month_start)
+            period_jobs = DonationJob.objects.filter(
+                charity=charity, created_at__date__gte=month_start
+            )
             period_totals = period_jobs.aggregate(
                 total=Count("id"),
                 sent=Count("id", filter=Q(status="success")),

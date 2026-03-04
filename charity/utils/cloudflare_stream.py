@@ -253,7 +253,7 @@ def _fetch_stream_window(
             else:
                 results[uid] = {"plays": plays, "minutes_viewed": round(minutes, 2)}
     except Exception as exc:
-        logger.warning("CF Stream GraphQL window %s–%s failed: %s", start, end, exc)
+        logger.warning("CF Stream GraphQL window %s-%s failed: %s", start, end, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +285,9 @@ def get_r2_storage_by_prefix() -> dict[str, dict]:
     if cached is not None:
         return cached
 
-    account_id = getattr(settings, "CLOUDFLARE_R2_ACCOUNT_ID", "") or getattr(settings, "CLOUDFLARE_ACCOUNT_ID", "")
+    account_id = getattr(settings, "CLOUDFLARE_R2_ACCOUNT_ID", "") or getattr(
+        settings, "CLOUDFLARE_ACCOUNT_ID", ""
+    )
     access_key = getattr(settings, "CLOUDFLARE_R2_ACCESS_KEY_ID", "")
     secret_key = getattr(settings, "CLOUDFLARE_R2_SECRET_ACCESS_KEY", "")
     bucket = getattr(settings, "CLOUDFLARE_R2_BUCKET_NAME", "")
@@ -321,7 +323,7 @@ def get_r2_storage_by_prefix() -> dict[str, dict]:
 
         # Add human-readable GB and estimated cost (£0.015/GB/month)
         _GB = 1_073_741_824
-        for prefix, totals in prefix_totals.items():
+        for _prefix, totals in prefix_totals.items():
             gb = round(totals["bytes"] / _GB, 3)
             totals["gb"] = gb
             totals["cost_gbp"] = round(gb * 0.015, 4)
