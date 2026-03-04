@@ -29,6 +29,15 @@ if is_true "${SEED_DATA_ON_START:-false}"; then
   fi
 fi
 
+if is_true "${SEED_ANALYTICS_ON_START:-false}"; then
+  echo "Seeding analytics events..."
+  if is_true "${SEED_ANALYTICS_FORCE:-false}"; then
+    python manage.py seed_analytics --force
+  else
+    python manage.py seed_analytics
+  fi
+fi
+
 echo "Ensuring superuser exists..."
 python manage.py ensure_superuser \
   --username "${DJANGO_SUPERUSER_USERNAME:-admin}" \
