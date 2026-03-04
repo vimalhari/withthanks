@@ -1,8 +1,7 @@
 name: Deploy – Dev (Hetzner)
 
 on:
-  push:
-    branches: [develop]
+  workflow_dispatch:
 
 # Prevent concurrent deploys to the same environment
 concurrency:

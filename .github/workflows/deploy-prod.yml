@@ -1,8 +1,7 @@
 name: Deploy – Prod (DigitalOcean)
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 # Prevent concurrent deploys to the same environment
 concurrency:
