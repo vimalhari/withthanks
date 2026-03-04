@@ -624,3 +624,30 @@ try:
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 except Exception as _e:
     print(f"⚠️ Could not ensure MEDIA_ROOT exists: {_e}")
+
+# ------------------------------------------------------------
+# Sentry error monitoring (production)
+# Set SENTRY_DSN in your .env.prod to enable.
+# Sign up free at https://sentry.io or self-host.
+# ------------------------------------------------------------
+_sentry_dsn = os.environ.get("SENTRY_DSN", "")
+if _sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        environment=os.environ.get("DJANGO_ENV", "development"),
+        # Capture 10% of transactions for performance tracing.
+        # Increase to 1.0 temporarily to debug performance issues.
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        # Don't send PII (email addresses etc.) to Sentry by default.
+        send_default_pii=False,
+    )

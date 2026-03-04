@@ -25,7 +25,36 @@ schema_view = get_schema_view(
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok"})
+    """Deep health check — probes DB and Redis cache.
+    Returns HTTP 200 on healthy, HTTP 503 on any failure.
+    Used by Coolify / container orchestrators for readiness checks.
+    """
+    from django.core.cache import cache
+    from django.db import OperationalError, connection
+
+    errors: dict[str, str] = {}
+
+    # Probe PostgreSQL
+    try:
+        connection.ensure_connection()
+        db_status = "ok"
+    except OperationalError as exc:
+        db_status = "error"
+        errors["db"] = str(exc)
+
+    # Probe Redis (cache backend)
+    try:
+        cache.get("_health_probe")
+        cache_status = "ok"
+    except Exception as exc:  # noqa: BLE001
+        cache_status = "error"
+        errors["cache"] = str(exc)
+
+    healthy = not errors
+    payload: dict[str, object] = {"status": "ok" if healthy else "error", "db": db_status, "cache": cache_status}
+    if errors:
+        payload["detail"] = errors
+    return JsonResponse(payload, status=200 if healthy else 503)
 
 
 urlpatterns = [
