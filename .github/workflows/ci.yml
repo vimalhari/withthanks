@@ -22,10 +22,10 @@ jobs:
         with:
           version: "0.10.7"
 
-      - name: Set up Python 3.14
+      - name: Set up Python 3.14.3
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.14.3"
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
@@ -57,10 +57,10 @@ jobs:
         with:
           version: "0.10.7"
 
-      - name: Set up Python 3.14
+      - name: Set up Python 3.14.3
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.14.3"
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
