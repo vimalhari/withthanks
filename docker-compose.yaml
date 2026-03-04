@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: withthanks
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-withthanks_prod}
       POSTGRES_DB: withthanks
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -46,7 +46,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD}@db:5432/withthanks
+      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:-withthanks_prod}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       DJANGO_ENV: production
@@ -83,7 +83,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD}@db:5432/withthanks
+      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:-withthanks_prod}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       DJANGO_ENV: production
@@ -112,7 +112,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD}@db:5432/withthanks
+      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:-withthanks_prod}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       DJANGO_ENV: production
@@ -131,7 +131,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD}@db:5432/withthanks
+      DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:-withthanks_prod}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       DJANGO_ENV: production
