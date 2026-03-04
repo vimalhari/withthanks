@@ -144,10 +144,20 @@ def video_landing_view(request, job_id):
     # Resolve the EmailTracking record so the JS player can send watch events
     tracking = EmailTracking.objects.filter(job=job).first()
     tracking_id = str(tracking.id) if tracking else ""
+    # Resolve post-video CTA from the campaign (if configured)
+    campaign = job.campaign
+    cta_url = (campaign.cta_url or "") if campaign else ""
+    cta_label = (campaign.cta_label or "Donate Again") if campaign else "Donate Again"
     return render(
         request,
         "video_landing.html",
-        {"job": job, "video_url": video_url, "tracking_id": tracking_id},
+        {
+            "job": job,
+            "video_url": video_url,
+            "tracking_id": tracking_id,
+            "cta_url": cta_url,
+            "cta_label": cta_label,
+        },
     )
 
 

@@ -489,6 +489,17 @@ class CampaignAdmin(ModelAdmin):
                 ),
             },
         ),
+        (
+            "Post-Video CTA",
+            {
+                "classes": ("collapse",),
+                "description": "Optional call-to-action button shown as an overlay when the video ends on the donor landing page.",
+                "fields": (
+                    "cta_url",
+                    "cta_label",
+                ),
+            },
+        ),
     )
 
 

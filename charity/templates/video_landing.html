@@ -16,6 +16,14 @@
         .branding { padding: 20px; background: #fff; text-align: center; }
         .branding h1 { margin: 0 0 10px; color: #333; font-size: 24px; }
         .branding p { color: #666; margin: 0; }
+        /* Post-video CTA overlay */
+        .cta-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+        .cta-overlay.visible { opacity: 1; pointer-events: auto; }
+        .cta-card { background: #fff; border-radius: 12px; padding: 32px 40px; text-align: center; max-width: 360px; width: 85%; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .cta-card h2 { margin: 0 0 8px; color: #222; font-size: 20px; font-weight: 700; }
+        .cta-card p { color: #555; margin: 0 0 24px; font-size: 15px; }
+        .cta-btn { display: inline-block; background: #2563eb; color: #fff; font-size: 16px; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; cursor: pointer; border: none; transition: background 0.2s, transform 0.15s; }
+        .cta-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -26,6 +34,16 @@
             Your browser does not support the video tag.
         </video>
         
+        {% if cta_url %}
+        <div class="cta-overlay" id="ctaOverlay">
+            <div class="cta-card">
+                <h2>Thank you, {{ job.donor_name }}!</h2>
+                <p>Your generosity makes a real difference to {{ job.charity.organization_name }}.</p>
+                <button class="cta-btn" id="ctaBtn">{{ cta_label }}</button>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="branding">
             <h1>Thank You, {{ job.donor_name }}!</h1>
             <p>A message from {{ job.charity.organization_name }}</p>
@@ -91,7 +109,29 @@
                 hasCompleted = true;
                 sendEvent('complete', video.duration); // Send total duration
             }
+            showCta();
         });
+
+        {% if cta_url %}
+        // Post-video CTA
+        const ctaUrl = "{{ cta_url|escapejs }}";
+        const ctaOverlay = document.getElementById('ctaOverlay');
+        const ctaBtn = document.getElementById('ctaBtn');
+
+        function showCta() {
+            if (ctaUrl && ctaOverlay) {
+                ctaOverlay.classList.add('visible');
+            }
+        }
+
+        if (ctaBtn) {
+            ctaBtn.addEventListener('click', () => {
+                window.open(ctaUrl, '_blank', 'noopener,noreferrer');
+            });
+        }
+        {% else %}
+        function showCta() {}
+        {% endif %}
     </script>
 
 </body>

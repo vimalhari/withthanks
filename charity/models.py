@@ -664,6 +664,20 @@ class Campaign(models.Model):
         help_text="Cloudflare Stream hosted player URL (cached after first VDM upload)",
     )
 
+    # Post-video CTA — shown as an overlay when the video ends on the landing page
+    cta_url = models.URLField(
+        max_length=512,
+        blank=True,
+        null=True,
+        help_text="URL to open when the donor clicks the CTA button after the video ends",
+    )
+    cta_label = models.CharField(
+        max_length=100,
+        blank=True,
+        default="Donate Again",
+        help_text="Label text for the post-video CTA button (default: \"Donate Again\")",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
