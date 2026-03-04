@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+trap 'echo "ERROR: entrypoint.sh failed at line $LINENO (exit code $?)" >&2' ERR
 
 echo "Applying database migrations..."
 python manage.py migrate --noinput
