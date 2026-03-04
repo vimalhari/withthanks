@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING
 
 from django.contrib import admin, messages
 from django.db.models import Count, Q, QuerySet
+from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin, TabularInline
 
 if TYPE_CHECKING:
@@ -88,7 +91,13 @@ class CharityAdmin(ModelAdmin):
     warn_unsaved_tabs = True
     inlines = [CharityMemberInline]
     actions = [create_default_campaign]
-    readonly_fields = ("blackbaud_token_expires_at", "blackbaud_last_synced_at")
+    readonly_fields = (
+        "blackbaud_enabled",
+        "blackbaud_environment_id",
+        "blackbaud_token_expires_at",
+        "blackbaud_last_synced_at",
+        "blackbaud_crm_status",
+    )
     fieldsets = (
         (
             "Identity",
@@ -142,6 +151,7 @@ class CharityAdmin(ModelAdmin):
             {
                 "classes": ("collapse",),
                 "fields": (
+                    "blackbaud_crm_status",
                     "blackbaud_enabled",
                     "blackbaud_environment_id",
                     "blackbaud_token_expires_at",
@@ -150,6 +160,70 @@ class CharityAdmin(ModelAdmin):
             },
         ),
     )
+
+    # ------------------------------------------------------------------
+    # Custom admin URLs: connect / disconnect per charity
+    # ------------------------------------------------------------------
+
+    def get_urls(self):
+        from charity.views_crm import blackbaud_admin_connect, blackbaud_admin_disconnect
+
+        custom = [
+            path(
+                "<int:charity_id>/connect-blackbaud/",
+                self.admin_site.admin_view(blackbaud_admin_connect),
+                name="charity_charity_blackbaud_connect",
+            ),
+            path(
+                "<int:charity_id>/disconnect-blackbaud/",
+                self.admin_site.admin_view(blackbaud_admin_disconnect),
+                name="charity_charity_blackbaud_disconnect",
+            ),
+        ]
+        return custom + super().get_urls()
+
+    # ------------------------------------------------------------------
+    # Readonly field: inline Connect / Disconnect button
+    # ------------------------------------------------------------------
+
+    @admin.display(description="Raiser's Edge NXT Connection")
+    def blackbaud_crm_status(self, obj):
+        if not obj or not obj.pk:
+            return mark_safe("<em>Save the charity first to connect Raiser's Edge NXT.</em>")
+
+        if obj.blackbaud_enabled:
+            last_sync = (
+                obj.blackbaud_last_synced_at.strftime("%d %b %Y %H:%M UTC")
+                if obj.blackbaud_last_synced_at
+                else "never"
+            )
+            disconnect_url = reverse("admin:charity_charity_blackbaud_disconnect", args=[obj.pk])
+            return format_html(
+                '<span style="color:#16a34a;font-weight:600;">&#10003; Connected</span> '
+                '&mdash; last synced: {last_sync}'
+                '<form method="post" action="{url}" style="display:inline;margin-left:16px;">'
+                '<input type="hidden" name="csrfmiddlewaretoken" value="">'
+                '<button type="submit" '
+                'style="background:#dc2626;color:#fff;border:none;padding:4px 12px;'
+                'border-radius:4px;cursor:pointer;font-size:12px;" '
+                'onclick="this.form.querySelector(\'[name=csrfmiddlewaretoken]\').value='
+                'document.cookie.match(/csrftoken=([^;]+)/)[1];return confirm(\'Disconnect Raiser\'s Edge NXT for this charity?\');">'
+                "Disconnect"
+                "</button>"
+                "</form>",
+                last_sync=last_sync,
+                url=disconnect_url,
+            )
+
+        connect_url = reverse("admin:charity_charity_blackbaud_connect", args=[obj.pk])
+        return format_html(
+            '<a href="{}" '
+            'style="background:#2563eb;color:#fff;padding:5px 14px;'
+            'border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;">'
+            "&#128279; Connect Raiser's Edge NXT"
+            "</a>",
+            connect_url,
+        )
 
 
 @admin.register(CharityMember)

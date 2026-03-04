@@ -3,11 +3,14 @@ from __future__ import annotations
 """
 CRM integration views — Blackbaud Raiser's Edge NXT OAuth 2.0 flow.
 
-    /crm/blackbaud/connect/   → redirect to Blackbaud authorization URL
-    /crm/blackbaud/callback/  → handle authorization code, exchange for tokens
-    /crm/blackbaud/disconnect/ → revoke stored tokens
+    /crm/blackbaud/connect/              → charity portal: connect using active charity
+    /admin-crm/blackbaud/<id>/connect/   → superuser admin: connect a specific charity by id
+    /crm/blackbaud/callback/             → handle authorization code, exchange for tokens
+    /crm/blackbaud/disconnect/           → revoke stored tokens (portal)
+    /admin-crm/blackbaud/<id>/disconnect/ → revoke stored tokens (admin)
 
-All views require an authenticated user and an active charity.
+Superuser-initiated flows store the target charity_id in the session so the callback
+knows which charity to connect, then redirect back to the Django admin change page.
 """
 
 import logging
@@ -17,9 +20,11 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.utils.timezone import now
 
+from charity.models import Charity
 from charity.utils.access_control import get_active_charity
 from charity.utils.crm_adapters.blackbaud import _save_tokens
 
@@ -28,14 +33,16 @@ logger = logging.getLogger(__name__)
 _BLACKBAUD_AUTH_URL = "https://oauth2.sky.blackbaud.com/authorization"
 _BLACKBAUD_TOKEN_URL = "https://oauth2.sky.blackbaud.com/token"
 
-# Session key used to carry the CSRF state parameter across the OAuth redirect
+# Session keys used across the OAuth redirect
 _STATE_SESSION_KEY = "blackbaud_oauth_state"
+_CHARITY_ID_SESSION_KEY = "blackbaud_oauth_charity_id"
+_ADMIN_ORIGIN_SESSION_KEY = "blackbaud_oauth_admin_origin"
 
 
 @login_required(login_url="charity_login")
 def blackbaud_connect(request):
     """
-    Step 1 — redirect the charity admin to the Blackbaud authorization page.
+    Step 1 (portal) — redirect to Blackbaud authorization using the active charity.
 
     A cryptographically-random state token is stored in the session to
     protect against CSRF on the OAuth callback.
@@ -44,13 +51,32 @@ def blackbaud_connect(request):
     if not charity:
         messages.error(request, "No active charity selected.")
         return redirect("profile")
+    return _initiate_blackbaud_oauth(request, charity, admin_origin=False)
 
+
+@login_required(login_url="charity_login")
+def blackbaud_admin_connect(request, charity_id: int):
+    """
+    Step 1 (admin) — superuser initiates the OAuth flow for any charity directly
+    from the Django admin Charity change page.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "Permission denied.")
+        return redirect("admin:charity_charity_changelist")
+    charity = get_object_or_404(Charity, id=charity_id)
+    return _initiate_blackbaud_oauth(request, charity, admin_origin=True)
+
+
+def _initiate_blackbaud_oauth(request, charity, *, admin_origin: bool):
+    """Shared logic: build the Blackbaud authorization URL and redirect."""
     if not settings.BLACKBAUD_CLIENT_ID:
         messages.error(request, "Blackbaud integration is not configured. Contact support.")
-        return redirect("profile")
+        return _post_connect_redirect(request, charity, admin_origin)
 
     state = secrets.token_urlsafe(32)
     request.session[_STATE_SESSION_KEY] = state
+    request.session[_CHARITY_ID_SESSION_KEY] = charity.id
+    request.session[_ADMIN_ORIGIN_SESSION_KEY] = admin_origin
 
     params = {
         "client_id": settings.BLACKBAUD_CLIENT_ID,
@@ -59,11 +85,14 @@ def blackbaud_connect(request):
         "state": state,
     }
 
-    # Build the authorization URL manually without an extra dependency
     query = "&".join(f"{k}={v}" for k, v in params.items())
     auth_url = f"{_BLACKBAUD_AUTH_URL}?{query}"
 
-    logger.info("Redirecting charity %s to Blackbaud authorization", charity.id)
+    logger.info(
+        "Redirecting charity %s to Blackbaud authorization (admin_origin=%s)",
+        charity.id,
+        admin_origin,
+    )
     return redirect(auth_url)
 
 
@@ -72,13 +101,25 @@ def blackbaud_callback(request):
     """
     Step 2 — Blackbaud redirects here with ?code=…&state=…
 
-    Exchange the code for tokens, persist them on the Charity, and
-    enable the integration.
+    Works for both portal-initiated and admin-initiated flows.
+    Admin flows redirect back to the Charity change page after connecting.
     """
-    charity = get_active_charity(request)
-    if not charity:
-        messages.error(request, "No active charity selected.")
-        return redirect("profile")
+    # Retrieve which charity this OAuth flow is for (set by _initiate_blackbaud_oauth)
+    charity_id = request.session.pop(_CHARITY_ID_SESSION_KEY, None)
+    admin_origin = request.session.pop(_ADMIN_ORIGIN_SESSION_KEY, False)
+
+    if charity_id:
+        try:
+            charity = Charity.objects.get(id=charity_id)
+        except Charity.DoesNotExist:
+            messages.error(request, "Charity not found.")
+            return redirect("admin:charity_charity_changelist" if admin_origin else "profile")
+    else:
+        # Fallback: portal flow without explicit charity_id in session
+        charity = get_active_charity(request)
+        if not charity:
+            messages.error(request, "No active charity selected.")
+            return redirect("profile")
 
     # CSRF state check
     expected_state = request.session.pop(_STATE_SESSION_KEY, None)
@@ -91,18 +132,18 @@ def blackbaud_callback(request):
             received_state,
         )
         messages.error(request, "Authorization failed: invalid state. Please try again.")
-        return redirect("profile")
+        return _post_connect_redirect(request, charity, admin_origin)
 
     error = request.GET.get("error")
     if error:
         description = request.GET.get("error_description", error)
         messages.error(request, f"Blackbaud authorization was denied: {description}")
-        return redirect("profile")
+        return _post_connect_redirect(request, charity, admin_origin)
 
     code = request.GET.get("code")
     if not code:
         messages.error(request, "No authorization code received from Blackbaud.")
-        return redirect("profile")
+        return _post_connect_redirect(request, charity, admin_origin)
 
     # Exchange code for tokens
     try:
@@ -120,7 +161,7 @@ def blackbaud_callback(request):
     except requests.RequestException as exc:
         logger.exception("Token exchange request failed for charity %s", charity.id)
         messages.error(request, f"Could not reach Blackbaud: {exc}")
-        return redirect("profile")
+        return _post_connect_redirect(request, charity, admin_origin)
 
     if resp.status_code != 200:
         logger.error(
@@ -130,22 +171,25 @@ def blackbaud_callback(request):
             resp.text[:200],
         )
         messages.error(request, "Blackbaud token exchange failed. Please try connecting again.")
-        return redirect("profile")
+        return _post_connect_redirect(request, charity, admin_origin)
 
     token_data = resp.json()
     _save_tokens(charity, token_data)
     charity.blackbaud_enabled = True
     charity.save(update_fields=["blackbaud_enabled"])
 
-    logger.info("Blackbaud integration connected for charity %s", charity.id)
-    messages.success(request, "Raiser's Edge NXT connected successfully. Donation sync is now active.")
-    return redirect("profile")
+    logger.info("Blackbaud integration connected for charity %s (admin_origin=%s)", charity.id, admin_origin)
+    messages.success(
+        request,
+        f"Raiser's Edge NXT connected for {charity.client_name}. Donation sync is now active.",
+    )
+    return _post_connect_redirect(request, charity, admin_origin)
 
 
 @login_required(login_url="charity_login")
 def blackbaud_disconnect(request):
     """
-    Remove stored Blackbaud tokens and disable the integration for this charity.
+    Remove stored Blackbaud tokens and disable the integration (portal flow).
     Only accepts POST to prevent accidental disconnection via navigating to the URL.
     """
     if request.method != "POST":
@@ -156,6 +200,36 @@ def blackbaud_disconnect(request):
         messages.error(request, "No active charity selected.")
         return redirect("profile")
 
+    _clear_blackbaud_tokens(charity)
+    messages.success(request, "Raiser's Edge NXT has been disconnected.")
+    return redirect("profile")
+
+
+@login_required(login_url="charity_login")
+def blackbaud_admin_disconnect(request, charity_id: int):
+    """
+    Remove stored Blackbaud tokens for a specific charity (admin flow).
+    Only accepts POST.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "Permission denied.")
+        return redirect("admin:charity_charity_changelist")
+
+    if request.method != "POST":
+        return redirect("admin:charity_charity_change", charity_id)
+
+    charity = get_object_or_404(Charity, id=charity_id)
+    _clear_blackbaud_tokens(charity)
+    messages.success(request, f"Raiser's Edge NXT disconnected for {charity.client_name}.")
+    return redirect("admin:charity_charity_change", charity_id)
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _clear_blackbaud_tokens(charity) -> None:
+    """Zero out all Blackbaud OAuth tokens and disable the integration."""
     charity.blackbaud_enabled = False
     charity.blackbaud_access_token = None
     charity.blackbaud_refresh_token = None
@@ -172,7 +246,11 @@ def blackbaud_disconnect(request):
             "blackbaud_environment_id",
         ]
     )
-
     logger.info("Blackbaud integration disconnected for charity %s", charity.id)
-    messages.success(request, "Raiser's Edge NXT has been disconnected.")
+
+
+def _post_connect_redirect(request, charity, admin_origin: bool):
+    """Redirect to the right place after connect/disconnect/error."""
+    if admin_origin:
+        return redirect("admin:charity_charity_change", charity.id)
     return redirect("profile")
