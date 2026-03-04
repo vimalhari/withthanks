@@ -196,7 +196,7 @@ class UnifiedDashboardDataAPI(AnalyticsBaseView, View):
         }
 
         # 4. Funnel Logic based on Campaign Type
-        if campaign.appeal_type == "VDM":
+        if campaign.campaign_type == campaign.CampaignType.VDM:
             stages = [
                 {"label": "Sent", "value": stats.total_sent},
                 {"label": "Delivered", "value": stats.total_sent - stats.total_failed},
@@ -234,7 +234,7 @@ class UnifiedDashboardDataAPI(AnalyticsBaseView, View):
 
         return JsonResponse(
             {
-                "campaign_type": campaign.appeal_type,
+                "campaign_type": campaign.campaign_type,
                 "metrics": {
                     "total_sent": stats.total_sent,
                     "total_failed": stats.total_failed,

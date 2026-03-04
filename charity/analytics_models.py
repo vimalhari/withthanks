@@ -55,11 +55,11 @@ class EmailEvent(models.Model):
         return f"{self.event_type} - Campaign {self.campaign_id}"
 
     def save(self, *args, **kwargs):
-        # STRICT LOGIC: Reject UNSUB for THANKYOU campaigns
+        # STRICT LOGIC: Reject UNSUB for THANK_YOU campaigns
         if (
             self.event_type in ["UNSUB", "unsub"]
             and self.campaign
-            and self.campaign.appeal_type == "THANKYOU"
+            and self.campaign.campaign_type == "THANK_YOU"
         ):
             return  # Silently ignore
         super().save(*args, **kwargs)

@@ -56,8 +56,8 @@
                             <div class="text-[11px] text-gray-400">{{ job.email }}</div>
                         </td>
                         <td>
-                            <span class="{% if job.appeal_type == 'VDM' %}badge-warning{% else %}badge-brand{% endif %} !text-[10px]">
-                                {{ job.appeal_type|default:"WithThanks" }}
+                            <span class="{% if job.campaign_type == 'VDM' %}badge-warning{% else %}badge-brand{% endif %} !text-[10px]">
+                                {{ job.campaign_type|default:"Thank You" }}
                             </span>
                         </td>
                         <td>

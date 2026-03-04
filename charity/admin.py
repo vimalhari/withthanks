@@ -69,9 +69,9 @@ def create_default_campaign(
         Campaign.objects.create(
             name=f"Primary Campaign - {charity.client_name}",
             client=charity,
-            appeal_code=f"PC-{charity.id}-{year}",
-            appeal_start=timezone.now().date(),
-            appeal_end=timezone.now().date() + datetime.timedelta(days=365),
+            campaign_code=f"PC-{charity.id}-{year}",
+            campaign_start=timezone.now().date(),
+            campaign_end=timezone.now().date() + datetime.timedelta(days=365),
             status="active",
         )
         created += 1
@@ -422,15 +422,15 @@ class CampaignAdmin(ModelAdmin):
     list_display = (
         "name",
         "client",
-        "appeal_type",
         "status",
         "campaign_type",
+        "input_source",
         "video_mode",
-        "appeal_start",
-        "appeal_end",
+        "campaign_start",
+        "campaign_end",
     )
-    list_filter = ("status", "appeal_type", "campaign_type", "video_mode")
-    search_fields = ("name", "client__client_name", "appeal_code")
+    list_filter = ("status", "campaign_type", "input_source", "video_mode")
+    search_fields = ("name", "client__client_name", "campaign_code")
     readonly_fields = ("id", "created_at", "is_personalized")
     warn_unsaved_tabs = True
     inlines = [CampaignFieldInline, DonationBatchCampaignInline]
@@ -442,8 +442,7 @@ class CampaignAdmin(ModelAdmin):
                     "id",
                     "name",
                     "client",
-                    "appeal_code",
-                    "appeal_type",
+                    "campaign_code",
                     "status",
                     "created_at",
                 )
@@ -454,8 +453,10 @@ class CampaignAdmin(ModelAdmin):
             {
                 "fields": (
                     "campaign_type",
+                    "input_source",
                     "video_mode",
                     "is_personalized",  # read-only — derived from video_mode
+                    "gratitude_cooldown_days",  # Thank You only
                 )
             },
         ),
@@ -463,8 +464,8 @@ class CampaignAdmin(ModelAdmin):
             "Schedule",
             {
                 "fields": (
-                    "appeal_start",
-                    "appeal_end",
+                    "campaign_start",
+                    "campaign_end",
                 )
             },
         ),

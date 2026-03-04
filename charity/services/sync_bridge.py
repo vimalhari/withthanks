@@ -59,8 +59,8 @@ def sync_job_to_normalized_models(job) -> dict | None:
             amount = Decimal("0")
 
         campaign_type = Campaign.CampaignType.THANK_YOU
-        appeal = getattr(job, "appeal_type", None) or ""
-        if appeal.upper() == "VDM":
+        raw_mode = getattr(job, "campaign_type", None) or ""
+        if raw_mode.upper() == "VDM":
             campaign_type = Campaign.CampaignType.VDM
 
         donated_at = getattr(job, "completed_at", None) or now()
@@ -75,8 +75,8 @@ def sync_job_to_normalized_models(job) -> dict | None:
         )
 
         # ── VideoSendLog ───────────────────────────────────────────────
-        # Map CSV appeal_type → SendKind
-        if appeal.lower() == "gratitude":
+        # Map CSV campaign_type → SendKind
+        if raw_mode.lower() == "gratitude":
             send_kind = VideoSendLog.SendKind.GRATITUDE
         elif getattr(job, "media_type_override", None) == "image":
             send_kind = VideoSendLog.SendKind.TEMPLATE

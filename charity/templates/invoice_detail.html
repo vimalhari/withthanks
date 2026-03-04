@@ -157,7 +157,7 @@
                             <td class="font-bold">#{{ batch_item.batch.id }}</td>
                             <td>
                                 <div class="font-medium text-gray-900">{{ batch_item.batch.campaign_name }}</div>
-                                <div class="text-xs text-gray-400">{{ batch_item.batch.campaign.get_appeal_type_display|default:"Standard Campaign" }}</div>
+                                <div class="text-xs text-gray-400">{{ batch_item.batch.campaign.get_campaign_type_display|default:"Standard Campaign" }}</div>
                             </td>
                             <td class="text-sm text-gray-400">{{ batch_item.batch.created_at|date:"M d, Y" }}</td>
                             <td class="text-right font-mono">{{ batch_item.videos_count }}</td>

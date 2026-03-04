@@ -72,8 +72,8 @@ class VideoProcessingIsolationTests(TestCase):
         self.campaign_a = Campaign.objects.create(
             name="Campaign A",
             client=self.charity_a,
-            appeal_start=date.today(),
-            appeal_end=date.today(),
+            campaign_start=date.today(),
+            campaign_end=date.today(),
             video_mode=Campaign.VideoMode.PERSONALIZED,
         )
         self.charity_a.default_voiceover_script = "Hello A {{donor_name}}"
@@ -86,8 +86,8 @@ class VideoProcessingIsolationTests(TestCase):
         self.campaign_b = Campaign.objects.create(
             name="Campaign B",
             client=self.charity_b,
-            appeal_start=date.today(),
-            appeal_end=date.today(),
+            campaign_start=date.today(),
+            campaign_end=date.today(),
             video_mode=Campaign.VideoMode.PERSONALIZED,
         )
         self.charity_b.default_voiceover_script = "Hello B {{donor_name}}"

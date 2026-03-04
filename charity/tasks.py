@@ -61,8 +61,8 @@ def validate_and_prep_job(self, job_id):
 
     # Determine processing mode (default: WithThanks)
     mode = "WithThanks"
-    if campaign and campaign.appeal_type:
-        mode = campaign.appeal_type
+    if campaign and campaign.campaign_type:
+        mode = "VDM" if campaign.campaign_type == campaign.CampaignType.VDM else "WithThanks"
 
     logger.info("Prep Job %s — mode: %s", job_id, mode)
 
@@ -337,7 +337,7 @@ def dispatch_email_for_job(self, context):
         )
 
         # --- Tracking URLs -------------------------------------------------- #
-        suppress_unsub = bool(campaign and campaign.appeal_type == "THANKYOU")
+        suppress_unsub = bool(campaign and campaign.campaign_type == campaign.CampaignType.THANK_YOU)
         tracking = build_tracking_urls(
             job_id=job.id,
             mode=mode,
@@ -354,7 +354,7 @@ def dispatch_email_for_job(self, context):
                 "campaign": campaign,
                 "batch": job.donation_batch,
                 "user_id": job.id,
-                "appeal_type": mode,
+                "campaign_type": mode,
                 "sent": True,
                 "vdm": False,
             },
@@ -426,7 +426,7 @@ def dispatch_email_for_job(self, context):
         # non-personalised modes where no R2 upload occurred.
         if not job.video_path:
             job.video_path = final_video_path or ""
-        job.appeal_type = mode
+        job.campaign_type = mode
         job.generation_time = generation_time
         job.completed_at = now()
         job.save()

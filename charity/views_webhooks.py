@@ -245,7 +245,7 @@ class ResendWebhookView(View):
                 "campaign": job.campaign,
                 "batch": job.donation_batch,
                 "user_id": job.id,
-                "appeal_type": job.appeal_type or "WithThanks",
+                "campaign_type": job.campaign_type or "WithThanks",
                 "sent": True,
             },
         )

@@ -382,8 +382,8 @@ class DonationJob(models.Model):
     video_path = models.TextField(blank=True, null=True)
     error_message = models.TextField(blank=True, null=True)
     task_id = models.CharField(max_length=128, blank=True, null=True)
-    appeal_type = models.CharField(
-        max_length=20, choices=[("WithThanks", "WithThanks"), ("VDM", "VDM")], null=True, blank=True
+    campaign_type = models.CharField(
+        max_length=20, choices=[("WithThanks", "WithThanks"), ("VDM", "VDM"), ("Gratitude", "Gratitude")], null=True, blank=True
     )
     media_type_override = models.CharField(
         max_length=20, choices=[("video", "Video"), ("image", "Image")], null=True, blank=True
@@ -539,21 +539,19 @@ class VideoTemplate(models.Model):
 
 
 class Campaign(models.Model):
-    # Legacy plain-list choices (used by CSV batch pipeline)
     STATUS_CHOICES = [
         ("draft", "Draft"),
         ("active", "Active"),
         ("closed", "Closed"),
     ]
-    APPEAL_TYPES = [
-        ("WithThanks", "Thank you"),
-        ("VDM", "Video Direct Mail (VDM)"),
-    ]
 
-    # Stage 3 enums (used by API pipeline / video_dispatch service)
     class CampaignType(models.TextChoices):
         THANK_YOU = "THANK_YOU", "Thank You"
         VDM = "VDM", "Video Direct Mail"
+
+    class InputSource(models.TextChoices):
+        API = "API", "API"
+        CSV = "CSV", "CSV"
 
     class VideoMode(models.TextChoices):
         PERSONALIZED = "PERSONALIZED", "Personalized (TTS + stitch)"
@@ -564,22 +562,24 @@ class Campaign(models.Model):
     client = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="campaigns")
     description = models.TextField(blank=True)
 
-    # Appeal Details
-    appeal_code = models.CharField(max_length=50)
-    appeal_type = models.CharField(max_length=20, choices=APPEAL_TYPES, default="WithThanks")
+    # Campaign Dates & Identity
+    campaign_code = models.CharField(max_length=50)
+    campaign_start = models.DateField()
+    campaign_end = models.DateField()
 
-    appeal_start = models.DateField()
-    appeal_end = models.DateField()
-
-    # Financial Overview & Dates removed as per request
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
 
-    # Stage 3 fields (API pipeline)
     campaign_type = models.CharField(
         max_length=20,
         choices=CampaignType.choices,
         default=CampaignType.THANK_YOU,
-        help_text="API pipeline campaign type",
+        help_text="Campaign type: Thank You (donor acknowledgement) or VDM (video direct mail)",
+    )
+    input_source = models.CharField(
+        max_length=10,
+        choices=InputSource.choices,
+        default=InputSource.CSV,
+        help_text="Data ingest source. VDM is always CSV; Thank You can be API or CSV.",
     )
     video_mode = models.CharField(
         max_length=20,
@@ -613,7 +613,7 @@ class Campaign(models.Model):
     )
     gratitude_cooldown_days = models.PositiveIntegerField(
         default=30,
-        help_text="Days within which a repeat donation triggers a gratitude video instead",
+        help_text="Thank You only — if a donor gives again within this many days, send a gratitude card instead of another full thank-you video.",
     )
 
     # NEW CAMPAIGN MEDIA ASSETS
@@ -621,13 +621,13 @@ class Campaign(models.Model):
         upload_to=get_client_media_path,
         blank=True,
         null=True,
-        help_text="Main Campaign Video (VDM Appeal)",
+        help_text="Main Campaign Video (VDM Campaign)",
     )
     gratitude_video = models.FileField(
         upload_to=get_client_media_path,
         blank=True,
         null=True,
-        help_text="Gratitude Video (WithThanks Appeal)",
+        help_text="Gratitude Video (Thank You Campaign — sent to repeat donors within cooldown window)",
     )
 
     video_template_override = models.FileField(
@@ -643,7 +643,7 @@ class Campaign(models.Model):
     # Personalization Settings (derived from video_mode — not a DB column)
     @property
     def is_personalized(self) -> bool:
-        """True when the campaign uses TTS + personalised stitching (WithThanks only)."""
+        """True when the campaign uses TTS + personalised stitching (Thank You campaign only)."""
         return self.video_mode == self.VideoMode.PERSONALIZED
 
     # Email Settings
@@ -846,8 +846,10 @@ class EmailTracking(models.Model):
         null=True,
         blank=True,
     )
-    appeal_type = models.CharField(
-        max_length=20, choices=[("WithThanks", "WithThanks"), ("VDM", "VDM")], default="WithThanks"
+    campaign_type = models.CharField(
+        max_length=20,
+        choices=Campaign.CampaignType.choices,
+        default=Campaign.CampaignType.THANK_YOU,
     )
 
     # Tracking Status
@@ -877,7 +879,7 @@ class EmailTracking(models.Model):
         indexes = [
             models.Index(fields=["campaign", "batch"]),
             models.Index(fields=["job"]),
-            models.Index(fields=["appeal_type"]),
+            models.Index(fields=["campaign_type"]),
         ]
 
     def __str__(self):
