@@ -46,7 +46,7 @@ def health_check(request):
     try:
         cache.get("_health_probe")
         cache_status = "ok"
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         cache_status = "error"
         errors["cache"] = str(exc)
 

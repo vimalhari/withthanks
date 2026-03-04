@@ -849,7 +849,7 @@ def sync_charity_blackbaud(self, charity_id: int):
         donations = adapter.fetch_new_donations(since=since)
     except CRMError as exc:
         logger.exception("CRM fetch failed for charity %s: %s", charity_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     if not donations:
         logger.info("sync_charity_blackbaud: no new donations for charity %s", charity_id)
