@@ -200,14 +200,14 @@ class CharityAdmin(ModelAdmin):
             disconnect_url = reverse("admin:charity_charity_blackbaud_disconnect", args=[obj.pk])
             return format_html(
                 '<span style="color:#16a34a;font-weight:600;">&#10003; Connected</span> '
-                '&mdash; last synced: {last_sync}'
+                "&mdash; last synced: {last_sync}"
                 '<form method="post" action="{url}" style="display:inline;margin-left:16px;">'
                 '<input type="hidden" name="csrfmiddlewaretoken" value="">'
                 '<button type="submit" '
                 'style="background:#dc2626;color:#fff;border:none;padding:4px 12px;'
                 'border-radius:4px;cursor:pointer;font-size:12px;" '
-                'onclick="this.form.querySelector(\'[name=csrfmiddlewaretoken]\').value='
-                'document.cookie.match(/csrftoken=([^;]+)/)[1];return confirm(\'Disconnect Raiser\'s Edge NXT for this charity?\');">'
+                "onclick=\"this.form.querySelector('[name=csrfmiddlewaretoken]').value="
+                "document.cookie.match(/csrftoken=([^;]+)/)[1];return confirm('Disconnect Raiser's Edge NXT for this charity?');\">"
                 "Disconnect"
                 "</button>"
                 "</form>",

@@ -18,9 +18,7 @@ def backfill_input_source(apps, schema_editor):
     # Build a set of charity IDs that have at least one API-sourced donation.
     # (Donation has no campaign FK — it links to Charity directly.)
     api_charity_ids = set(
-        Donation.objects.filter(source="API")
-        .values_list("charity_id", flat=True)
-        .distinct()
+        Donation.objects.filter(source="API").values_list("charity_id", flat=True).distinct()
     )
 
     for campaign in Campaign.objects.all():
@@ -37,7 +35,6 @@ def backfill_input_source(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("charity", "0066_fix_index_name_and_help_texts"),
     ]

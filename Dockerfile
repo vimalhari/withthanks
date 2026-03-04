@@ -1,7 +1,7 @@
 # -------------------------------------------------------
 # Stage 1: Build & Dependencies
 # -------------------------------------------------------
-FROM python:3.12-slim AS build
+FROM python:3.14-slim AS build
 
 WORKDIR /app
 
@@ -36,7 +36,7 @@ RUN uv run python manage.py collectstatic --noinput
 # -------------------------------------------------------
 # Stage 2: Runtime Image (smaller)
 # -------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 

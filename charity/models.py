@@ -397,7 +397,10 @@ class DonationJob(models.Model):
     error_message = models.TextField(blank=True, null=True)
     task_id = models.CharField(max_length=128, blank=True, null=True)
     campaign_type = models.CharField(
-        max_length=20, choices=[("WithThanks", "WithThanks"), ("VDM", "VDM"), ("Gratitude", "Gratitude")], null=True, blank=True
+        max_length=20,
+        choices=[("WithThanks", "WithThanks"), ("VDM", "VDM"), ("Gratitude", "Gratitude")],
+        null=True,
+        blank=True,
     )
     media_type_override = models.CharField(
         max_length=20, choices=[("video", "Video"), ("image", "Image")], null=True, blank=True
@@ -690,7 +693,7 @@ class Campaign(models.Model):
         max_length=100,
         blank=True,
         default="Donate Again",
-        help_text="Label text for the post-video CTA button (default: \"Donate Again\")",
+        help_text='Label text for the post-video CTA button (default: "Donate Again")',
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

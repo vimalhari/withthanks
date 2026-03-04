@@ -6,30 +6,42 @@ import charity.utils.media_utils
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0065_consolidate_campaign_terminology'),
+        ("charity", "0065_consolidate_campaign_terminology"),
     ]
 
     operations = [
         migrations.RenameIndex(
-            model_name='emailtracking',
-            new_name='charity_ema_campaig_a41463_idx',
-            old_name='charity_ema_campaig_idx',
+            model_name="emailtracking",
+            new_name="charity_ema_campaig_a41463_idx",
+            old_name="charity_ema_campaig_idx",
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='charity_video',
-            field=models.FileField(blank=True, help_text='Main Campaign Video (VDM Campaign)', null=True, upload_to=charity.utils.media_utils.get_client_media_path),
+            model_name="campaign",
+            name="charity_video",
+            field=models.FileField(
+                blank=True,
+                help_text="Main Campaign Video (VDM Campaign)",
+                null=True,
+                upload_to=charity.utils.media_utils.get_client_media_path,
+            ),
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='gratitude_cooldown_days',
-            field=models.PositiveIntegerField(default=30, help_text='Thank You only — if a donor gives again within this many days, send a gratitude card instead of another full thank-you video.'),
+            model_name="campaign",
+            name="gratitude_cooldown_days",
+            field=models.PositiveIntegerField(
+                default=30,
+                help_text="Thank You only — if a donor gives again within this many days, send a gratitude card instead of another full thank-you video.",
+            ),
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='gratitude_video',
-            field=models.FileField(blank=True, help_text='Gratitude Video (Thank You Campaign — sent to repeat donors within cooldown window)', null=True, upload_to=charity.utils.media_utils.get_client_media_path),
+            model_name="campaign",
+            name="gratitude_video",
+            field=models.FileField(
+                blank=True,
+                help_text="Gratitude Video (Thank You Campaign — sent to repeat donors within cooldown window)",
+                null=True,
+                upload_to=charity.utils.media_utils.get_client_media_path,
+            ),
         ),
     ]

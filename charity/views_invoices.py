@@ -180,7 +180,9 @@ def create_invoice_view(request):
                 )
 
                 # Auto-set one-time package defaults from campaign type
-                auto_vdm_package = "standard" if campaign.campaign_type == campaign.CampaignType.VDM else "none"
+                auto_vdm_package = (
+                    "standard" if campaign.campaign_type == campaign.CampaignType.VDM else "none"
+                )
                 auto_gratitude_card = campaign.campaign_type == campaign.CampaignType.THANK_YOU
 
                 wizard_data.update(

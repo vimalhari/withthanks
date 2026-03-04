@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Blackbaud Raiser's Edge NXT adapter.
 
@@ -11,10 +9,12 @@ Implements read-only donation sync via the Blackbaud SKY API:
 Docs: https://developer.sky.blackbaud.com/docs/services/58bdd6d1d7dcde0508674123
 """
 
+from __future__ import annotations
+
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import requests
 from django.conf import settings
@@ -43,7 +43,7 @@ class BlackbaudAdapter(CRMAdapter):
     perform a refresh before any API call is made.
     """
 
-    def __init__(self, charity: "Charity") -> None:
+    def __init__(self, charity: Charity) -> None:
         super().__init__(charity)
         self._session = requests.Session()
         self._session.headers.update(
@@ -69,7 +69,7 @@ class BlackbaudAdapter(CRMAdapter):
         now_utc = dj_timezone.now()
         expires_at = charity.blackbaud_token_expires_at
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace(tzinfo=UTC)
         return (expires_at - now_utc).total_seconds() < margin_seconds
 
     def _ensure_token(self) -> None:
@@ -120,12 +120,10 @@ class BlackbaudAdapter(CRMAdapter):
         Handles Blackbaud pagination (``next_link`` cursor).
         """
         self._ensure_token()
-        self._session.headers["Authorization"] = (
-            f"Bearer {self.charity.blackbaud_access_token}"
-        )
+        self._session.headers["Authorization"] = f"Bearer {self.charity.blackbaud_access_token}"
 
         # Format datetime as ISO 8601 used by SKY API
-        since_iso = since.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        since_iso = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         url = f"{_SKY_BASE}/gift/v1/gifts"
         params: dict[str, Any] = {
@@ -138,7 +136,9 @@ class BlackbaudAdapter(CRMAdapter):
             resp = self._session.get(url, params=params, timeout=30)
             if resp.status_code == 401:
                 # Token may have been invalidated server-side; attempt one refresh
-                logger.warning("401 received mid-sync for charity %s — refreshing token", self.charity.id)
+                logger.warning(
+                    "401 received mid-sync for charity %s — refreshing token", self.charity.id
+                )
                 self._ensure_token()
                 self._session.headers["Authorization"] = (
                     f"Bearer {self.charity.blackbaud_access_token}"
@@ -217,7 +217,7 @@ class BlackbaudAdapter(CRMAdapter):
                 # SKY API returns "2024-01-15T00:00:00+00:00" or similar
                 donated_at = datetime.fromisoformat(donated_at_raw)
                 if donated_at.tzinfo is None:
-                    donated_at = donated_at.replace(tzinfo=timezone.utc)
+                    donated_at = donated_at.replace(tzinfo=UTC)
             except ValueError:
                 donated_at = dj_timezone.now()
         else:
@@ -245,8 +245,7 @@ class BlackbaudAdapter(CRMAdapter):
         )
         if resp.status_code != 200:
             raise CRMError(
-                f"Constituent {constituent_id} fetch failed: "
-                f"{resp.status_code} {resp.text[:100]}"
+                f"Constituent {constituent_id} fetch failed: {resp.status_code} {resp.text[:100]}"
             )
         data = resp.json()
 
@@ -271,10 +270,11 @@ class BlackbaudAdapter(CRMAdapter):
 # ---------------------------------------------------------------------------
 
 
-def _save_tokens(charity: "Charity", token_data: dict) -> None:
+def _save_tokens(charity: Charity, token_data: dict) -> None:
     """Persist OAuth tokens from a token endpoint response to the Charity model."""
-    from django.utils.timezone import now
     from datetime import timedelta
+
+    from django.utils.timezone import now
 
     charity.blackbaud_access_token = token_data["access_token"]
     if "refresh_token" in token_data:
@@ -283,10 +283,7 @@ def _save_tokens(charity: "Charity", token_data: dict) -> None:
     charity.blackbaud_token_expires_at = now() + timedelta(seconds=expires_in)
 
     # Some token responses include the environment_id
-    env_id = (
-        token_data.get("environment_id")
-        or token_data.get("environment_name")
-    )
+    env_id = token_data.get("environment_id") or token_data.get("environment_name")
     if env_id and not charity.blackbaud_environment_id:
         charity.blackbaud_environment_id = env_id
 

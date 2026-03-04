@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .settings import *  # noqa: F401, F403
+from .settings import *  # noqa: F403
 
 # Use plain staticfiles storage during tests — no manifest required.
 # This avoids `ValueError: Missing staticfiles manifest entry for ...`

@@ -4,48 +4,66 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0067_backfill_campaign_input_source'),
+        ("charity", "0067_backfill_campaign_input_source"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='charity',
-            name='blackbaud_client_id',
+            model_name="charity",
+            name="blackbaud_client_id",
         ),
         migrations.RemoveField(
-            model_name='charity',
-            name='blackbaud_client_secret',
+            model_name="charity",
+            name="blackbaud_client_secret",
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_access_token',
-            field=models.TextField(blank=True, help_text='OAuth access token for the Blackbaud SKY API', null=True),
+            model_name="charity",
+            name="blackbaud_access_token",
+            field=models.TextField(
+                blank=True, help_text="OAuth access token for the Blackbaud SKY API", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_environment_id',
-            field=models.CharField(blank=True, help_text='Blackbaud environment / subscription ID (returned by the token endpoint)', max_length=255, null=True),
+            model_name="charity",
+            name="blackbaud_environment_id",
+            field=models.CharField(
+                blank=True,
+                help_text="Blackbaud environment / subscription ID (returned by the token endpoint)",
+                max_length=255,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_last_synced_at',
-            field=models.DateTimeField(blank=True, help_text="Timestamp of the last successful donation sync from Raiser's Edge; used as the incremental cursor", null=True),
+            model_name="charity",
+            name="blackbaud_last_synced_at",
+            field=models.DateTimeField(
+                blank=True,
+                help_text="Timestamp of the last successful donation sync from Raiser's Edge; used as the incremental cursor",
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_refresh_token',
-            field=models.TextField(blank=True, help_text='OAuth refresh token used to obtain a new access token', null=True),
+            model_name="charity",
+            name="blackbaud_refresh_token",
+            field=models.TextField(
+                blank=True,
+                help_text="OAuth refresh token used to obtain a new access token",
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='charity',
-            name='blackbaud_token_expires_at',
-            field=models.DateTimeField(blank=True, help_text='UTC expiry time of the current access token', null=True),
+            model_name="charity",
+            name="blackbaud_token_expires_at",
+            field=models.DateTimeField(
+                blank=True, help_text="UTC expiry time of the current access token", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='charity',
-            name='blackbaud_enabled',
-            field=models.BooleanField(default=False, help_text="Enable Raiser's Edge NXT sync for this charity"),
+            model_name="charity",
+            name="blackbaud_enabled",
+            field=models.BooleanField(
+                default=False, help_text="Enable Raiser's Edge NXT sync for this charity"
+            ),
         ),
     ]

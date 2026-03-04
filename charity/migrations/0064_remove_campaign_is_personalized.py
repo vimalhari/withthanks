@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0063_add_cta_fields_to_campaign'),
+        ("charity", "0063_add_cta_fields_to_campaign"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='campaign',
-            name='is_personalized',
+            model_name="campaign",
+            name="is_personalized",
         ),
     ]

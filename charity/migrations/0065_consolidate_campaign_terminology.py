@@ -37,7 +37,6 @@ def migrate_email_tracking_appeal_type(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("charity", "0064_remove_campaign_is_personalized"),
     ]
@@ -45,7 +44,6 @@ class Migration(migrations.Migration):
     operations = [
         # ── 1. Data migration: sync legacy appeal_type → campaign_type ──────
         migrations.RunPython(migrate_campaign_appeal_type, migrations.RunPython.noop),
-
         # ── 2. Campaign field renames ────────────────────────────────────────
         migrations.RenameField(
             model_name="campaign",
@@ -62,13 +60,11 @@ class Migration(migrations.Migration):
             old_name="appeal_end",
             new_name="campaign_end",
         ),
-
         # ── 3. Remove legacy appeal_type from Campaign ───────────────────────
         migrations.RemoveField(
             model_name="campaign",
             name="appeal_type",
         ),
-
         # ── 4. Add input_source to Campaign ──────────────────────────────────
         migrations.AddField(
             model_name="campaign",
@@ -80,7 +76,6 @@ class Migration(migrations.Migration):
                 max_length=10,
             ),
         ),
-
         # ── 5. Update campaign_type help_text on Campaign ────────────────────
         migrations.AlterField(
             model_name="campaign",
@@ -92,7 +87,6 @@ class Migration(migrations.Migration):
                 max_length=20,
             ),
         ),
-
         # ── 6. DonationJob: rename appeal_type → campaign_type ──────────────
         migrations.RenameField(
             model_name="donationjob",
@@ -113,7 +107,6 @@ class Migration(migrations.Migration):
                 null=True,
             ),
         ),
-
         # ── 7. EmailTracking: remove old index, rename field, rebuild index ──
         migrations.RemoveIndex(
             model_name="emailtracking",

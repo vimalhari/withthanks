@@ -51,7 +51,11 @@ def health_check(request):
         errors["cache"] = str(exc)
 
     healthy = not errors
-    payload: dict[str, object] = {"status": "ok" if healthy else "error", "db": db_status, "cache": cache_status}
+    payload: dict[str, object] = {
+        "status": "ok" if healthy else "error",
+        "db": db_status,
+        "cache": cache_status,
+    }
     if errors:
         payload["detail"] = errors
     return JsonResponse(payload, status=200 if healthy else 503)

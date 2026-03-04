@@ -337,7 +337,9 @@ def dispatch_email_for_job(self, context):
         )
 
         # --- Tracking URLs -------------------------------------------------- #
-        suppress_unsub = bool(campaign and campaign.campaign_type == campaign.CampaignType.THANK_YOU)
+        suppress_unsub = bool(
+            campaign and campaign.campaign_type == campaign.CampaignType.THANK_YOU
+        )
         tracking = build_tracking_urls(
             job_id=job.id,
             mode=mode,
@@ -794,9 +796,7 @@ def sync_crm_donations():
     """
     from .models import Charity
 
-    charity_ids = list(
-        Charity.objects.filter(blackbaud_enabled=True).values_list("id", flat=True)
-    )
+    charity_ids = list(Charity.objects.filter(blackbaud_enabled=True).values_list("id", flat=True))
     if not charity_ids:
         logger.info("sync_crm_donations: no charities with Blackbaud enabled")
         return {"dispatched": 0}
@@ -832,7 +832,9 @@ def sync_charity_blackbaud(self, charity_id: int):
         return
 
     if not charity.blackbaud_enabled:
-        logger.info("sync_charity_blackbaud: charity %s has Blackbaud disabled — skipping", charity_id)
+        logger.info(
+            "sync_charity_blackbaud: charity %s has Blackbaud disabled — skipping", charity_id
+        )
         return
 
     # Determine sync window start

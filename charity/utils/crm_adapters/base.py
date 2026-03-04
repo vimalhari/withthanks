@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Base CRM adapter interface.
 
@@ -8,18 +6,21 @@ All CRM adapters must subclass ``CRMAdapter`` and implement
 donation dicts that match the fields expected by the DonationJob pipeline.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from charity.models import Charity
 
 
 class CRMAdapter(ABC):
     """Abstract base class for CRM read-only donation adapters."""
 
-    def __init__(self, charity: "Charity") -> None:
+    def __init__(self, charity: Charity) -> None:
         self.charity = charity
 
     @abstractmethod

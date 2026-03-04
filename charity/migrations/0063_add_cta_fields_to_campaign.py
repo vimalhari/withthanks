@@ -4,20 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0062_add_resend_message_id_and_event_types'),
+        ("charity", "0062_add_resend_message_id_and_event_types"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='campaign',
-            name='cta_label',
-            field=models.CharField(blank=True, default='Donate Again', help_text='Label text for the post-video CTA button (default: "Donate Again")', max_length=100),
+            model_name="campaign",
+            name="cta_label",
+            field=models.CharField(
+                blank=True,
+                default="Donate Again",
+                help_text='Label text for the post-video CTA button (default: "Donate Again")',
+                max_length=100,
+            ),
         ),
         migrations.AddField(
-            model_name='campaign',
-            name='cta_url',
-            field=models.URLField(blank=True, help_text='URL to open when the donor clicks the CTA button after the video ends', max_length=512, null=True),
+            model_name="campaign",
+            name="cta_url",
+            field=models.URLField(
+                blank=True,
+                help_text="URL to open when the donor clicks the CTA button after the video ends",
+                max_length=512,
+                null=True,
+            ),
         ),
     ]

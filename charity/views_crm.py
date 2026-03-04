@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 CRM integration views — Blackbaud Raiser's Edge NXT OAuth 2.0 flow.
 
@@ -21,8 +19,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
-from django.utils.timezone import now
 
 from charity.models import Charity
 from charity.utils.access_control import get_active_charity
@@ -178,7 +174,9 @@ def blackbaud_callback(request):
     charity.blackbaud_enabled = True
     charity.save(update_fields=["blackbaud_enabled"])
 
-    logger.info("Blackbaud integration connected for charity %s (admin_origin=%s)", charity.id, admin_origin)
+    logger.info(
+        "Blackbaud integration connected for charity %s (admin_origin=%s)", charity.id, admin_origin
+    )
     messages.success(
         request,
         f"Raiser's Edge NXT connected for {charity.client_name}. Donation sync is now active.",
@@ -227,6 +225,7 @@ def blackbaud_admin_disconnect(request, charity_id: int):
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _clear_blackbaud_tokens(charity) -> None:
     """Zero out all Blackbaud OAuth tokens and disable the integration."""
