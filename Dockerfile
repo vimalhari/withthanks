@@ -29,6 +29,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 RUN uv sync --frozen --no-dev
 
+# Build Tailwind CSS assets before collecting static files
+RUN uv run python manage.py tailwind build
+
 # Collect static files
 RUN uv run python manage.py collectstatic --noinput
 
