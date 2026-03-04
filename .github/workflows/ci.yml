@@ -75,4 +75,5 @@ jobs:
         env:
           DJANGO_SECRET_KEY: "ci-test-secret-key-not-used-in-production"
           DJANGO_DEBUG: "true"
+          DJANGO_SETTINGS_MODULE: "withthanks.settings_test"
         run: uv run python manage.py test --verbosity=2

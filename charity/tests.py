@@ -1,7 +1,10 @@
+import tempfile
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -54,13 +57,20 @@ class MultiTenantIsolationTests(TestCase):
 
 
 @override_settings(
+    MEDIA_ROOT=tempfile.mkdtemp(),
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
-    }
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    },
 )
 class VideoProcessingIsolationTests(TestCase):
     def setUp(self):
+        # Create fake base video files so file-open calls don't fail in CI
+        media_test_dir = Path(settings.MEDIA_ROOT) / "test"
+        media_test_dir.mkdir(parents=True, exist_ok=True)
+        (media_test_dir / "fake_video_a.mp4").write_bytes(b"fake")
+        (media_test_dir / "fake_video_b.mp4").write_bytes(b"fake")
+
         self.charity_a = Charity.objects.create(
             client_name="Charity A", contact_email="a@charity.org"
         )
