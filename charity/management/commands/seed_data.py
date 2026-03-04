@@ -307,18 +307,42 @@ class Command(BaseCommand):
             self.stdout.write(f"    → Linked {user.username} to {charity.client_name} as {role}")
 
     def _create_campaign(self, charity: Charity, data: dict) -> Campaign:
-        campaign, created = Campaign.objects.get_or_create(
+        existing = Campaign.objects.filter(
             client=charity,
             campaign_code=data["campaign_code"],
-            defaults={
-                "name": data["name"],
-                "campaign_type": data["campaign_type"],
-                "campaign_start": data["campaign_start"],
-                "campaign_end": data["campaign_end"],
-                "status": data["status"],
-                "description": data.get("description", ""),
-            },
-        )
+        ).order_by("created_at", "id")
+        campaign = existing.first()
+        created = campaign is None
+
+        if campaign is None:
+            campaign = Campaign.objects.create(
+                client=charity,
+                campaign_code=data["campaign_code"],
+                name=data["name"],
+                campaign_type=data["campaign_type"],
+                campaign_start=data["campaign_start"],
+                campaign_end=data["campaign_end"],
+                status=data["status"],
+                description=data.get("description", ""),
+            )
+        else:
+            duplicate_count = max(existing.count() - 1, 0)
+            if duplicate_count:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "  Found duplicate campaigns for code "
+                        f"'{data['campaign_code']}' on {charity.client_name}; "
+                        f"using earliest record ({campaign.id})."
+                    )
+                )
+            campaign.name = data["name"]
+            campaign.campaign_type = data["campaign_type"]
+            campaign.campaign_start = data["campaign_start"]
+            campaign.campaign_end = data["campaign_end"]
+            campaign.status = data["status"]
+            campaign.description = data.get("description", "")
+            campaign.save()
+
         verb = "Created" if created else "Found"
         self.stdout.write(f"  {verb} campaign: {campaign.name}")
         return campaign
@@ -326,16 +350,37 @@ class Command(BaseCommand):
     def _create_batch(
         self, charity: Charity, campaign: Campaign, batch_number: int
     ) -> DonationBatch:
-        batch, created = DonationBatch.objects.get_or_create(
+        existing = DonationBatch.objects.filter(
             charity=charity,
             campaign=campaign,
             batch_number=batch_number,
-            defaults={
-                "campaign_name": campaign.name,
-                "status": DonationBatch.BatchStatus.COMPLETED,
-                "csv_filename": f"demo_batch_{batch_number}.csv",
-            },
-        )
+        ).order_by("id")
+        batch = existing.first()
+        created = batch is None
+
+        if batch is None:
+            batch = DonationBatch.objects.create(
+                charity=charity,
+                campaign=campaign,
+                batch_number=batch_number,
+                campaign_name=campaign.name,
+                status=DonationBatch.BatchStatus.COMPLETED,
+                csv_filename=f"demo_batch_{batch_number}.csv",
+            )
+        else:
+            duplicate_count = max(existing.count() - 1, 0)
+            if duplicate_count:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "    Found duplicate batches for campaign "
+                        f"'{campaign.name}' batch #{batch_number}; using earliest record ({batch.id})."
+                    )
+                )
+            batch.campaign_name = campaign.name
+            batch.status = DonationBatch.BatchStatus.COMPLETED
+            batch.csv_filename = f"demo_batch_{batch_number}.csv"
+            batch.save()
+
         verb = "Created" if created else "Found"
         self.stdout.write(f"  {verb} batch #{batch_number} for '{campaign.name}'")
         return batch
