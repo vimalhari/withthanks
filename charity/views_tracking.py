@@ -9,8 +9,26 @@ from django.utils import timezone
 
 from .analytics_models import EmailEvent, VideoEvent
 from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
+from .utils.tracking_security import resolve_tracking_token
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_tracking(job_id=None, token=None):
+    tracking_id = resolve_tracking_token(token)
+    if tracking_id is not None:
+        return (
+            EmailTracking.objects.select_related("job", "job__campaign")
+            .filter(id=tracking_id)
+            .first()
+        )
+    if job_id:
+        return (
+            EmailTracking.objects.select_related("job", "job__campaign")
+            .filter(job_id=job_id)
+            .first()
+        )
+    return None
 
 
 def favicon_view(request):
@@ -22,21 +40,21 @@ def robots_view(request):
     return HttpResponse(content, content_type="text/plain")
 
 
-def track_open_view(request):
+def track_open_view(request, job_id=None):
     """Tracks email opens via 1x1 pixel using EmailTracking model."""
     try:
-        user_id = request.GET.get("u")
-        if user_id:
-            tracking = EmailTracking.objects.filter(job_id=user_id).first()
-            if tracking and not tracking.opened:
-                tracking.opened = True
-                tracking.open_time = timezone.now()
-                tracking.save(update_fields=["opened", "open_time"])
-                job = tracking.job
-                if job:
-                    job.real_views += 1
-                    job.save(update_fields=["real_views"])
-                    EmailEvent.objects.create(campaign=job.campaign, job=job, event_type="OPEN")
+        tracking = _resolve_tracking(
+            job_id=job_id or request.GET.get("u"), token=request.GET.get("t")
+        )
+        if tracking and not tracking.opened:
+            tracking.opened = True
+            tracking.open_time = timezone.now()
+            tracking.save(update_fields=["opened", "open_time"])
+            job = tracking.job
+            if job:
+                job.real_views += 1
+                job.save(update_fields=["real_views"])
+                EmailEvent.objects.create(campaign=job.campaign, job=job, event_type="OPEN")
     except Exception as e:
         logger.error(f"Tracking Open Error: {e}")
 
@@ -46,79 +64,75 @@ def track_open_view(request):
 
 def track_click_view(request):
     """Tracks link clicks and redirects to destination."""
-    user_id = request.GET.get("u")
     redirect_url = "/"
     try:
-        if user_id:
-            tracking = EmailTracking.objects.filter(job_id=user_id).first()
-            if tracking and not tracking.clicked:
-                tracking.clicked = True
-                tracking.click_time = timezone.now()
-                tracking.save(update_fields=["clicked", "click_time"])
-                job = tracking.job
-                if job:
-                    job.real_clicks += 1
-                    job.save(update_fields=["real_clicks"])
-                    EmailEvent.objects.create(campaign=job.campaign, job=job, event_type="CLICK")
-                    v_url = job.video_url
-                    if v_url and v_url.lower().split("?")[0].endswith((".mp4", ".mov", ".avi")):
-                        server_url = getattr(
-                            settings, "SERVER_BASE_URL", "https://hirefella.com"
-                        ).rstrip("/")
-                        redirect_path = reverse("video_landing", args=[job.id])
-                        redirect_url = f"{server_url}{redirect_path}"
-                    elif v_url:
-                        redirect_url = v_url
+        tracking = _resolve_tracking(job_id=request.GET.get("u"), token=request.GET.get("t"))
+        if tracking and not tracking.clicked:
+            tracking.clicked = True
+            tracking.click_time = timezone.now()
+            tracking.save(update_fields=["clicked", "click_time"])
+        job = tracking.job if tracking else None
+        if job:
+            job.real_clicks += 1
+            job.save(update_fields=["real_clicks"])
+            EmailEvent.objects.create(campaign=job.campaign, job=job, event_type="CLICK")
+            v_url = job.video_url
+            if v_url and v_url.lower().split("?")[0].endswith((".mp4", ".mov", ".avi")):
+                server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com").rstrip(
+                    "/"
+                )
+                redirect_path = reverse("video_landing", args=[job.id])
+                redirect_url = f"{server_url}{redirect_path}"
+            elif v_url:
+                redirect_url = v_url
     except Exception as e:
         logger.error(f"Tracking Click Error: {e}")
     return redirect(redirect_url)
 
 
-def track_unsubscribe_full_view(request):
+def track_unsubscribe_full_view(request, job_id=None):
     """Handles deep unsubscribe requests with context."""
-    user_id = request.GET.get("u")
     context = {"success": False}
-    if user_id:
+    tracking = _resolve_tracking(job_id=job_id or request.GET.get("u"), token=request.GET.get("t"))
+    if tracking:
         try:
-            tracking = EmailTracking.objects.filter(job_id=user_id).first()
-            if tracking:
-                job = tracking.job
-                campaign = job.campaign if job else None
+            job = tracking.job
+            campaign = job.campaign if job else None
 
-                # Check if it's VDM. If not, don't process unsubscribes
-                is_vdm = False
-                if tracking.campaign_type == "VDM" or (
-                    campaign and campaign.campaign_type == campaign.CampaignType.VDM
-                ):
-                    is_vdm = True
+            # Check if it's VDM. If not, don't process unsubscribes
+            is_vdm = False
+            if tracking.campaign_type == "VDM" or (
+                campaign and campaign.campaign_type == campaign.CampaignType.VDM
+            ):
+                is_vdm = True
 
-                if not is_vdm:
-                    # Ignore unsubscribe request for non-VDM emails
-                    return render(
-                        request,
-                        "unsubscribe.html",
-                        {
-                            "success": False,
-                            "error": "Unsubscribe is only available for marketing communications.",
-                        },
-                    )
+            if not is_vdm:
+                # Ignore unsubscribe request for non-VDM emails
+                return render(
+                    request,
+                    "unsubscribe.html",
+                    {
+                        "success": False,
+                        "error": "Unsubscribe is only available for marketing communications.",
+                    },
+                )
 
-                tracking.unsubscribed = True
-                tracking.vdm = True
-                tracking.save(update_fields=["unsubscribed", "vdm"])
+            tracking.unsubscribed = True
+            tracking.vdm = True
+            tracking.save(update_fields=["unsubscribed", "vdm"])
 
-                if job:
-                    UnsubscribedUser.objects.get_or_create(
-                        email=job.email,
-                        charity=job.charity,
-                        defaults={
-                            "reason": "Clicked unsubscribe link",
-                            "unsubscribed_from_job": job,
-                        },
-                    )
-                    EmailEvent.objects.create(campaign=campaign, job=job, event_type="UNSUB")
+            if job:
+                UnsubscribedUser.objects.get_or_create(
+                    email=job.email,
+                    charity=job.charity,
+                    defaults={
+                        "reason": "Clicked unsubscribe link",
+                        "unsubscribed_from_job": job,
+                    },
+                )
+                EmailEvent.objects.create(campaign=campaign, job=job, event_type="UNSUB")
 
-                context["success"] = True
+            context["success"] = True
         except Exception as e:
             logger.error(f"Tracking Unsubscribe Error: {e}")
     return render(request, "unsubscribe.html", context)

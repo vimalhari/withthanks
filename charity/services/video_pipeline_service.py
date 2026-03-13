@@ -145,6 +145,7 @@ def build_tracking_urls(
     job_id: int,
     mode: str,
     server_url: str,
+    tracking_token: str | None = None,
     campaign_id: int | None = None,
     batch_id: int | None = None,
     suppress_unsubscribe: bool = False,
@@ -161,11 +162,14 @@ def build_tracking_urls(
         suppress_unsubscribe: Pass ``True`` for THANKYOU campaigns to omit
             the unsubscribe link entirely.
     """
-    qs_suffix = f"u={job_id}&type={mode}"
-    if campaign_id:
-        qs_suffix += f"&c={campaign_id}"
-    if batch_id:
-        qs_suffix += f"&b={batch_id}"
+    if tracking_token:
+        qs_suffix = f"t={tracking_token}"
+    else:
+        qs_suffix = f"u={job_id}&type={mode}"
+        if campaign_id:
+            qs_suffix += f"&c={campaign_id}"
+        if batch_id:
+            qs_suffix += f"&b={batch_id}"
 
     pixel_url = f"{server_url}{reverse('track_open')}?{qs_suffix}"
     click_url = f"{server_url}{reverse('track_click')}?{qs_suffix}"

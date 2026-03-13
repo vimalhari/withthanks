@@ -1,7 +1,7 @@
 import os
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
@@ -16,7 +16,11 @@ class Command(BaseCommand):
         User = get_user_model()
         username = options["username"] or os.environ.get("DJANGO_SUPERUSER_USERNAME") or "admin"
         email = options["email"] or os.environ.get("DJANGO_SUPERUSER_EMAIL") or "admin@example.com"
-        password = options["password"] or os.environ.get("DJANGO_SUPERUSER_PASSWORD") or "admin"
+        password = options["password"] or os.environ.get("DJANGO_SUPERUSER_PASSWORD")
+        if not password:
+            if os.environ.get("DJANGO_ENV") == "production":
+                raise CommandError("DJANGO_SUPERUSER_PASSWORD is required in production")
+            password = "admin"
 
         if not User.objects.filter(username=username).exists():
             User.objects.create_superuser(username=username, email=email, password=password)

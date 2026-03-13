@@ -1,3 +1,7 @@
+import base64
+import hashlib
+import hmac
+import json
 import tempfile
 from datetime import date
 from decimal import Decimal
@@ -10,7 +14,8 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from charity.models import Campaign, Charity, DonationBatch, DonationJob
+from charity.models import Campaign, Charity, DonationBatch, DonationJob, EmailTracking
+from charity.utils.tracking_security import build_tracking_token
 
 
 class MultiTenantIsolationTests(TestCase):
@@ -316,3 +321,155 @@ class ResendUtilsTests(TestCase):
         params = mock_resend_send.call_args.args[0]
         self.assertNotIn("attachments", params)
         self.assertIn("https://stream.example.com/videos/stream-123", params["html"])
+
+    @patch("charity.utils.resend_utils.resend.Emails.send", return_value={"id": "resend-789"})
+    def test_send_video_email_uses_signed_tracking_links(self, mock_resend_send):
+        from charity.utils.resend_utils import send_video_email
+
+        send_video_email(
+            to_email="donor@example.com",
+            file_path=None,
+            job_id="job-123",
+            donor_name="Donor",
+            donation_amount="20",
+            organization_name="WithThanks",
+            from_email="sender@example.com",
+            video_url="https://stream.example.com/videos/stream-123",
+            tracking_token="signed-tracking-token",
+        )
+
+        params = mock_resend_send.call_args.args[0]
+        self.assertIn(
+            'src="http://127.0.0.1:8000/charity/track/open/?t=signed-tracking-token"',
+            params["html"],
+        )
+        self.assertIn(
+            'href="http://127.0.0.1:8000/charity/track/click/?t=signed-tracking-token"',
+            params["html"],
+        )
+        self.assertIn(
+            'href="http://127.0.0.1:8000/charity/track/unsubscribe/?t=signed-tracking-token"',
+            params["html"],
+        )
+
+
+class TrackingSecurityTests(TestCase):
+    def setUp(self):
+        today = date.today()
+        self.charity = Charity.objects.create(
+            client_name="Tracking Charity",
+            contact_email="ops@charity.org",
+            organization_name="Tracking Org",
+        )
+        self.campaign = Campaign.objects.create(
+            name="Tracking Campaign",
+            client=self.charity,
+            campaign_code="TRK-001",
+            campaign_start=today,
+            campaign_end=today,
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+        self.batch = DonationBatch.objects.create(charity=self.charity, campaign=self.campaign)
+        self.job = DonationJob.objects.create(
+            charity=self.charity,
+            campaign=self.campaign,
+            donation_batch=self.batch,
+            donor_name="Tracked Donor",
+            email="tracked@example.com",
+            donation_amount=Decimal("25.00"),
+            status="success",
+            video_path="https://cdn.example.com/video.mp4",
+        )
+        self.tracking = EmailTracking.objects.create(
+            campaign=self.campaign,
+            batch=self.batch,
+            job=self.job,
+            user_id=self.job.id,
+            campaign_type=self.campaign.campaign_type,
+        )
+
+    def test_track_open_accepts_signed_tracking_token(self):
+        token = build_tracking_token(tracking_id=self.tracking.id)
+
+        response = self.client.get(reverse("track_open"), {"t": token})
+
+        self.assertEqual(response.status_code, 200)
+        self.tracking.refresh_from_db()
+        self.job.refresh_from_db()
+        self.assertTrue(self.tracking.opened)
+        self.assertEqual(self.job.real_views, 1)
+
+    def test_track_click_accepts_signed_tracking_token(self):
+        token = build_tracking_token(tracking_id=self.tracking.id)
+
+        response = self.client.get(reverse("track_click"), {"t": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f"http://127.0.0.1:8000{reverse('video_landing', args=[self.job.id])}",
+        )
+        self.tracking.refresh_from_db()
+        self.job.refresh_from_db()
+        self.assertTrue(self.tracking.clicked)
+        self.assertEqual(self.job.real_clicks, 1)
+
+
+@override_settings(WEBHOOK_SIGNATURE_MAX_AGE_SECONDS=300)
+class WebhookSecurityTests(TestCase):
+    def _build_resend_signature(self, body: bytes, timestamp: int, secret: str) -> str:
+        key = base64.b64decode(secret[6:])
+        signed_content = f"msg-1.{timestamp}.{body.decode('utf-8')}"
+        digest = hmac.new(key, signed_content.encode("utf-8"), hashlib.sha256).digest()
+        return f"v1,{base64.b64encode(digest).decode()}"
+
+    def _build_cloudflare_signature(self, body: bytes, timestamp: int, secret: str) -> str:
+        digest = hmac.new(
+            secret.encode("utf-8"),
+            f"{timestamp}{body.decode('utf-8')}".encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return f"time={timestamp};sig1={digest}"
+
+    @override_settings(RESEND_WEBHOOK_SECRET="whsec_c2VjcmV0LWtleQ==")
+    def test_resend_webhook_rejects_stale_signature(self):
+        timestamp = 1
+        payload = {"type": "email.sent", "data": {"id": "msg-123"}}
+        body = json.dumps(payload).encode("utf-8")
+        signature = self._build_resend_signature(body, timestamp, settings.RESEND_WEBHOOK_SECRET)
+
+        response = self.client.post(
+            reverse("resend_webhook"),
+            data=body,
+            content_type="application/json",
+            **{
+                "HTTP_SVIX_ID": "msg-1",
+                "HTTP_SVIX_TIMESTAMP": str(timestamp),
+                "HTTP_SVIX_SIGNATURE": signature,
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    @override_settings(CLOUDFLARE_WEBHOOK_SECRET="cloudflare-secret")
+    def test_cloudflare_webhook_rejects_stale_signature(self):
+        timestamp = 1
+        payload = {"action": "video.play", "video_id": "vid-1", "meta": {}}
+        body = json.dumps(payload).encode("utf-8")
+        signature = self._build_cloudflare_signature(
+            body,
+            timestamp,
+            settings.CLOUDFLARE_WEBHOOK_SECRET,
+        )
+
+        response = self.client.post(
+            reverse("cloudflare_webhook"),
+            data=body,
+            content_type="application/json",
+            **{"HTTP_WEBHOOK_SIGNATURE": signature},
+        )
+
+        self.assertEqual(response.status_code, 401)

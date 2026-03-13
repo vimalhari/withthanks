@@ -39,6 +39,11 @@ if is_true "${SEED_ANALYTICS_ON_START:-false}"; then
 fi
 
 echo "Ensuring superuser exists..."
+if [ "${DJANGO_ENV:-development}" = "production" ] && [ -z "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
+  echo "DJANGO_SUPERUSER_PASSWORD must be set in production." >&2
+  exit 1
+fi
+
 python manage.py ensure_superuser \
   --username "${DJANGO_SUPERUSER_USERNAME:-admin}" \
   --email "${DJANGO_SUPERUSER_EMAIL:-admin@withthanks.example.com}" \

@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.cache import cache
 from django.db.models import Avg, Count, Q, Sum
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import TemplateView, View
 
@@ -20,6 +20,11 @@ from .models import (
     InvoiceLineItem,
     UnsubscribedUser,
     VideoSendLog,
+)
+from .utils.access_control import (
+    get_accessible_charities,
+    get_authorized_campaign,
+    get_authorized_charity,
 )
 from .utils.exports import export_analytics_csv, export_analytics_excel
 
@@ -75,9 +80,12 @@ class AnalyticsBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateVi
             ).values_list("charity_id", flat=True)
 
             if model_class in (EmailEvent, VideoEvent):
-                qs = qs.filter(job__donation_batch__charity_id__in=user_charity_ids)
+                qs = qs.filter(
+                    Q(job__charity_id__in=user_charity_ids)
+                    | Q(campaign__client_id__in=user_charity_ids)
+                ).distinct()
             elif model_class == Campaign:
-                qs = qs.filter(charity_id__in=user_charity_ids)
+                qs = qs.filter(client_id__in=user_charity_ids)
         return qs
 
 
@@ -91,12 +99,7 @@ class UnifiedAnalyticsView(AnalyticsBaseView):
         if self.request.user.is_superuser:
             context["clients"] = Charity.objects.all().order_by("client_name")
         else:
-            user_charity_ids = CharityMember.objects.filter(
-                user=self.request.user, status="ACTIVE"
-            ).values_list("charity_id", flat=True)
-            context["clients"] = Charity.objects.filter(id__in=user_charity_ids).order_by(
-                "client_name"
-            )
+            context["clients"] = get_accessible_charities(self.request.user).order_by("client_name")
         context.update(self.get_date_params())
         return context
 
@@ -109,7 +112,10 @@ class UnifiedDashboardDataAPI(AnalyticsBaseView, View):
         if not charity_id or charity_id == "all" or not campaign_id or campaign_id == "all":
             return JsonResponse({"error": "Selection required"}, status=400)
 
-        campaign = get_object_or_404(Campaign, id=campaign_id)
+        charity = get_authorized_charity(request.user, charity_id)
+        campaign = get_authorized_campaign(request.user, campaign_id)
+        if charity is None or campaign is None or campaign.client_id != charity.id:
+            raise Http404
 
         # 1. Caching Layer (CampaignStats)
         stats, created = CampaignStats.objects.get_or_create(campaign=campaign)

@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -5,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from charity.models import (
+    Campaign,
     Charity,
     CharityMember,
     DonationBatch,
@@ -36,6 +38,7 @@ class MultiTenancyIsolationTest(TestCase):
         from django.utils import timezone
 
         today = timezone.now().date()
+        self.today = today
 
         # Create Data for Charity A
         self.batch_a = DonationBatch.objects.create(charity=self.charity_a, batch_number=1)
@@ -71,6 +74,28 @@ class MultiTenancyIsolationTest(TestCase):
             amount=200.00,
             issue_date=today,
             due_date=today + timedelta(days=30),
+        )
+        self.campaign_a = Campaign.objects.create(
+            name="Campaign A",
+            client=self.charity_a,
+            campaign_code="A-001",
+            campaign_start=today,
+            campaign_end=today,
+            status="active",
+            campaign_type=Campaign.CampaignType.THANK_YOU,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.PERSONALIZED,
+        )
+        self.campaign_b = Campaign.objects.create(
+            name="Campaign B",
+            client=self.charity_b,
+            campaign_code="B-001",
+            campaign_start=today,
+            campaign_end=today,
+            status="active",
+            campaign_type=Campaign.CampaignType.THANK_YOU,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.PERSONALIZED,
         )
 
     def test_dashboard_isolation(self):
@@ -147,3 +172,84 @@ class MultiTenancyIsolationTest(TestCase):
         self.client.login(username="user_b", password="password123")
         response = self.client.get(reverse("logs"))
         self.assertIn("of <strong>1</strong> results", response.content.decode())
+
+    def test_api_ingest_rejects_cross_charity_access(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.post(
+            reverse("donation-ingest"),
+            {
+                "charity_id": self.charity_b.id,
+                "donor_email": "intruder@example.com",
+                "donor_name": "Intruder",
+                "amount": "15.00",
+                "campaign_type": Campaign.CampaignType.THANK_YOU,
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("charity_id", response.json())
+        self.assertFalse(DonationJob.objects.filter(email="intruder@example.com").exists())
+
+    def test_task_status_isolation(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.get(
+            reverse("task-status", kwargs={"task_id": "ignored-task-id"}),
+            {"job_id": self.job_b.id},
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_campaign_report_isolation(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.get(
+            reverse("api_campaign_report", kwargs={"campaign_id": self.campaign_b.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_send_wizard_rejects_other_campaign(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.get(
+            reverse("send_email_wizard"),
+            {"campaign_id": str(self.campaign_b.id)},
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_billing_create_rejects_other_charity(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.post(
+            reverse("api_billing_create"),
+            data=json.dumps({"charity_id": self.charity_b.id, "items": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_billing_create_uses_charity_additional_emails(self):
+        self.charity_a.additional_emails = "finance@a.test,ops@a.test"
+        self.charity_a.save(update_fields=["additional_emails"])
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.post(
+            reverse("api_billing_create"),
+            data=json.dumps({"charity_id": self.charity_a.id, "items": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        invoice = Invoice.objects.get(id=response.json()["invoice_id"])
+        self.assertEqual(invoice.additional_billing_emails, "finance@a.test,ops@a.test")
+
+    def test_video_landing_route_uses_integer_job_ids(self):
+        self.job_a.video_path = "https://cdn.example.com/video.mp4"
+        self.job_a.save(update_fields=["video_path"])
+
+        response = self.client.get(reverse("video_landing", kwargs={"job_id": self.job_a.id}))
+
+        self.assertEqual(response.status_code, 200)

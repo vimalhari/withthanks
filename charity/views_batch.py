@@ -9,11 +9,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncDate
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .analytics_models import EmailEvent, VideoEvent
-from .models import Campaign, Charity, DonationBatch, DonationJob
+from .models import Campaign, DonationBatch, DonationJob
 from .tasks import (
     batch_process_csv,
     dispatch_email_for_job,
@@ -21,7 +21,13 @@ from .tasks import (
     on_batch_complete,
     validate_and_prep_job,
 )
-from .utils.access_control import get_active_charity
+from .utils.access_control import (
+    get_accessible_campaigns,
+    get_accessible_charities,
+    get_active_charity,
+    get_authorized_campaign,
+    get_authorized_charity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -145,14 +151,21 @@ def send_email_wizard(request):
     selected_client = current_charity
     selected_campaign = None
     if campaign_id:
-        selected_campaign = get_object_or_404(Campaign, id=campaign_id)
+        selected_campaign = get_authorized_campaign(request.user, campaign_id)
+        if selected_campaign is None:
+            raise Http404
         selected_client = selected_campaign.client
-    elif client_id and request.user.is_superuser:
-        selected_client = Charity.objects.filter(id=client_id).first()
+    elif client_id:
+        selected_client = get_authorized_charity(request.user, client_id)
+        if selected_client is None:
+            raise Http404
 
     if not selected_client:
-        selected_client = Charity.objects.filter(members=request.user).first()
-    campaigns = Campaign.objects.filter(client=selected_client, status__in=["active", "draft"])
+        selected_client = get_accessible_charities(request.user).order_by("id").first()
+    campaigns = get_accessible_campaigns(request.user).filter(
+        client=selected_client,
+        status__in=["active", "draft"],
+    )
 
     if request.method == "POST":
         if step == 4 and method == "bulk" and "csv_file" in request.FILES:

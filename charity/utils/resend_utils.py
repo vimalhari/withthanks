@@ -8,6 +8,7 @@ from typing import Any
 
 import resend
 from django.conf import settings
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def send_video_email(
     from_email: str | None = None,
     video_url: str | None = None,
     is_card_only: bool = False,
+    tracking_token: str | None = None,
 ) -> dict[str, Any]:
 
     video_extensions = {".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv"}
@@ -89,9 +91,14 @@ def send_video_email(
 
     # video_url is used only as a fallback when no custom HTML is supplied.
     video_url = video_url or ""
-
-    tracking_pixel_url = f"{server_url}/track/email/{job_id}/"
-    unsubscribe_url = f"{server_url}/charity/unsubscribe/{job_id}/"
+    if tracking_token:
+        tracking_pixel_url = f"{server_url}{reverse('track_open')}?t={tracking_token}"
+        tracking_click_url = f"{server_url}{reverse('track_click')}?t={tracking_token}"
+        unsubscribe_url = f"{server_url}{reverse('track_unsubscribe_full')}?t={tracking_token}"
+    else:
+        tracking_pixel_url = f"{server_url}/track/email/{job_id}/"
+        tracking_click_url = video_url
+        unsubscribe_url = f"{server_url}/charity/unsubscribe/{job_id}/"
 
     # SIMPLE SaaS TEMPLATE
     subject = subject or ("Thank You Card" if is_card_only else "Personalized thank-you message")
@@ -114,7 +121,7 @@ def send_video_email(
                         We deeply appreciate your recent contribution. Please accept this digital thank-you card.
                     </p>
                     <div style="margin-top: 20px;">
-                        <img src="{video_url}" alt="Gratitude Card" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <img src="{tracking_click_url or video_url}" alt="Gratitude Card" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     </div>
                 </div>
                 """
@@ -129,20 +136,20 @@ def send_video_email(
                     </p>
                     <div style="font-size: 48px; margin: 20px 0;">📬✨</div>
                      <p style="font-size: 12px; color: #666;">
-                        (If a video card is attached, please see below or <a href="{video_url}">click here</a>)
+                        (If a video card is attached, please see below or <a href="{tracking_click_url or video_url}">click here</a>)
                     </p>
                 </div>
                 """
         else:
             email_cta = f"""
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{video_url}"
+                <a href="{tracking_click_url or video_url}"
                    style="background-color: #000; color: #fff; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                     🎥 View Your Video
                 </a>
             </div>
             <p style="font-size: 11px; color: #666; text-align: center;">
-                Video link: <a href="{video_url}">{video_url}</a>
+                Video link: <a href="{tracking_click_url or video_url}">{video_url}</a>
             </p>
             """
 

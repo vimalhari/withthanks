@@ -25,27 +25,33 @@ schema_view = get_schema_view(
 
 
 def health_check(request):
-    """Deep health check — probes DB and Redis cache.
+    """Deep health check — probes DB and Redis.
     Returns HTTP 200 on healthy, HTTP 503 on any failure.
     Used by Coolify / container orchestrators for readiness checks.
     """
-    from django.core.cache import cache
     from django.db import OperationalError, connection
+    from redis import Redis
 
     errors: dict[str, str] = {}
 
     # Probe PostgreSQL
     try:
-        connection.ensure_connection()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
         db_status = "ok"
     except OperationalError as exc:
         db_status = "error"
         errors["db"] = str(exc)
 
-    # Probe Redis (cache backend)
+    # Probe Redis via the configured broker URL.
     try:
-        cache.get("_health_probe")
-        cache_status = "ok"
+        redis_client = Redis.from_url(settings.CELERY_BROKER_URL)
+        try:
+            redis_client.ping()
+            cache_status = "ok"
+        finally:
+            redis_client.close()
     except Exception as exc:
         cache_status = "error"
         errors["cache"] = str(exc)

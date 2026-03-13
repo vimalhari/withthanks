@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from charity.models import Campaign, Charity
+from charity.utils.access_control import get_authorized_charity
 
 
 class DonationIngestSerializer(serializers.Serializer):
@@ -18,6 +19,12 @@ class DonationIngestSerializer(serializers.Serializer):
     )
 
     def validate_charity_id(self, value):
+        request = self.context.get("request")
+        if request is not None:
+            if not get_authorized_charity(request.user, value):
+                raise serializers.ValidationError("Invalid charity_id.")
+            return value
+
         if not Charity.objects.filter(id=value).exists():
             raise serializers.ValidationError("Invalid charity_id.")
         return value

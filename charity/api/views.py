@@ -1,11 +1,12 @@
 from celery import chain, chord, group
 from celery.result import AsyncResult
+from django.http import Http404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from charity.api.serializers import BulkDonationIngestSerializer, DonationIngestSerializer
-from charity.models import Campaign, Charity, DonationBatch, DonationJob
+from charity.models import Campaign, DonationBatch, DonationJob
 from charity.permissions import IsCharityMember
 from charity.tasks import (
     dispatch_email_for_job,
@@ -13,6 +14,7 @@ from charity.tasks import (
     on_batch_complete,
     validate_and_prep_job,
 )
+from charity.utils.access_control import get_accessible_jobs, get_authorized_charity
 
 
 def _resolve_campaign(charity, campaign_type):
@@ -36,11 +38,13 @@ class DonationIngestAPIView(APIView):
     permission_classes = [IsCharityMember]
 
     def post(self, request):
-        serializer = DonationIngestSerializer(data=request.data)
+        serializer = DonationIngestSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         payload = serializer.validated_data
 
-        charity = Charity.objects.get(id=payload["charity_id"])
+        charity = get_authorized_charity(request.user, payload["charity_id"])
+        if charity is None:
+            raise Http404
         campaign = _resolve_campaign(charity, payload["campaign_type"])
 
         batch = DonationBatch.objects.create(
@@ -90,7 +94,7 @@ class BulkDonationIngestAPIView(APIView):
     permission_classes = [IsCharityMember]
 
     def post(self, request):
-        serializer = BulkDonationIngestSerializer(data=request.data)
+        serializer = BulkDonationIngestSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         # Group all donations by charity + campaign_type so they land in the
@@ -103,7 +107,9 @@ class BulkDonationIngestAPIView(APIView):
         # (the serializer should validate homogeneity; mixed batches remain
         # supported via separate API calls).
         first = donations[0]
-        charity = Charity.objects.get(id=first["charity_id"])
+        charity = get_authorized_charity(request.user, first["charity_id"])
+        if charity is None:
+            raise Http404
         campaign = _resolve_campaign(charity, first["campaign_type"])
 
         batch = DonationBatch.objects.create(
@@ -169,7 +175,7 @@ class TaskStatusAPIView(APIView):
         job_id = request.query_params.get("job_id")
         if job_id:
             try:
-                job = DonationJob.objects.get(id=job_id)
+                job = get_accessible_jobs(request.user).get(id=job_id)
                 return Response(
                     {
                         "job_id": job.id,

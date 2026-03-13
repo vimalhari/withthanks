@@ -5,10 +5,10 @@ from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.views import View
 
-from .models import Charity, Invoice, InvoiceLineItem, InvoiceService
+from .models import Invoice, InvoiceLineItem, InvoiceService
+from .utils.access_control import get_authorized_charity
 
 
 class InvoiceCalculationAPI(LoginRequiredMixin, View):
@@ -52,7 +52,9 @@ class CreateInvoiceAPI(LoginRequiredMixin, View):
         try:
             data = json.loads(request.body)
             charity_id = data.get("charity_id")
-            charity = get_object_or_404(Charity, id=charity_id)
+            charity = get_authorized_charity(request.user, charity_id)
+            if charity is None:
+                return JsonResponse({"error": "Charity not found"}, status=404)
 
             from datetime import timedelta
 
@@ -70,7 +72,7 @@ class CreateInvoiceAPI(LoginRequiredMixin, View):
                 tax_percent=Decimal(str(data.get("tax_percent", 20))),
                 # Pre-fill billing contact from the charity
                 billing_email=charity.billing_email or charity.contact_email or "",
-                additional_billing_emails=charity.additional_billing_emails or "",
+                additional_billing_emails=charity.additional_emails or "",
             )
 
             invoice.generate_invoice_number()

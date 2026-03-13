@@ -1,10 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.http import Http404, JsonResponse
 from django.views import View
 
 from ..analytics_models import CampaignStats
-from ..models import Campaign
+from ..utils.access_control import get_authorized_campaign
 
 
 class CampaignReportAPIView(LoginRequiredMixin, View):
@@ -14,7 +13,9 @@ class CampaignReportAPIView(LoginRequiredMixin, View):
 
     def get(self, request, campaign_id, *args, **kwargs):
         # 1. Fetch Campaign
-        campaign = get_object_or_404(Campaign, id=campaign_id)
+        campaign = get_authorized_campaign(request.user, campaign_id)
+        if campaign is None:
+            raise Http404
 
         # 2. Get or Initialize Stats
         stats, _ = CampaignStats.objects.get_or_create(campaign=campaign)

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
@@ -14,6 +15,10 @@ from .analytics_models import CampaignStats, EmailEvent, VideoEvent
 from .models import Campaign, DonationJob, EmailTracking
 
 logger = logging.getLogger(__name__)
+
+
+def _get_webhook_signature_max_age_seconds() -> int:
+    return getattr(settings, "WEBHOOK_SIGNATURE_MAX_AGE_SECONDS", 300)
 
 
 class CloudflareWebhookView(View):
@@ -96,6 +101,9 @@ class CloudflareWebhookView(View):
             signature = parts.get("sig1")
 
             if not timestamp or not signature:
+                return False
+            if abs(time.time() - int(timestamp)) > _get_webhook_signature_max_age_seconds():
+                logger.warning("Cloudflare webhook signature expired")
                 return False
 
             # Verify signature: HMAC-SHA256(secret, timestamp + body)
@@ -213,6 +221,9 @@ class ResendWebhookView(View):
             svix_timestamp = request.headers.get("svix-timestamp", "")
             svix_signature = request.headers.get("svix-signature", "")
             if not all([svix_id, svix_timestamp, svix_signature]):
+                return False
+            if abs(time.time() - int(svix_timestamp)) > _get_webhook_signature_max_age_seconds():
+                logger.warning("ResendWebhook: stale signature timestamp")
                 return False
             signed_content = f"{svix_id}.{svix_timestamp}.{request.body.decode('utf-8')}"
             secret = settings.RESEND_WEBHOOK_SECRET

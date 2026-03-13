@@ -24,6 +24,7 @@ from .services.video_pipeline_service import (
     stream_safe_upload,
 )
 from .utils.resend_utils import send_video_email
+from .utils.tracking_security import build_tracking_token
 
 logger = logging.getLogger(__name__)
 
@@ -339,17 +340,8 @@ def dispatch_email_for_job(self, context):
         suppress_unsub = bool(
             campaign and campaign.campaign_type == campaign.CampaignType.THANK_YOU
         )
-        tracking = build_tracking_urls(
-            job_id=job.id,
-            mode=mode,
-            server_url=server_url,
-            campaign_id=campaign.id if campaign else None,
-            batch_id=job.donation_batch.id if job.donation_batch else None,
-            suppress_unsubscribe=suppress_unsub,
-        )
-
         # --- EmailTracking record ------------------------------------------- #
-        EmailTracking.objects.get_or_create(
+        tracking_record, _ = EmailTracking.objects.get_or_create(
             job=job,
             defaults={
                 "campaign": campaign,
@@ -359,6 +351,15 @@ def dispatch_email_for_job(self, context):
                 "sent": True,
                 "vdm": False,
             },
+        )
+        tracking = build_tracking_urls(
+            job_id=job.id,
+            mode=mode,
+            server_url=server_url,
+            tracking_token=build_tracking_token(tracking_id=tracking_record.id),
+            campaign_id=campaign.id if campaign else None,
+            batch_id=job.donation_batch.id if job.donation_batch else None,
+            suppress_unsubscribe=suppress_unsub,
         )
 
         # --- SENT analytics event ------------------------------------------- #

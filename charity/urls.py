@@ -32,7 +32,7 @@ urlpatterns = [
     ),
     # Video engagement
     path("track/video/event/", views.track_video_event_view, name="track_video_event"),
-    path("watch/<uuid:job_id>/", views.video_landing_view, name="video_landing"),
+    path("watch/<int:job_id>/", views.video_landing_view, name="video_landing"),
     path("unsubscribe/<int:job_id>/", views.track_unsubscribe_full_view, name="unsubscribe"),
     path("logs/", views.logs_view, name="logs"),
     path("profile/", views.profile_view, name="profile"),
