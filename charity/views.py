@@ -9,9 +9,9 @@ from .models import Campaign, Charity, DonationJob
 from .utils.access_control import get_active_charity
 from .views_admin import (
     api_campaigns,
-    api_clients,
-    clear_client_context,
-    switch_client,
+    api_charities,
+    clear_charity_context,
+    switch_charity,
 )
 from .views_auth import (
     change_password,
@@ -58,9 +58,9 @@ from .views_tracking import (
 __all__ = [  # noqa: RUF022
     # views_admin
     "api_campaigns",
-    "api_clients",
-    "clear_client_context",
-    "switch_client",
+    "api_charities",
+    "clear_charity_context",
+    "switch_charity",
     # views_auth
     "change_password",
     "login_view",
@@ -125,7 +125,7 @@ def dashboard_view(request):
     # List population based on view mode
     if view_mode == "campaigns":
         clients = (
-            Campaign.objects.filter(client=current_charity)
+            Campaign.objects.filter(charity=current_charity)
             if current_charity
             else Campaign.objects.all()
         )
@@ -133,7 +133,7 @@ def dashboard_view(request):
         clients = clients.annotate(
             total_batches=Count("batches", distinct=True),
             total_videos=Count("batches__jobs", distinct=True),
-        ).select_related("client")
+        ).select_related("charity")
     elif request.user.is_superuser and view_mode == "clients":
         clients = (
             Charity.objects.all()
@@ -142,7 +142,7 @@ def dashboard_view(request):
                 total_batches=Count("batches", distinct=True),
                 total_videos=Count("batches__jobs", distinct=True),
             )
-            .order_by("client_name")
+            .order_by("charity_name")
         )
     else:
         clients = [current_charity] if current_charity else []

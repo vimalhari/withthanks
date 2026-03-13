@@ -105,7 +105,7 @@ def invoice_send_email(request, invoice_id):
             invoice_pdf_bytes=pdf_bytes,
             invoice_number=invoice.invoice_number,
             invoice_id=str(invoice.id),
-            subject=f"Invoice {invoice.invoice_number} from {invoice.charity.client_name}",
+            subject=f"Invoice {invoice.invoice_number} from {invoice.charity.charity_name}",
             from_email=None,
             filename=f"Invoice_{invoice.invoice_number}.pdf",
         )

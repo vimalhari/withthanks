@@ -40,9 +40,8 @@ class ${1:FeatureName}Tests(TestCase):
         # Charity A (primary test subject)
         self.user_a = User.objects.create_user(username="user_a", password="testpass123")
         self.charity_a = Charity.objects.create(
-            client_name="Charity A",
+            charity_name="Charity A",
             contact_email="a@test.com",
-            organization_name="Org A",
         )
         CharityMember.objects.create(
             charity=self.charity_a, user=self.user_a, role="Admin", status="ACTIVE"
@@ -51,9 +50,8 @@ class ${1:FeatureName}Tests(TestCase):
         # Charity B (isolation verification)
         self.user_b = User.objects.create_user(username="user_b", password="testpass123")
         self.charity_b = Charity.objects.create(
-            client_name="Charity B",
+            charity_name="Charity B",
             contact_email="b@test.com",
-            organization_name="Org B",
         )
         CharityMember.objects.create(
             charity=self.charity_b, user=self.user_b, role="Admin", status="ACTIVE"

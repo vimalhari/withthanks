@@ -1,49 +1,11 @@
 # forms.py
 from django import forms
 
-from .models import Campaign, Charity, CharityMember, Invoice
+from .models import Campaign, CharityMember, Invoice
 
 
 class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(label="Upload CSV")
-
-
-class ClientSetupForm(forms.ModelForm):
-    class Meta:
-        model = Charity
-        fields = [
-            "client_name",
-            "contact_email",
-            "organization_name",
-            "contact_phone",
-            "company_number",
-            "address_line_1",
-            "address_line_2",
-            "county",
-            "postcode",
-            "billing_email",
-            "billing_address",
-            "additional_emails",
-            "default_voiceover_script",
-            "default_voice_id",
-        ]
-        widgets = {
-            "client_name": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "Client Name"}
-            ),
-            "contact_email": forms.EmailInput(
-                attrs={"class": "form-control", "placeholder": "contact@client.com"}
-            ),
-            "organization_name": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "Organization Name"}
-            ),
-            "additional_emails": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "cc@example.com, finance@example.com",
-                }
-            ),
-        }
 
 
 class CharityMemberForm(forms.ModelForm):
@@ -103,7 +65,7 @@ class InvoiceForm(forms.ModelForm):
 
 
 class InvoiceStep1Form(forms.Form):
-    client = forms.ModelChoiceField(
+    charity = forms.ModelChoiceField(
         queryset=None, widget=forms.Select(attrs={"class": "form-select"})
     )
     campaign = forms.ModelChoiceField(
@@ -130,10 +92,10 @@ class InvoiceStep1Form(forms.Form):
         super().__init__(*args, **kwargs)
         from .models import Charity
 
-        self.fields["client"].queryset = Charity.objects.all()
+        self.fields["charity"].queryset = Charity.objects.all()
         if charity:
-            self.fields["client"].initial = charity
-            self.fields["campaign"].queryset = Campaign.objects.filter(client=charity)
+            self.fields["charity"].initial = charity
+            self.fields["campaign"].queryset = Campaign.objects.filter(charity=charity)
         else:
             self.fields["campaign"].queryset = Campaign.objects.all()
 
@@ -149,7 +111,7 @@ class InvoiceStep2Form(forms.Form):
         choices=[
             ("none", "None"),
             ("standard", "Standard"),
-            ("client_supplied", "Client Supplied"),
+            ("charity_supplied", "Charity Supplied"),
         ],
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),

@@ -112,7 +112,7 @@
     </style>
 </head>
 <body>
-    <div class="preheader">A thank-you message from {{ organization_name }}.</div>
+    <div class="preheader">A thank-you message from {{ charity_name }}.</div>
     <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display:none;" alt="" />
 
     <table role="presentation" class="wrapper" width="100%">
@@ -122,16 +122,16 @@
                     {% if image_url %}
                     <tr>
                         <td>
-                            <img src="{{ image_url }}" alt="Thank you from {{ organization_name }}" width="640" style="width: 100%; max-width: 640px;">
+                            <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="640" style="width: 100%; max-width: 640px;">
                         </td>
                     </tr>
                     {% endif %}
                     <tr>
                         <td class="section-padding" style="padding: 40px 48px 28px;">
                             <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>
-                            <div class="headline" style="margin-bottom: 20px;">Dear {{ donor_name }},</div>
+                            <div class="headline" style="margin-bottom: 20px;">{{ greeting_line }},</div>
                             <div class="body-copy">
-                                <p style="margin: 0 0 18px;">On behalf of <strong style="color: #13202b;">{{ organization_name }}</strong>, thank you for your generous donation of <strong style="color: #13202b;">{{ donation_amount }}</strong>.</p>
+                                <p style="margin: 0 0 18px;">On behalf of <strong style="color: #13202b;">{{ charity_name }}</strong>, thank you for your generous donation of <strong style="color: #13202b;">{{ donation_amount }}</strong>.</p>
                                 <p style="margin: 0;">Your support helps sustain our work, and we have prepared a personal video message to express our appreciation.</p>
                             </div>
                         </td>
@@ -158,8 +158,12 @@
                                 <tr>
                                     <td style="padding-top: 24px;" class="footer-copy">
                                         <div style="margin-bottom: 4px;">With thanks,</div>
-                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">{{ organization_name }} Team</div>
-                                        <div style="margin-bottom: 12px;">{{ from_email }}</div>
+                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">{{ charity_name }} Team</div>
+                                        {% if charity_website_url %}
+                                        <div style="margin-bottom: 12px;">
+                                            <a href="{{ charity_website_url }}" class="secondary-link" style="color: #667788;">{{ charity_website_url }}</a>
+                                        </div>
+                                        {% endif %}
                                         {% if unsubscribe_url %}
                                         <div><a href="{{ unsubscribe_url }}" class="secondary-link" style="color: #667788;">Unsubscribe</a> from these updates.</div>
                                         {% endif %}

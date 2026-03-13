@@ -52,14 +52,14 @@ class CharityMemberInline(TabularInline):
     readonly_fields = ("joined_at",)
 
 
-@admin.action(description="Create a default campaign for selected clients")
+@admin.action(description="Create a default campaign for selected charities")
 def create_default_campaign(
     modeladmin: admin.ModelAdmin,
     request: HttpRequest,
     queryset: QuerySet,
 ) -> None:
     """
-    Replaces the old `client_campaign_redirect` view: creates a default Campaign
+    Replaces the old charity campaign bootstrap flow: creates a default Campaign
     for any selected Charity that doesn't already have one.
     """
     created = 0
@@ -70,8 +70,8 @@ def create_default_campaign(
             continue
         year = timezone.now().year
         Campaign.objects.create(
-            name=f"Primary Campaign - {charity.client_name}",
-            client=charity,
+            name=f"Primary Campaign - {charity.charity_name}",
+            charity=charity,
             campaign_code=f"PC-{charity.id}-{year}",
             campaign_start=timezone.now().date(),
             campaign_end=timezone.now().date() + datetime.timedelta(days=365),
@@ -81,13 +81,13 @@ def create_default_campaign(
     if created:
         messages.success(request, f"Created {created} default campaign(s).")
     if skipped:
-        messages.info(request, f"Skipped {skipped} client(s) that already have campaigns.")
+        messages.info(request, f"Skipped {skipped} charities that already have campaigns.")
 
 
 @admin.register(Charity)
 class CharityAdmin(ModelAdmin):
-    list_display = ("client_name", "contact_email", "organization_name", "created_at")
-    search_fields = ("client_name", "contact_email", "organization_name")
+    list_display = ("charity_name", "contact_email", "created_at")
+    search_fields = ("charity_name", "contact_email")
     warn_unsaved_tabs = True
     inlines = [CharityMemberInline]
     actions = [create_default_campaign]
@@ -103,8 +103,8 @@ class CharityAdmin(ModelAdmin):
             "Identity",
             {
                 "fields": (
-                    "client_name",
-                    "organization_name",
+                    "charity_name",
+                    "website_url",
                     "contact_email",
                     "contact_phone",
                     "company_number",
@@ -118,6 +118,7 @@ class CharityAdmin(ModelAdmin):
                 "fields": (
                     "address_line_1",
                     "address_line_2",
+                    "city",
                     "county",
                     "postcode",
                 ),
@@ -129,7 +130,6 @@ class CharityAdmin(ModelAdmin):
                 "classes": ("collapse",),
                 "fields": (
                     "billing_email",
-                    "billing_address",
                     "additional_emails",
                 ),
             },
@@ -230,7 +230,7 @@ class CharityAdmin(ModelAdmin):
 class CharityMemberAdmin(ModelAdmin):
     list_display = ("user", "charity", "role", "status", "joined_at")
     list_filter = ("role", "status")
-    search_fields = ("user__username", "charity__client_name")
+    search_fields = ("user__username", "charity__charity_name")
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +281,7 @@ class InvoiceAdmin(ModelAdmin):
         "created_at",
     )
     list_filter = ("status", "invoice_type", "issue_date")
-    search_fields = ("invoice_number", "charity__client_name")
+    search_fields = ("invoice_number", "charity__charity_name")
     readonly_fields = ("created_at",)
     ordering = ("-issue_date",)
     warn_unsaved_tabs = True
@@ -340,7 +340,7 @@ class DonationBatchAdmin(ModelAdmin):
         "created_at",
     )
     list_filter = ("media_type", "status", "created_at")
-    search_fields = ("batch_number", "charity__client_name", "campaign_name")
+    search_fields = ("batch_number", "charity__charity_name", "campaign_name")
     readonly_fields = ("created_at",)
     compressed_fields = True
     inlines = [DonationJobInline]
@@ -497,7 +497,7 @@ class DonationBatchCampaignInline(TabularInline):
 class CampaignAdmin(ModelAdmin):
     list_display = (
         "name",
-        "client",
+        "charity",
         "status",
         "campaign_type",
         "input_source",
@@ -506,7 +506,7 @@ class CampaignAdmin(ModelAdmin):
         "campaign_end",
     )
     list_filter = ("status", "campaign_type", "input_source", "video_mode")
-    search_fields = ("name", "client__client_name", "campaign_code")
+    search_fields = ("name", "charity__charity_name", "campaign_code")
     readonly_fields = ("id", "created_at", "is_personalized")
     warn_unsaved_tabs = True
     inlines = [CampaignFieldInline, DonationBatchCampaignInline]
@@ -517,7 +517,7 @@ class CampaignAdmin(ModelAdmin):
                 "fields": (
                     "id",
                     "name",
-                    "client",
+                    "charity",
                     "campaign_code",
                     "status",
                     "created_at",
@@ -597,7 +597,7 @@ class CampaignFieldAdmin(ModelAdmin):
 class DonorAdmin(ModelAdmin):
     list_display = ("full_name", "email", "charity", "created_at")
     list_filter = ("charity",)
-    search_fields = ("email", "full_name", "charity__client_name")
+    search_fields = ("email", "full_name", "charity__charity_name")
     readonly_fields = ("created_at",)
     compressed_fields = True
 
@@ -606,7 +606,7 @@ class DonorAdmin(ModelAdmin):
 class DonationAdmin(ModelAdmin):
     list_display = ("donor", "charity", "amount", "campaign_type", "source", "donated_at")
     list_filter = ("campaign_type", "source", "donated_at")
-    search_fields = ("donor__email", "donor__full_name", "charity__client_name")
+    search_fields = ("donor__email", "donor__full_name", "charity__charity_name")
     readonly_fields = ("created_at",)
     compressed_fields = True
 
@@ -623,7 +623,7 @@ class VideoSendLogAdmin(ModelAdmin):
         "sent_at",
     )
     list_filter = ("status", "send_kind", "campaign_type")
-    search_fields = ("recipient_email", "donor__email", "charity__client_name")
+    search_fields = ("recipient_email", "donor__email", "charity__charity_name")
     readonly_fields = ("created_at", "sent_at")
     compressed_fields = True
 

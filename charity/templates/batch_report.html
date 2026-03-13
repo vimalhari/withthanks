@@ -25,14 +25,14 @@
                     <a class="dropdown-item" href="?export=csv"><i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2 text-emerald-600 inline"></i>Export CSV</a>
                     <a class="dropdown-item" href="?export=excel"><i data-lucide="file-text" class="w-4 h-4 mr-2 text-brand inline"></i>Export Excel</a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item !text-gray-400 !text-[11px]" href="{% url 'dashboard' %}?batch_id={{ batch.id }}"><i data-lucide="list" class="w-3 h-3 mr-2 inline"></i>View Raw Jobs</a>
+                    <a class="dropdown-item text-gray-400 text-[11px]" href="{% url 'dashboard' %}?batch_id={{ batch.id }}"><i data-lucide="list" class="w-3 h-3 mr-2 inline"></i>View Raw Jobs</a>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Recipient Table -->
-    <div class="card !p-0 overflow-hidden">
+    <div class="card p-0 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200 bg-gray-50/80">
             <h3 class="text-base font-bold">Recipient Deep-Dive</h3>
         </div>
@@ -56,7 +56,7 @@
                             <div class="text-[11px] text-gray-400">{{ job.email }}</div>
                         </td>
                         <td>
-                            <span class="{% if job.campaign_type == 'VDM' %}badge-warning{% else %}badge-brand{% endif %} !text-[10px]">
+                            <span class="{% if job.campaign_type == 'VDM' %}badge-warning{% else %}badge-brand{% endif %} text-[10px]">
                                 {{ job.campaign_type|default:"Thank You" }}
                             </span>
                         </td>
@@ -85,7 +85,7 @@
                         </td>
                         <td class="pr-4 text-right">
                             {% if job.video_path %}
-                                <a href="{{ job.video_url }}" target="_blank" class="btn-ghost !p-1">
+                                <a href="{{ job.video_url }}" target="_blank" class="btn-ghost p-1">
                                     <i data-lucide="play" class="w-4 h-4"></i>
                                 </a>
                             {% else %}

@@ -28,7 +28,7 @@ from .utils.access_control import (
     get_authorized_campaign,
     get_authorized_charity,
 )
-from .utils.csv_rows import build_csv_recipient_name, get_csv_row_value
+from .utils.csv_rows import build_csv_recipient_name, build_vdm_recipient_name, get_csv_row_value
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ def upload_csv_and_process(request):
             campaign_id = request.POST.get("campaign_id")
             if campaign_id:
                 donation_batch.campaign = Campaign.objects.filter(
-                    id=campaign_id, client=current_charity
+                    id=campaign_id, charity=current_charity
                 ).first()
 
             file_name = f"uploads/csv/{uuid.uuid4()}_{csv_file.name}"
@@ -138,27 +138,27 @@ def send_email_wizard(request):
     """Multi-step wizard for sending emails."""
     current_charity = get_active_charity(request)
     step = int(request.POST.get("step", request.GET.get("step", 1)))
-    client_id = request.POST.get("client_id", request.GET.get("client_id"))
+    charity_id = request.POST.get("charity_id", request.GET.get("charity_id"))
     campaign_id = request.POST.get("campaign_id", request.GET.get("campaign_id"))
     method_raw = request.POST.get("method", request.GET.get("method"))
     method = method_raw.strip().lower() if method_raw else None
 
-    selected_client = current_charity
+    selected_charity = current_charity
     selected_campaign = None
     if campaign_id:
         selected_campaign = get_authorized_campaign(request.user, campaign_id)
         if selected_campaign is None:
             raise Http404
-        selected_client = selected_campaign.client
-    elif client_id:
-        selected_client = get_authorized_charity(request.user, client_id)
-        if selected_client is None:
+        selected_charity = selected_campaign.charity
+    elif charity_id:
+        selected_charity = get_authorized_charity(request.user, charity_id)
+        if selected_charity is None:
             raise Http404
 
-    if not selected_client:
-        selected_client = get_accessible_charities(request.user).order_by("id").first()
+    if not selected_charity:
+        selected_charity = get_accessible_charities(request.user).order_by("id").first()
     campaigns = get_accessible_campaigns(request.user).filter(
-        client=selected_client,
+        charity=selected_charity,
         status__in=["active", "draft"],
     )
 
@@ -182,16 +182,16 @@ def send_email_wizard(request):
         if step == 5:
             subject = request.POST.get("subject")
             batch = DonationBatch.objects.create(
-                charity=selected_client,
+                charity=selected_charity,
                 campaign=selected_campaign,
-                batch_number=DonationBatch.get_next_batch_number(selected_client),
+                batch_number=DonationBatch.get_next_batch_number(selected_charity),
                 campaign_name=subject,
             )
             queued_count = 0
 
             if method == "reengage":
                 previous_donors = (
-                    DonationJob.objects.filter(charity=selected_client)
+                    DonationJob.objects.filter(charity=selected_charity)
                     .values("email")
                     .annotate(name=Max("donor_name"))
                 )
@@ -199,7 +199,7 @@ def send_email_wizard(request):
                     DonationJob(
                         donor_name=donor["name"] or "Supporter",
                         email=donor["email"],
-                        charity=selected_client,
+                        charity=selected_charity,
                         campaign=selected_campaign,
                         status="pending",
                         donation_batch=batch,
@@ -215,7 +215,7 @@ def send_email_wizard(request):
                 job = DonationJob.objects.create(
                     donor_name=request.POST.get("recipient_name") or "Supporter",
                     email=request.POST.get("recipient_email"),
-                    charity=selected_client,
+                    charity=selected_charity,
                     campaign=selected_campaign,
                     status="pending",
                     donation_batch=batch,
@@ -231,14 +231,19 @@ def send_email_wizard(request):
             elif method == "bulk" and "wizard_csv_data" in request.session:
                 jobs_to_create = []
                 for row in request.session["wizard_csv_data"]:
-                    name = build_csv_recipient_name(row, default="Donor")
+                    name = (
+                        build_vdm_recipient_name(row, default="Donor")
+                        if selected_campaign
+                        and selected_campaign.campaign_type == selected_campaign.CampaignType.VDM
+                        else build_csv_recipient_name(row, default="Donor")
+                    )
                     email = get_col(row, "email", "email address", "recipient email", "email-id")
                     if email:
                         jobs_to_create.append(
                             DonationJob(
                                 donor_name=name or "Donor",
                                 email=email,
-                                charity=selected_client,
+                                charity=selected_charity,
                                 campaign=selected_campaign,
                                 status="pending",
                                 donation_batch=batch,
@@ -255,10 +260,15 @@ def send_email_wizard(request):
 
     context = {
         "step": step,
-        "selected_client": selected_client,
+        "selected_charity": selected_charity,
         "selected_campaign": selected_campaign,
         "method": method,
         "campaigns": campaigns,
+        "all_charities": (
+            get_accessible_charities(request.user).order_by("charity_name")
+            if request.user.is_superuser
+            else None
+        ),
         "subject": request.POST.get("subject", ""),
         "media_type": request.POST.get("media_type", "video"),
         "campaign_id": campaign_id,

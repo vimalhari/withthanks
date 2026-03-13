@@ -26,8 +26,8 @@ def get_accessible_campaigns(user):
     if user.is_superuser:
         return Campaign.objects.all()
     return Campaign.objects.filter(
-        client__charitymember__user=user,
-        client__charitymember__status="ACTIVE",
+        charity__charitymember__user=user,
+        charity__charitymember__status="ACTIVE",
     ).distinct()
 
 
@@ -51,7 +51,7 @@ def get_authorized_charity(user, charity_id):
 def get_authorized_campaign(user, campaign_id):
     if campaign_id in (None, ""):
         return None
-    return get_accessible_campaigns(user).select_related("client").filter(id=campaign_id).first()
+    return get_accessible_campaigns(user).select_related("charity").filter(id=campaign_id).first()
 
 
 def get_active_charity(request):

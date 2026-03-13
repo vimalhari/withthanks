@@ -47,7 +47,7 @@ class Command(BaseCommand):
                         u.id,
                         u.email,
                         u.charity.id if u.charity else "",
-                        getattr(u.charity, "client_name", ""),
+                        getattr(u.charity, "charity_name", ""),
                         u.reason,
                         u.unsubscribed_from_job.id if u.unsubscribed_from_job else "",
                         u.ip_address,

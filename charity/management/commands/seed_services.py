@@ -43,10 +43,10 @@ class Command(BaseCommand):
             ("Text amends", "production", 30.00, "Minor text changes in overlays or subtitles."),
             ("RE-proof", "production", 30.00, "Regenerating proof copy after changes."),
             (
-                "Client supplied audio clean up",
+                "Charity supplied audio clean up",
                 "production",
                 65.00,
-                "Equalization and noise reduction for client audio.",
+                "Equalization and noise reduction for charity audio.",
             ),
             (
                 "Video Direct Mail",
@@ -55,10 +55,10 @@ class Command(BaseCommand):
                 "Full VDM campaign: outreach, stitches, audio, VO, and CTA.",
             ),
             (
-                "Client supplied video/audio (VDM)",
+                "Charity supplied video/audio (VDM)",
                 "production",
                 450.00,
-                "VDM execution using client-provided media.",
+                "VDM execution using charity-provided media.",
             ),
             # VOLUME PRICING (production tier)
             ("Volume: 0-99 videos", "production", 0.00, "Base volume tier."),

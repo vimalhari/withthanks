@@ -51,7 +51,7 @@ class Command(BaseCommand):
                     [
                         b.id,
                         b.charity.id if b.charity else "",
-                        b.charity.client_name if b.charity else "",
+                        b.charity.charity_name if b.charity else "",
                         b.campaign.id if b.campaign else "",
                         getattr(b.campaign, "name", ""),
                         b.batch_number,

@@ -179,7 +179,7 @@ def blackbaud_callback(request):
     )
     messages.success(
         request,
-        f"Raiser's Edge NXT connected for {charity.client_name}. Donation sync is now active.",
+        f"Raiser's Edge NXT connected for {charity.charity_name}. Donation sync is now active.",
     )
     return _post_connect_redirect(request, charity, admin_origin)
 
@@ -218,7 +218,7 @@ def blackbaud_admin_disconnect(request, charity_id: int):
 
     charity = get_object_or_404(Charity, id=charity_id)
     _clear_blackbaud_tokens(charity)
-    messages.success(request, f"Raiser's Edge NXT disconnected for {charity.client_name}.")
+    messages.success(request, f"Raiser's Edge NXT disconnected for {charity.charity_name}.")
     return redirect("admin:charity_charity_change", charity_id)
 
 

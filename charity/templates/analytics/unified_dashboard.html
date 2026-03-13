@@ -47,9 +47,9 @@
     <div class="card mb-6 p-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             <select x-model="filters.charity_id" @change="onCharityChange()" class="form-select">
-                <option value="all">Select Client...</option>
+                <option value="all">Select Charity...</option>
                 {% for client in clients %}
-                <option value="{{ client.id }}">{{ client.client_name }}</option>
+                <option value="{{ client.id }}">{{ client.charity_name }}</option>
                 {% endfor %}
             </select>
             <select x-model="filters.campaign_id" @change="refreshData()" class="form-select" :disabled="filters.charity_id === 'all'">
@@ -145,13 +145,13 @@
                     <h3 class="text-base font-extrabold text-gray-900 flex items-center gap-2">Email Lifecycle Performance</h3>
                     <span class="text-[11px] font-bold bg-brand/10 text-brand px-2.5 py-1 rounded-md">Weekly Aggregation</span>
                 </div>
-                <div class="h-[320px]"><canvas id="emailPerformanceChart"></canvas></div>
+                <div class="h-80"><canvas id="emailPerformanceChart"></canvas></div>
             </div>
             <div class="card p-6">
                 <div class="flex justify-between items-center mb-5">
                     <h3 class="text-base font-extrabold text-gray-900">Open & Click Trend</h3>
                 </div>
-                <div class="h-[320px]"><canvas id="conversionTrendChart"></canvas></div>
+                <div class="h-80"><canvas id="conversionTrendChart"></canvas></div>
             </div>
         </div>
 
@@ -195,7 +195,7 @@
                 <div class="flex flex-col items-center gap-1.5 py-3">
                     <template x-for="(stage, index) in chartsData.funnel.stages" :key="index">
                         <div class="w-full flex items-center justify-center relative">
-                            <span class="absolute left-0 text-[11px] font-bold text-gray-400 w-[80px]" x-text="stage.label"></span>
+                            <span class="absolute left-0 text-[11px] font-bold text-gray-400 w-20" x-text="stage.label"></span>
                             <div class="h-10 flex items-center justify-center text-white font-bold text-xs rounded"
                                  :style="'width: ' + (100 - (index * 8)) + '%; max-width: 600px; background:' + getFunnelColor(index)">
                                 <span x-text="stage.label" class="hidden md:inline"></span>
@@ -226,7 +226,7 @@
             <div class="card inline-block p-12 max-w-[600px]">
                 <div class="mb-6 text-brand"><i data-lucide="bar-chart-3" class="w-16 h-16 mx-auto opacity-80"></i></div>
                 <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Report Generation Awaiting</h2>
-                <p class="text-gray-400 font-medium leading-relaxed">Select a client and campaign from the filters above to generate your comprehensive analytics report. The dashboard will aggregate delivery metrics, video engagement, and conversion tracking.</p>
+                <p class="text-gray-400 font-medium leading-relaxed">Select a charity and campaign from the filters above to generate your comprehensive analytics report. The dashboard will aggregate delivery metrics, video engagement, and conversion tracking.</p>
                 <div class="mt-8 pt-6 border-t border-gray-200 flex justify-center gap-8">
                     <div class="text-left"><div class="text-xs font-bold text-gray-400 mb-1">DATA POINTS</div><div class="font-extrabold text-gray-900">Real-time</div></div>
                     <div class="text-left"><div class="text-xs font-bold text-gray-400 mb-1">EXPORT</div><div class="font-extrabold text-gray-900">CSV/PDF Available</div></div>
@@ -276,7 +276,7 @@ function enterpriseDashboard() {
         async fetchCampaigns() {
             if (this.filters.charity_id === 'all') return;
             this.loading = true;
-            try { const r = await fetch(`{% url 'api_campaigns' %}?client_id=${this.filters.charity_id}`); this.campaigns = await r.json(); } catch(e) { console.error(e); } finally { this.loading = false; }
+            try { const r = await fetch(`{% url 'api_campaigns' %}?charity_id=${this.filters.charity_id}`); this.campaigns = await r.json(); } catch(e) { console.error(e); } finally { this.loading = false; }
         },
         async onCharityChange() { this.filters.campaign_id = 'all'; await this.fetchCampaigns(); },
         async refreshData() {

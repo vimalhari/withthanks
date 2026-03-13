@@ -53,7 +53,7 @@ def send_video_email(
     job_id: str,
     donor_name: str = "Donor",
     donation_amount: str = "0",
-    organization_name: str = "WithThanks",
+    charity_name: str = "WithThanks",
     subject: str | None = None,
     html: str | None = None,
     from_email: str | None = None,
@@ -156,7 +156,7 @@ def send_video_email(
         html = f"""
         <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
             <h2>Thank You, {donor_name}!</h2>
-            <p><strong>Organization:</strong> {organization_name}</p>
+            <p><strong>Charity:</strong> {charity_name}</p>
             <p><strong>Donation Amount:</strong> {donation_amount}</p>
             <p>We deeply appreciate your support.</p>
 

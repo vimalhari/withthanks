@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def cleanup_charity_media(sender, instance, **kwargs):
     """
     Delete individual media files attached to a Charity row when it is deleted.
-    Also removes the per-client media folder if it exists.
+    Also removes the per-charity media folder if it exists.
     """
     for field in (instance.default_template_video, instance.gratitude_card):
         if field:
@@ -28,10 +28,10 @@ def cleanup_charity_media(sender, instance, **kwargs):
             except Exception as exc:
                 logger.warning("cleanup_charity_media: could not delete %s: %s", field.name, exc)
 
-    client_dir = os.path.join(settings.MEDIA_ROOT, "clients", f"client_{instance.id}")
-    if os.path.isdir(client_dir):
+    charity_dir = os.path.join(settings.MEDIA_ROOT, "charities", f"charity_{instance.id}")
+    if os.path.isdir(charity_dir):
         try:
-            shutil.rmtree(client_dir)
-            logger.info("cleanup_charity_media: removed %s", client_dir)
+            shutil.rmtree(charity_dir)
+            logger.info("cleanup_charity_media: removed %s", charity_dir)
         except Exception as exc:
-            logger.warning("cleanup_charity_media: could not remove %s: %s", client_dir, exc)
+            logger.warning("cleanup_charity_media: could not remove %s: %s", charity_dir, exc)

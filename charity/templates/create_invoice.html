@@ -24,27 +24,29 @@
     <div class="relative flex justify-between items-center mb-12 px-16">
         <div class="absolute top-4 left-16 right-16 h-0.5 bg-gray-200 z-0"></div>
         <div class="relative z-10 bg-white px-3 flex flex-col items-center gap-2">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                {% if step == 1 %}border-2 border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]
-                {% elif step > 1 %}border-2 border-emerald-500 bg-emerald-500 text-white
-                {% else %}border-2 border-gray-200 text-gray-400{% endif %}">
-                {% if step > 1 %}<i data-lucide="check" class="w-4 h-4"></i>{% else %}1{% endif %}
-            </div>
+            {% if step == 1 %}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="border: 2px solid rgb(79 70 229); background-color: rgb(79 70 229); color: rgb(255 255 255); box-shadow: 0 0 0 4px rgba(79,70,229,0.1);">1</div>
+            {% elif step > 1 %}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="border: 2px solid rgb(16 185 129); background-color: rgb(16 185 129); color: rgb(255 255 255);"><i data-lucide="check" class="w-4 h-4"></i></div>
+            {% else %}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="border: 2px solid rgb(229 231 235); color: rgb(156 163 175);">1</div>
+            {% endif %}
             <span class="text-[11px] font-bold uppercase tracking-wider {% if step == 1 %}text-brand{% else %}text-gray-400{% endif %}">Details</span>
         </div>
         <div class="relative z-10 bg-white px-3 flex flex-col items-center gap-2">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                {% if step == 2 %}border-2 border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]
-                {% elif step > 2 %}border-2 border-emerald-500 bg-emerald-500 text-white
-                {% else %}border-2 border-gray-200 text-gray-400{% endif %}">
-                {% if step > 2 %}<i data-lucide="check" class="w-4 h-4"></i>{% else %}2{% endif %}
-            </div>
+            {% if step == 2 %}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="border: 2px solid rgb(79 70 229); background-color: rgb(79 70 229); color: rgb(255 255 255); box-shadow: 0 0 0 4px rgba(79,70,229,0.1);">2</div>
+            {% elif step > 2 %}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="border: 2px solid rgb(16 185 129); background-color: rgb(16 185 129); color: rgb(255 255 255);"><i data-lucide="check" class="w-4 h-4"></i></div>
+            {% else %}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="border: 2px solid rgb(229 231 235); color: rgb(156 163 175);">2</div>
+            {% endif %}
             <span class="text-[11px] font-bold uppercase tracking-wider {% if step == 2 %}text-brand{% else %}text-gray-400{% endif %}">Services</span>
         </div>
         <div class="relative z-10 bg-white px-3 flex flex-col items-center gap-2">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                {% if step == 3 %}border-2 border-brand bg-brand text-white shadow-[0_0_0_4px_rgba(79,70,229,0.1)]
-                {% else %}border-2 border-gray-200 text-gray-400{% endif %}">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                {% if step == 3 %}style="border: 2px solid rgb(79 70 229); background-color: rgb(79 70 229); color: rgb(255 255 255); box-shadow: 0 0 0 4px rgba(79,70,229,0.1);"
+                {% else %}style="border: 2px solid rgb(229 231 235); color: rgb(156 163 175);"{% endif %}>
                 3
             </div>
             <span class="text-[11px] font-bold uppercase tracking-wider {% if step == 3 %}text-brand{% else %}text-gray-400{% endif %}">Review</span>
@@ -64,8 +66,8 @@
 
                     <div class="grid grid-cols-2 gap-6">
                         <div class="col-span-2">
-                            <label class="form-label">Client</label>
-                            {{ form.client }}
+                            <label class="form-label">Charity</label>
+                            {{ form.charity }}
                         </div>
                         <div class="col-span-2">
                             <label class="form-label">Campaign</label>
@@ -89,7 +91,7 @@
                         <div>
                             <label class="form-label">Billing Email (Recipient)</label>
                             {{ form.billing_email }}
-                            <div class="text-[11px] text-gray-400 mt-1">Defaults to client contact email.</div>
+                            <div class="text-[11px] text-gray-400 mt-1">Defaults to the charity contact email.</div>
                         </div>
                         <div>
                             <label class="form-label">Billing Address</label>
@@ -141,10 +143,10 @@
                                 <div class="font-bold text-gray-900">VDM Package (£575)</div>
                                 <div class="text-xs text-gray-400">Full outreach solution</div>
                             </label>
-                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.vdm_package.value == 'client_supplied' %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
-                                <input type="radio" name="vdm_package" value="client_supplied" class="sr-only pkg-radio" {% if form.vdm_package.value == 'client_supplied' %}checked{% endif %}>
+                            <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.vdm_package.value == 'charity_supplied' %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
+                                <input type="radio" name="vdm_package" value="charity_supplied" class="sr-only pkg-radio" {% if form.vdm_package.value == 'charity_supplied' %}checked{% endif %}>
                                 <div class="font-bold text-gray-900">VDM (Supplied) (£450)</div>
-                                <div class="text-xs text-gray-400">Client supplies media</div>
+                                <div class="text-xs text-gray-400">Charity supplies media</div>
                             </label>
                             <label class="pkg-card border border-gray-200 rounded-xl p-5 cursor-pointer transition-all hover:border-brand {% if form.enable_gratitude_card.value %}border-brand bg-brand/5 shadow-[0_0_0_3px_rgba(79,70,229,0.08)]{% endif %}">
                                 <input type="checkbox" name="enable_gratitude_card" value="true" class="sr-only svc-chk" {% if form.enable_gratitude_card.value %}checked{% endif %}>
@@ -279,7 +281,7 @@
                     </div>
                     <div class="flex gap-3">
                         {% if step < 3 %}
-                        <button type="submit" name="action" value="next" class="btn-primary w-[160px] h-[50px]">
+                        <button type="submit" name="action" value="next" class="btn-primary h-[50px]" style="width: 10rem;">
                             Continue <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </button>
                         {% else %}
@@ -302,7 +304,7 @@
                             <span class="font-bold text-gray-900">{{ step }} of 3</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-400">Client</span>
+                            <span class="text-gray-400">Charity</span>
                             <span class="font-bold text-gray-900">{{ wizard_charity.name|default:"Not Selected" }}</span>
                         </div>
 
@@ -337,27 +339,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const clientSelect = document.querySelector('select[name="client"]');
+    const charitySelect = document.querySelector('select[name="charity"]');
 
-    function updateBillingDetails(clientId) {
-        if (!clientId) return;
+    function updateBillingDetails(charityId) {
+        if (!charityId) return;
         const emailInp = document.querySelector('input[name="billing_email"]');
         const addrInp = document.querySelector('textarea[name="billing_address"]');
         if (!emailInp || !addrInp) return;
-        fetch(`/charity/api/clients/?client_id=${clientId}`)
+        fetch(`/charity/api/charities/?charity_id=${charityId}`)
             .then(r => r.json())
             .then(data => {
                 if (data && data.length > 0) {
-                    const client = data[0];
-                    if (!emailInp.value) emailInp.value = client.billing_email;
-                    if (!addrInp.value) addrInp.value = client.billing_address;
+                    const charity = data[0];
+                    if (!emailInp.value) emailInp.value = charity.billing_email;
+                    if (!addrInp.value) addrInp.value = charity.billing_address;
                 }
-            }).catch(err => console.error('Error fetching client details:', err));
+            }).catch(err => console.error('Error fetching charity details:', err));
     }
 
-    if (clientSelect) {
-        clientSelect.addEventListener('change', function() { updateBillingDetails(this.value); });
-        if (clientSelect.value) updateBillingDetails(clientSelect.value);
+    if (charitySelect) {
+        charitySelect.addEventListener('change', function() { updateBillingDetails(this.value); });
+        if (charitySelect.value) updateBillingDetails(charitySelect.value);
     }
 
     // Live summary for Step 2
@@ -374,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let itemsHtml = `<div class="flex justify-between text-xs"><span class="text-gray-400">Base Campaign</span><span class="font-semibold">${rawBase === "POA" ? "POA" : "£" + total.toFixed(2)}</span></div>`;
 
         const prices = {
-            'vdm_package_standard': 575, 'vdm_package_client_supplied': 450,
+            'vdm_package_standard': 575, 'vdm_package_charity_supplied': 450,
             'enable_gratitude_card': 250, 'enable_qr_generation': 150, 'enable_batch_processing': 200,
             'enable_email_sign_off': 50, 'enable_pers_vo_amends': 55, 'enable_text_amends': 30,
             'enable_re_proof': 30, 'enable_add_programming': 120, 'enable_data_cleaning': 60,
@@ -382,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'enable_add_donate_page': 50, 'enable_bounce_foc': 0
         };
         const labels = {
-            'vdm_package_standard': 'VDM Package', 'vdm_package_client_supplied': 'VDM (Supplied)',
+            'vdm_package_standard': 'VDM Package', 'vdm_package_charity_supplied': 'VDM (Supplied)',
             'enable_gratitude_card': 'Gratitud-E Card', 'enable_qr_generation': 'QR Generation',
             'enable_batch_processing': 'Batch Processing', 'enable_email_sign_off': 'Email Sign Off',
             'enable_pers_vo_amends': 'VO Amends', 'enable_text_amends': 'Text Amends',

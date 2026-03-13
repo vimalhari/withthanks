@@ -18,19 +18,19 @@
     {% if messages or message or errors %}
     <div class="mb-8">
         {% for m in messages %}
-        <div class="card !py-3 !px-5 border-l-4 !border-l-emerald-500 !bg-emerald-50 text-emerald-600 font-semibold mb-3">
+        <div class="card py-3 px-5 border-l-4 border-l-emerald-500 bg-emerald-50 text-emerald-600 font-semibold mb-3">
             <i data-lucide="check-circle-2" class="w-4 h-4 inline mr-2"></i> {{ m }}
         </div>
         {% endfor %}
         
         {% if message %}
-        <div class="card !py-3 !px-5 border-l-4 !border-l-brand !bg-brand/5 text-brand font-semibold mb-3">
+        <div class="card py-3 px-5 border-l-4 border-l-brand bg-brand/5 text-brand font-semibold mb-3">
             <i data-lucide="info" class="w-4 h-4 inline mr-2"></i> {{ message }}
         </div>
         {% endif %}
 
         {% if errors %}
-        <div class="card !py-4 !px-5 border-l-4 !border-l-red-500 !bg-red-50 text-red-600 mb-3">
+        <div class="card py-4 px-5 border-l-4 border-l-red-500 bg-red-50 text-red-600 mb-3">
             <p class="font-bold mb-2"><i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i> Verification Errors:</p>
             <ul class="text-[13px] pl-5 list-disc">
                 {% for err in errors %}
@@ -65,7 +65,7 @@
                         </div>
                         <div class="hidden">{{ form.csv_file }}</div>
                     </div>
-                    <button type="submit" class="btn-primary w-full mt-5 !py-3">
+                    <button type="submit" class="btn-primary w-full mt-5 py-3">
                         Process Bulk Batch
                     </button>
                 </form>
@@ -97,7 +97,7 @@
                         <input type="email" id="manual_email" placeholder="donor@example.com" class="form-input">
                     </div>
                 </div>
-                <button type="button" onclick="submitManual()" class="btn-secondary w-full mt-1 !py-3 !border-brand !text-brand">
+                <button type="button" onclick="submitManual()" class="btn-secondary w-full mt-1 py-3 border-brand text-brand">
                     Create Single Job
                 </button>
             </form>
@@ -106,7 +106,7 @@
 
     <!-- Batch Summary Card -->
     {% if upload_info or jobs %}
-    <div class="card !p-8 border-t-4 !border-t-brand">
+    <div class="card p-8 border-t-4 border-t-brand">
         <div class="flex justify-between items-start mb-8">
             <div>
                 <div class="flex items-center gap-3 mb-1">
@@ -161,11 +161,11 @@
             <h3 class="text-xl font-extrabold">Batch History</h3>
             <div class="relative w-[300px]">
                 <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-gray-400"></i>
-                <input type="text" id="batchSearch" placeholder="Search batch number or file..." class="form-input !pl-9 !text-[13px]">
+                <input type="text" id="batchSearch" placeholder="Search batch number or file..." class="form-input pl-9 text-[13px]">
             </div>
         </div>
 
-        <div class="card !p-0 overflow-hidden">
+        <div class="card p-0 overflow-hidden">
             <table class="data-table" id="batchTable">
                 <thead>
                     <tr>

@@ -20,7 +20,7 @@ from charity.utils.access_control import get_accessible_jobs, get_authorized_cha
 def _resolve_campaign(charity, campaign_type):
     """Return the first active campaign matching *campaign_type*, or None."""
     return Campaign.objects.filter(
-        client=charity,
+        charity=charity,
         campaign_type=campaign_type,
         status="active",
     ).first()

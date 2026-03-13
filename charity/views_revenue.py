@@ -129,7 +129,7 @@ class RevenueIntelligenceAPI(LoginRequiredMixin, AnalyticsPermissionMixin, View)
         for c in client_stats:
             clients_list.append(
                 {
-                    "name": c.client_name,
+                    "name": c.charity_name,
                     "total_billed": float(c.total_invoiced or 0),
                     "outstanding": float((c.total_invoiced or 0) - (c.total_paid or 0)),
                     "avg_pay_days": c.avg_days.days if c.avg_days else "-",

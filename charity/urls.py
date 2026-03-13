@@ -3,9 +3,9 @@ from django.urls import path
 from . import views, views_billing, views_crm, views_revenue, views_webhooks
 from .views_admin import (
     api_campaigns,
-    api_clients,
-    clear_client_context,
-    switch_client,
+    api_charities,
+    clear_charity_context,
+    switch_charity,
 )
 
 # No app_name to keep global namespace for now
@@ -37,11 +37,11 @@ urlpatterns = [
     path("logs/", views.logs_view, name="logs"),
     path("profile/", views.profile_view, name="profile"),
     path("change-password/", views.change_password, name="change_password"),
-    # Client-switcher session helpers (superuser session context — not CRUD)
-    path("api/clients/", api_clients, name="api_clients"),
+    # Charity-switcher session helpers (superuser session context — not CRUD)
+    path("api/charities/", api_charities, name="api_charities"),
     path("api/campaigns/", api_campaigns, name="api_campaigns"),
-    path("switch-client/clear/", clear_client_context, name="clear_client_context"),
-    path("switch-client/<int:charity_id>/", switch_client, name="switch_client"),
+    path("switch-charity/clear/", clear_charity_context, name="clear_charity_context"),
+    path("switch-charity/<int:charity_id>/", switch_charity, name="switch_charity"),
     # Batch reports
     path("reports/batch/<int:batch_id>/", views.batch_detail_view, name="batch_detail"),
     # Send wizard

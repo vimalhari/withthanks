@@ -66,30 +66,30 @@ urlpatterns = [
         views_analytics.InternalStorageReportView.as_view(),
         name="internal_storage",
     ),
-    # --- Client / External Reports (charity-scoped) ---
+    # --- Charity / External Reports (charity-scoped) ---
     path(
-        "client/campaign-summary/",
-        views_analytics.ClientCampaignSummaryView.as_view(),
-        name="client_campaign_summary",
+        "charity/campaign-summary/",
+        views_analytics.CharityCampaignSummaryView.as_view(),
+        name="charity_campaign_summary",
     ),
     path(
-        "client/video-engagement/",
-        views_analytics.ClientVideoEngagementView.as_view(),
-        name="client_video_engagement",
+        "charity/video-engagement/",
+        views_analytics.CharityVideoEngagementView.as_view(),
+        name="charity_video_engagement",
     ),
     path(
-        "client/donor-heatmap/",
-        views_analytics.ClientDonorHeatmapView.as_view(),
-        name="client_donor_heatmap",
+        "charity/donor-heatmap/",
+        views_analytics.CharityDonorHeatmapView.as_view(),
+        name="charity_donor_heatmap",
     ),
     path(
-        "client/list-hygiene/",
-        views_analytics.ClientListHygieneView.as_view(),
-        name="client_list_hygiene",
+        "charity/list-hygiene/",
+        views_analytics.CharityListHygieneView.as_view(),
+        name="charity_list_hygiene",
     ),
     path(
-        "client/billing-snapshot/",
-        views_analytics.ClientBillingSnapshotView.as_view(),
-        name="client_billing_snapshot",
+        "charity/billing-snapshot/",
+        views_analytics.CharityBillingSnapshotView.as_view(),
+        name="charity_billing_snapshot",
     ),
 ]

@@ -3,20 +3,24 @@ import uuid
 from django.contrib.auth.models import User
 from django.db import models
 
-from charity.utils.media_utils import get_client_media_path
+from charity.utils.media_utils import get_charity_media_path
 
 
 # Create your models here.
 class Charity(models.Model):
-    # CLIENT MODEL (MINIMAL & FINAL)
-    client_name = models.CharField(max_length=255)
+    # CHARITY MODEL (MINIMAL & FINAL)
+    charity_name = models.CharField(max_length=255)
     contact_email = models.EmailField()
-    organization_name = models.CharField(max_length=255)
+    website_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Optional public website URL shown in donor email footers",
+    )
     default_template_video = models.FileField(
-        upload_to=get_client_media_path, blank=True, null=True, help_text="fallback MP4"
+        upload_to=get_charity_media_path, blank=True, null=True, help_text="fallback MP4"
     )
     gratitude_card = models.FileField(
-        upload_to=get_client_media_path,
+        upload_to=get_charity_media_path,
         blank=True,
         null=True,
         help_text="Gratitude card (Video or Image)",
@@ -25,9 +29,6 @@ class Charity(models.Model):
     # Billing Information
     billing_email = models.EmailField(
         blank=True, null=True, help_text="Override contact email for invoices"
-    )
-    billing_address = models.TextField(
-        blank=True, null=True, help_text="Specific billing address for invoices"
     )
 
     # Blackbaud Raiser's Edge NXT Integration (OAuth 2.0, per-charity tokens)
@@ -58,7 +59,7 @@ class Charity(models.Model):
     # Defaults used by processing pipeline
     default_voiceover_script = models.TextField(
         blank=True,
-        help_text="Default script with placeholders {{donor_name}}, {{donation_amount}}, {{organization_name}}",
+        help_text="Default script with placeholders {{donor_name}}, {{donation_amount}}, {{charity_name}}",
     )
     default_voice_id = models.CharField(
         max_length=128, blank=True, help_text="Default ElevenLabs voice ID"
@@ -72,9 +73,10 @@ class Charity(models.Model):
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     company_number = models.CharField(max_length=50, blank=True, null=True)
 
-    # Physical Address
+    # Physical Address (UK format)
     address_line_1 = models.CharField(max_length=255, blank=True, null=True)
     address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
     county = models.CharField(max_length=100, blank=True, null=True)
     postcode = models.CharField(max_length=20, blank=True, null=True)
 
@@ -88,12 +90,23 @@ class Charity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.client_name
+        return self.charity_name
 
-    # Backward compatibility properties
     @property
     def name(self):
-        return self.client_name
+        return self.charity_name
+
+    @property
+    def formatted_billing_address(self) -> str:
+        """Construct a UK-formatted address string from structured fields."""
+        parts = [
+            self.address_line_1,
+            self.address_line_2,
+            self.city,
+            self.county,
+            self.postcode,
+        ]
+        return "\n".join(p for p in parts if p)
 
     @property
     def sender_email(self):
@@ -576,7 +589,7 @@ class Campaign(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    client = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="campaigns")
+    charity = models.ForeignKey(Charity, on_delete=models.CASCADE, related_name="campaigns")
     description = models.TextField(blank=True)
 
     # Campaign Dates & Identity
@@ -635,26 +648,26 @@ class Campaign(models.Model):
 
     # NEW CAMPAIGN MEDIA ASSETS
     charity_video = models.FileField(
-        upload_to=get_client_media_path,
+        upload_to=get_charity_media_path,
         blank=True,
         null=True,
         help_text="Main Campaign Video (VDM Campaign)",
     )
     gratitude_video = models.FileField(
-        upload_to=get_client_media_path,
+        upload_to=get_charity_media_path,
         blank=True,
         null=True,
         help_text="Gratitude Video (Thank You Campaign — sent to repeat donors within cooldown window)",
     )
     email_thumbnail = models.ImageField(
-        upload_to=get_client_media_path,
+        upload_to=get_charity_media_path,
         blank=True,
         null=True,
         help_text="Thumbnail image shown in donor emails and linked to the video landing page",
     )
 
     video_template_override = models.FileField(
-        upload_to=get_client_media_path,
+        upload_to=get_charity_media_path,
         blank=True,
         null=True,
         help_text="Override the default template video",
@@ -677,7 +690,7 @@ class Campaign(models.Model):
         blank=True,
         default="",
         help_text=(
-            "Optional VDM email copy. Supports {{ donor_name }}, {{ organization_name }}, "
+            "Optional VDM email copy. Supports {{ donor_name }}, {{ charity_name }}, "
             "{{ campaign_name }}, and {{ donation_amount }} placeholders."
         ),
     )
@@ -714,12 +727,6 @@ class Campaign(models.Model):
 
     def __str__(self):
         return self.name
-
-    # Historical code paths use `charity` while newer code uses `client`.
-    # Both refer to the same FK.
-    @property
-    def charity(self):
-        return self.client
 
     @property
     def is_active(self):

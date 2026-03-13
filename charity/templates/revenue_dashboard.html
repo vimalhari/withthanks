@@ -13,7 +13,7 @@
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 mb-1">Revenue Intelligence</h1>
-            <p class="text-sm text-gray-400">Monitor your organization's financial health and payment performance.</p>
+            <p class="text-sm text-gray-400">Monitor your charity's financial health and payment performance.</p>
         </div>
         <div class="flex gap-3">
             <button @click="refreshData()" class="btn-secondary" :disabled="loading">
@@ -89,14 +89,14 @@
         </div>
     </div>
 
-    <!-- Client Analytics Table -->
+    <!-- Charity Analytics Table -->
     <div class="card mt-8">
-        <h3 class="text-base font-bold text-gray-900 mb-5">Client Payment Performance</h3>
+        <h3 class="text-base font-bold text-gray-900 mb-5">Charity Payment Performance</h3>
         <div class="overflow-x-auto">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Organization</th>
+                        <th>Charity</th>
                         <th>Total Billed</th>
                         <th>Outstanding</th>
                         <th>Avg Days to Pay</th>

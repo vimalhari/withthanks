@@ -35,16 +35,16 @@ def invoices_view(request):
         invoices = Invoice.objects.filter(charity=charity).select_related("charity", "campaign")
 
     # Apply filters
-    client_filter = request.GET.get("client")
+    charity_filter = request.GET.get("charity")
     status_filter = request.GET.get("status")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
 
-    if client_filter and client_filter not in ["All Clients", ""]:
-        if client_filter.isdigit():
-            invoices = invoices.filter(charity__id=client_filter)
+    if charity_filter and charity_filter not in ["All Charities", ""]:
+        if charity_filter.isdigit():
+            invoices = invoices.filter(charity__id=charity_filter)
         else:
-            invoices = invoices.filter(charity__client_name__icontains=client_filter)
+            invoices = invoices.filter(charity__charity_name__icontains=charity_filter)
 
     if status_filter and status_filter not in ["All Status", ""]:
         invoices = invoices.filter(status=status_filter)
@@ -70,7 +70,7 @@ def invoices_view(request):
     invoices_page = paginator.get_page(page)
 
     if request.user.is_superuser:
-        clients = Charity.objects.all().order_by("client_name")
+        clients = Charity.objects.all().order_by("charity_name")
     else:
         clients = [charity] if charity else []
 
@@ -112,13 +112,13 @@ def create_invoice_view(request):
     """3-Step Invoice Creation Wizard"""
     charity = get_active_charity(request)
     if not charity and not request.user.is_superuser:
-        messages.warning(request, "Please select a client context from the dashboard.")
+        messages.warning(request, "Please select a charity context from the dashboard.")
         return redirect("dashboard")
 
     step = request.session.get("invoice_wizard_step", 1)
     wizard_data = request.session.get("invoice_wizard_data", {})
 
-    wizard_charity_id = wizard_data.get("client_id") or (charity.id if charity else None)
+    wizard_charity_id = wizard_data.get("charity_id") or (charity.id if charity else None)
     wizard_charity = (
         Charity.objects.filter(id=wizard_charity_id).first() if wizard_charity_id else None
     )
@@ -135,7 +135,7 @@ def create_invoice_view(request):
         ("RE-proof", "enable_re_proof", 30, "Second stage proofing"),
         ("Add. Programming", "enable_add_programming", 120, "Custom logic requests"),
         ("Data Cleaning", "enable_data_cleaning", 60, "Formatting & cleansing"),
-        ("Audio Cleanup", "enable_audio_cleanup", 65, "Client audio optimization"),
+        ("Audio Cleanup", "enable_audio_cleanup", 65, "Charity audio optimization"),
         ("Analytics Report", "enable_analytics_report", 30, "Full insight breakdown"),
         ("Bounce Log", "enable_bounce_log", 30, "Error tracking report"),
         ("Donate Page", "enable_add_donate_page", 50, "Additional landing page"),
@@ -187,7 +187,7 @@ def create_invoice_view(request):
 
                 wizard_data.update(
                     {
-                        "client_id": str(d["client"].id),
+                        "charity_id": str(d["charity"].id),
                         "campaign_id": str(campaign.id),
                         "campaign_name": campaign.name,
                         "campaign_type": campaign.campaign_type or "",
@@ -258,7 +258,7 @@ def create_invoice_view(request):
                     ("enable_data_cleaning", "Reformatting of data & cleaning", 60.0),
                     (
                         "enable_audio_cleanup",
-                        "Client supplied audio recording clean up/edits",
+                        "Charity supplied audio recording clean up/edits",
                         65.0,
                     ),
                     ("enable_analytics_report", "Analytics report", 30.0),
@@ -298,10 +298,10 @@ def create_invoice_view(request):
                             "total": 575.0,
                         }
                     )
-                elif d["vdm_package"] == "client_supplied":
+                elif d["vdm_package"] == "charity_supplied":
                     line_items.append(
                         {
-                            "description": "VDM (Client Supplies Video/Audio)",
+                            "description": "VDM (Charity Supplies Video/Audio)",
                             "quantity": 1,
                             "unit_price": 450.0,
                             "total": 450.0,
@@ -340,7 +340,7 @@ def create_invoice_view(request):
             else:
                 context["form"] = form
         elif step == 3 and action == "finalize":
-            target_charity = Charity.objects.get(id=wizard_data["client_id"])
+            target_charity = Charity.objects.get(id=wizard_data["charity_id"])
             target_campaign = Campaign.objects.filter(id=wizard_data["campaign_id"]).first()
             invoice = Invoice.objects.create(
                 charity=target_charity,
@@ -360,7 +360,7 @@ def create_invoice_view(request):
                 or target_charity.contact_email
                 or "",
                 billing_address=wizard_data.get("billing_address")
-                or target_charity.billing_address
+                or target_charity.formatted_billing_address
                 or "",
             )
             invoice.generate_invoice_number()
@@ -401,7 +401,7 @@ def create_invoice_view(request):
         initial = {
             k: wizard_data.get(k)
             for k in [
-                "client_id",
+                "charity_id",
                 "campaign_id",
                 "period_start",
                 "period_end",
@@ -410,7 +410,7 @@ def create_invoice_view(request):
                 "billing_address",
             ]
         }
-        initial["client"] = initial.pop("client_id")
+        initial["charity"] = initial.pop("charity_id")
         initial["campaign"] = initial.pop("campaign_id")
         if "form" not in context:
             context["form"] = InvoiceStep1Form(initial=initial, charity=wizard_charity)

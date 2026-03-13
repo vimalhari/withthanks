@@ -33,10 +33,14 @@ class MultiTenantIsolationTests(TestCase):
     def setUp(self):
         # Create two users/charities
         self.user_a = User.objects.create_user(username="charity_a", password="password")
-        self.charity_a = Charity.objects.create(client_name="Charity A", contact_email="a@test.com")
+        self.charity_a = Charity.objects.create(
+            charity_name="Charity A", contact_email="a@test.com"
+        )
 
         self.user_b = User.objects.create_user(username="charity_b", password="password")
-        self.charity_b = Charity.objects.create(client_name="Charity B", contact_email="b@test.com")
+        self.charity_b = Charity.objects.create(
+            charity_name="Charity B", contact_email="b@test.com"
+        )
 
         self.client = Client()
 
@@ -89,16 +93,16 @@ class VideoProcessingIsolationTests(TestCase):
         (media_test_dir / "fake_video_b.mp4").write_bytes(b"fake")
 
         self.charity_a = Charity.objects.create(
-            client_name="Charity A", contact_email="a@charity.org"
+            charity_name="Charity A", contact_email="a@charity.org"
         )
         self.charity_b = Charity.objects.create(
-            client_name="Charity B", contact_email="b@charity.org"
+            charity_name="Charity B", contact_email="b@charity.org"
         )
 
         # Campaigns with scripts/settings replacing templates
         self.campaign_a = Campaign.objects.create(
             name="Campaign A",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_start=date.today(),
             campaign_end=date.today(),
             video_mode=Campaign.VideoMode.PERSONALIZED,
@@ -112,7 +116,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         self.campaign_b = Campaign.objects.create(
             name="Campaign B",
-            client=self.charity_b,
+            charity=self.charity_b,
             campaign_start=date.today(),
             campaign_end=date.today(),
             video_mode=Campaign.VideoMode.PERSONALIZED,
@@ -223,7 +227,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         vdm_campaign = Campaign.objects.create(
             name="VDM Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="VDM-001",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -278,7 +282,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         vdm_campaign = Campaign.objects.create(
             name="Custom Copy Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="VDM-005",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -287,7 +291,7 @@ class VideoProcessingIsolationTests(TestCase):
             input_source=Campaign.InputSource.CSV,
             video_mode=Campaign.VideoMode.TEMPLATE,
             vdm_email_body=(
-                "Welcome to {{ campaign_name }} from {{ organization_name }}.\n\n"
+                "Welcome to {{ campaign_name }} from {{ charity_name }}.\n\n"
                 "We made this update for {{ donor_name }}."
             ),
         )
@@ -343,7 +347,7 @@ class VideoProcessingIsolationTests(TestCase):
         )
         vdm_campaign = Campaign.objects.create(
             name="Thumbnail Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="VDM-006",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -381,12 +385,159 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("vdm-thumb", html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
 
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    def test_vdm_omits_dear_for_title_surname_greeting(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        vdm_campaign = Campaign.objects.create(
+            name="Formal Greeting Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-007",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=8,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Ms Smith",
+            email="formal@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn("Ms Smith,", html)
+        self.assertNotIn("Dear Ms Smith,", html)
+
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload", return_value=None)
+    @patch("os.path.exists")
+    def test_withthanks_omits_dear_for_title_surname_greeting(
+        self,
+        mock_exists,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        mock_upload,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        mock_exists.return_value = True
+        mock_tts.return_value = "/tmp/tts.mp3"
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        self.job_a.donor_name = "Ms Smith"
+        self.job_a.save(update_fields=["donor_name"])
+
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn("Ms Smith,", html)
+        self.assertNotIn("Dear Ms Smith,", html)
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    def test_vdm_footer_uses_website_url_when_present(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        self.charity_a.website_url = "https://charitya.example.org"
+        self.charity_a.save(update_fields=["website_url"])
+
+        vdm_campaign = Campaign.objects.create(
+            name="Website Footer Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-008",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=9,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Jane",
+            email="website@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn("https://charitya.example.org", html)
+        self.assertNotIn("a@charity.org", html)
+
     def test_batch_process_csv_fails_fast_for_vdm_campaign_without_video(self):
         from charity.tasks import batch_process_csv
 
         vdm_campaign = Campaign.objects.create(
             name="Broken VDM Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="VDM-002",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -422,7 +573,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         vdm_campaign = Campaign.objects.create(
             name="Working VDM Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="VDM-003",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -463,7 +614,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         vdm_campaign = Campaign.objects.create(
             name="Greeting VDM Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="VDM-004",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -477,9 +628,9 @@ class VideoProcessingIsolationTests(TestCase):
         csv_key = default_storage.save(
             "uploads/test/vdm-greetings.csv",
             ContentFile(
-                b"Title,First Name,Surname,Email\n"
-                b"Dr,Jane,Doe,jane@example.com\n"
-                b"Ms,,Smith,smith@example.com\n"
+                b"Donor Name,Title,First Name,Surname,Email Address\n"
+                b"Dr Jane Doe,Dr,Jane,Doe,jane@example.com\n"
+                b"Supporter Record,Ms,,Smith,smith@example.com\n"
             ),
         )
         batch = DonationBatch.objects.create(
@@ -506,7 +657,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         campaign = Campaign.objects.create(
             name="WithThanks Campaign",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="WT-001",
             campaign_start=date.today(),
             campaign_end=date.today(),
@@ -542,9 +693,8 @@ class DonationIngestAPITests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="apiuser", password="password")
         self.charity = Charity.objects.create(
-            client_name="API Charity",
+            charity_name="API Charity",
             contact_email="api@charity.org",
-            organization_name="API Org",
         )
         CharityMember.objects.create(
             charity=self.charity,
@@ -619,7 +769,7 @@ class ResendUtilsTests(TestCase):
             job_id="job-123",
             donor_name="Donor",
             donation_amount="20",
-            organization_name="WithThanks",
+            charity_name="WithThanks",
             from_email="sender@example.com",
             video_url="https://stream.example.com/videos/stream-123",
         )
@@ -638,7 +788,7 @@ class ResendUtilsTests(TestCase):
             job_id="job-123",
             donor_name="Donor",
             donation_amount="20",
-            organization_name="WithThanks",
+            charity_name="WithThanks",
             from_email="sender@example.com",
             video_url="https://stream.example.com/videos/stream-123",
             tracking_token="signed-tracking-token",
@@ -663,13 +813,12 @@ class TrackingSecurityTests(TestCase):
     def setUp(self):
         today = date.today()
         self.charity = Charity.objects.create(
-            client_name="Tracking Charity",
+            charity_name="Tracking Charity",
             contact_email="ops@charity.org",
-            organization_name="Tracking Org",
         )
         self.campaign = Campaign.objects.create(
             name="Tracking Campaign",
-            client=self.charity,
+            charity=self.charity,
             campaign_code="TRK-001",
             campaign_start=today,
             campaign_end=today,

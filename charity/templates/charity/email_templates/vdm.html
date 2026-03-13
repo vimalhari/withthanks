@@ -9,9 +9,9 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #edf1f4;
+            background-color: #efeae2;
             font-family: Arial, Helvetica, sans-serif;
-            color: #243342;
+            color: #293646;
         }
         table {
             border-spacing: 0;
@@ -29,7 +29,7 @@
         }
         .wrapper {
             width: 100%;
-            background-color: #edf1f4;
+            background-color: #efeae2;
         }
         .container {
             width: 100%;
@@ -37,10 +37,14 @@
             margin: 0 auto;
             background-color: #ffffff;
         }
+        .top-rule {
+            height: 5px;
+            background-color: #8a6c45;
+        }
         .preheader {
             display: none;
             font-size: 1px;
-            color: #edf1f4;
+            color: #efeae2;
             line-height: 1px;
             max-height: 0;
             max-width: 0;
@@ -49,36 +53,35 @@
             mso-hide: all;
         }
         .section-padding {
-            padding: 40px 48px;
-        }
-        .eyebrow {
-            font-size: 12px;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            color: #5f7386;
+            padding: 40px 46px;
         }
         .headline {
-            font-size: 28px;
-            line-height: 36px;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 26px;
+            line-height: 32px;
             font-weight: bold;
-            color: #13202b;
+            color: #18222d;
         }
         .body-copy {
             font-size: 16px;
-            line-height: 26px;
-            color: #425466;
+            line-height: 28px;
+            color: #45525f;
         }
         .body-copy p {
-            margin: 0 0 18px;
+            margin: 0 0 20px;
         }
-        .cta-panel {
-            background-color: #f6f8fa;
-            border: 1px solid #d7e0e8;
+        .video-card {
+            background-color: #f7f4ee;
+            border: 1px solid #ddd2c2;
+        }
+        .thumbnail-frame {
+            background-color: #ffffff;
+            border: 1px solid #d8cdbf;
         }
         .cta-button {
             display: inline-block;
             padding: 14px 28px;
-            background-color: #1f4f78;
+            background-color: #1f2a36;
             color: #ffffff;
             text-decoration: none;
             font-size: 15px;
@@ -87,13 +90,13 @@
             border-radius: 4px;
         }
         .secondary-link {
-            color: #1f4f78;
+            color: #6f5635;
             text-decoration: underline;
         }
         .footer-copy {
             font-size: 13px;
             line-height: 20px;
-            color: #667788;
+            color: #717c86;
         }
         @media screen and (max-width: 640px) {
             .section-padding {
@@ -101,7 +104,7 @@
             }
             .headline {
                 font-size: 24px;
-                line-height: 31px;
+                line-height: 30px;
             }
             .mobile-full {
                 width: 100% !important;
@@ -118,30 +121,23 @@
     </style>
 </head>
 <body>
-    <div class="preheader">A message from {{ organization_name }} regarding {{ campaign_name }}.</div>
+    <div class="preheader">A message from {{ charity_name }} regarding {{ campaign_name }}.</div>
     <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display:none;" alt="" />
 
     <table role="presentation" class="wrapper" width="100%">
         <tr>
             <td align="center" style="padding: 24px 12px;">
-                <table role="presentation" class="container" width="100%" style="max-width: 640px; border: 1px solid #d7e0e8;">
-                    {% if image_url %}
+                <table role="presentation" class="container" width="100%" style="max-width: 640px; border: 1px solid #ddd2c2;">
                     <tr>
-                        <td>
-                            {% if tracking_click_url or cf_stream_url or video_url %}
-                            <a href="{{ tracking_click_url|default:cf_stream_url|default:video_url }}" style="display: block; text-decoration: none;">
-                                <img src="{{ image_url }}" alt="Video thumbnail for {{ campaign_name }}" width="640" style="width: 100%; max-width: 640px;">
-                            </a>
-                            {% else %}
-                            <img src="{{ image_url }}" alt="{{ campaign_name }}" width="640" style="width: 100%; max-width: 640px;">
-                            {% endif %}
+                        <td class="top-rule" style="height: 5px; background-color: #8a6c45;"></td>
+                    </tr>
+                    <tr>
+                        <td class="section-padding" style="padding: 34px 46px 18px;">
+                            <div class="headline">{{ greeting_line }},</div>
                         </td>
                     </tr>
-                    {% endif %}
                     <tr>
-                        <td class="section-padding" style="padding: 40px 48px 32px;">
-                            <div class="eyebrow" style="margin-bottom: 12px;">Personal message</div>
-                            <div class="headline" style="margin-bottom: 20px;">Dear {{ donor_name }},</div>
+                        <td class="section-padding" style="padding: 0 46px 30px;">
                             <div class="body-copy">
                                 {% for paragraph in vdm_body_paragraphs %}
                                 <p>{{ paragraph|linebreaksbr }}</p>
@@ -151,19 +147,30 @@
                     </tr>
                     {% if cf_stream_url or video_url %}
                     <tr>
-                        <td class="section-padding" style="padding: 0 48px 32px;">
-                            <table role="presentation" class="cta-panel" width="100%" style="width: 100%; background-color: #f6f8fa; border: 1px solid #d7e0e8;">
+                        <td class="section-padding" style="padding: 0 46px 36px;">
+                            <table role="presentation" class="video-card" width="100%" style="width: 100%; background-color: #f7f4ee; border: 1px solid #ddd2c2;">
+                                {% if image_url %}
                                 <tr>
-                                    <td class="section-padding mobile-center" style="padding: 28px 32px; text-align: center;">
-                                        <div style="font-size: 18px; line-height: 26px; font-weight: bold; color: #13202b; margin-bottom: 10px;">Your video message is ready</div>
-                                        <div style="font-size: 14px; line-height: 22px; color: #5f7386; margin-bottom: 22px;">
-                                            Click the thumbnail above, or use the button below to open the message in your browser.
-                                        </div>
-                                        <a href="{{ tracking_click_url|default:cf_stream_url|default:video_url }}" class="cta-button mobile-button">View video message</a>
-                                        <div style="font-size: 13px; line-height: 20px; color: #667788; margin-top: 18px;">
-                                            If the button does not open, use this link:
-                                            <a href="{{ tracking_click_url|default:cf_stream_url|default:video_url }}" class="secondary-link">Open your message</a>
-                                        </div>
+                                    <td style="padding: 32px 32px 10px;">
+                                        <table role="presentation" class="thumbnail-frame" width="100%" style="width: 100%; background-color: #ffffff; border: 1px solid #d8cdbf;">
+                                            <tr>
+                                                <td style="padding: 16px;">
+                                                    {% if tracking_click_url or cf_stream_url or video_url %}
+                                                    <a href="{{ tracking_click_url|default:cf_stream_url|default:video_url }}" style="display: block; text-decoration: none;">
+                                                        <img src="{{ image_url }}" alt="Video thumbnail for {{ campaign_name }}" width="548" style="width: 100%; max-width: 548px;">
+                                                    </a>
+                                                    {% else %}
+                                                    <img src="{{ image_url }}" alt="{{ campaign_name }}" width="548" style="width: 100%; max-width: 548px;">
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td class="section-padding mobile-center" style="padding: 18px 32px 30px; text-align: center;">
+                                        <a href="{{ tracking_click_url|default:cf_stream_url|default:video_url }}" class="cta-button mobile-button">Watch video</a>
                                     </td>
                                 </tr>
                             </table>
@@ -171,16 +178,19 @@
                     </tr>
                     {% endif %}
                     <tr>
-                        <td style="padding: 0 48px 40px;">
-                            <table role="presentation" width="100%" style="width: 100%; border-top: 1px solid #d7e0e8;">
+                        <td style="padding: 0 46px 40px;">
+                            <table role="presentation" width="100%" style="width: 100%; border-top: 1px solid #ddd2c2;">
                                 <tr>
                                     <td style="padding-top: 24px;" class="footer-copy">
-                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">Sent by {{ organization_name }}</div>
-                                        <div style="margin-bottom: 12px;">{{ from_email }}</div>
+                                        <div style="font-weight: bold; color: #45525f; margin-bottom: 4px;">{{ charity_name }}</div>
+                                        {% if charity_website_url %}
+                                        <div style="margin-bottom: 12px;">
+                                            <a href="{{ charity_website_url }}" class="secondary-link" style="color: #717c86;">{{ charity_website_url }}</a>
+                                        </div>
+                                        {% endif %}
                                         {% if unsubscribe_url %}
                                         <div>
-                                            <a href="{{ unsubscribe_url }}" class="secondary-link" style="color: #667788;">Unsubscribe</a>
-                                            from these updates.
+                                            <a href="{{ unsubscribe_url }}" class="secondary-link" style="color: #717c86;">Unsubscribe</a>
                                         </div>
                                         {% endif %}
                                     </td>

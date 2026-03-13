@@ -57,7 +57,7 @@ class Command(BaseCommand):
                         inv.id,
                         inv.invoice_number,
                         inv.charity.id if inv.charity else "",
-                        getattr(inv.charity, "client_name", ""),
+                        getattr(inv.charity, "charity_name", ""),
                         inv.amount,
                         inv.status,
                         inv.issue_date,

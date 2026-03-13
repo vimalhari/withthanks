@@ -44,10 +44,11 @@
              @click="mobileSidebarOpen = false"
              x-cloak></div>
 
-        <aside :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-               class="fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] bg-white border-r border-gray-200
+         <aside :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+             class="fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200
                       flex flex-col transition-transform duration-200 ease-in-out
-                      lg:translate-x-0 lg:static lg:z-auto">
+                 lg:translate-x-0 lg:static lg:z-auto"
+             style="width: var(--sidebar-width);">
 
             <!-- Logo -->
             <div class="px-5 py-6 border-b border-gray-100">
@@ -72,7 +73,7 @@
                         <a href="/admin/charity/charity/"
                            class="nav-link {% if '/admin/charity/charity/' in request.path %}active{% endif %}">
                             <i data-lucide="users" class="w-5 h-5"></i>
-                            <span>Clients</span>
+                            <span>Charities</span>
                         </a>
                         {% endif %}
                         <a href="/admin/charity/campaign/"
@@ -106,8 +107,9 @@
         <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
         <main class="flex-1 flex flex-col min-h-screen lg:ml-0">
             <!-- Top Header -->
-            <header class="sticky top-0 z-30 h-[var(--header-height)] bg-white border-b border-gray-200
-                          flex items-center justify-between px-4 lg:px-8 shadow-[0_1px_2px_0_rgb(0,0,0,0.05)]">
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200
+                      flex items-center justify-between px-4 lg:px-8 shadow-[0_1px_2px_0_rgb(0,0,0,0.05)]"
+                  style="height: var(--header-height);">
 
                 <!-- Left: Mobile menu + Breadcrumbs -->
                 <div class="flex items-center gap-4">
@@ -128,14 +130,14 @@
 
                 <!-- Right: Context badge + User -->
                 <div class="flex items-center gap-4">
-                    <!-- Active client context (superadmin) -->
+                    <!-- Active charity context (superadmin) -->
                     {% if request.user.is_superuser %}
                         {% if request.session.active_charity_id %}
                             <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold
                                         text-brand bg-brand-light border border-brand/20">
                                 <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-                                <span>CLIENT: {% if current_charity %}{{ current_charity.name|upper }}{% else %}ID: {{ request.session.active_charity_id }}{% endif %}</span>
-                                <a href="{% url 'clear_client_context' %}" class="text-red-500 hover:text-red-700 ml-1">
+                                <span>CHARITY: {% if current_charity %}{{ current_charity.name|upper }}{% else %}ID: {{ request.session.active_charity_id }}{% endif %}</span>
+                                <a href="{% url 'clear_charity_context' %}" class="text-red-500 hover:text-red-700 ml-1">
                                     <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
                                 </a>
                             </div>

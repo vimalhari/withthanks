@@ -70,11 +70,11 @@ def invoice_export_csv(request, invoice_id):
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="invoice_{invoice.invoice_number}.csv"'
     writer = defusedcsv.writer(response)
-    writer.writerow(["Invoice Number", "Client", "Issue Date", "Due Date", "Status", "Amount"])
+    writer.writerow(["Invoice Number", "Charity", "Issue Date", "Due Date", "Status", "Amount"])
     writer.writerow(
         [
             invoice.invoice_number,
-            invoice.charity.client_name,
+            invoice.charity.charity_name,
             invoice.issue_date,
             invoice.due_date,
             invoice.status,
@@ -94,7 +94,7 @@ def invoice_export_json(request, invoice_id):
     return JsonResponse(
         {
             "invoice_number": invoice.invoice_number,
-            "client": invoice.charity.client_name,
+            "charity": invoice.charity.charity_name,
             "issue_date": str(invoice.issue_date),
             "due_date": str(invoice.due_date),
             "status": invoice.status,

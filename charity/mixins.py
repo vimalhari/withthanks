@@ -46,7 +46,7 @@ class ActiveCharityMixin:
 
     def dispatch(self, request, *args, **kwargs):
         if self.charity is None and not request.user.is_superuser:
-            messages.error(request, "No active client selected.")
+            messages.error(request, "No active charity selected.")
             return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)  # type: ignore[misc]
 

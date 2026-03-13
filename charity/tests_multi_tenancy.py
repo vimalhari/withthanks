@@ -19,12 +19,16 @@ from charity.models import (
 class MultiTenancyIsolationTest(TestCase):
     def setUp(self):
         # Create Charity A + User A
-        self.charity_a = Charity.objects.create(client_name="Charity A", contact_email="a@test.com")
+        self.charity_a = Charity.objects.create(
+            charity_name="Charity A", contact_email="a@test.com"
+        )
         self.user_a = User.objects.create_user(username="user_a", password="password123")
         CharityMember.objects.create(charity=self.charity_a, user=self.user_a, role="Admin")
 
         # Create Charity B + User B
-        self.charity_b = Charity.objects.create(client_name="Charity B", contact_email="b@test.com")
+        self.charity_b = Charity.objects.create(
+            charity_name="Charity B", contact_email="b@test.com"
+        )
         self.user_b = User.objects.create_user(username="user_b", password="password123")
         CharityMember.objects.create(charity=self.charity_b, user=self.user_b, role="Admin")
 
@@ -77,7 +81,7 @@ class MultiTenancyIsolationTest(TestCase):
         )
         self.campaign_a = Campaign.objects.create(
             name="Campaign A",
-            client=self.charity_a,
+            charity=self.charity_a,
             campaign_code="A-001",
             campaign_start=today,
             campaign_end=today,
@@ -88,7 +92,7 @@ class MultiTenancyIsolationTest(TestCase):
         )
         self.campaign_b = Campaign.objects.create(
             name="Campaign B",
-            client=self.charity_b,
+            charity=self.charity_b,
             campaign_code="B-001",
             campaign_start=today,
             campaign_end=today,
@@ -136,14 +140,14 @@ class MultiTenancyIsolationTest(TestCase):
         self.assertIn("GLOBAL VIEW", content)
 
         # Switch to Charity A
-        self.client.get(reverse("switch_client", kwargs={"charity_id": self.charity_a.id}))
+        self.client.get(reverse("switch_charity", kwargs={"charity_id": self.charity_a.id}))
         response = self.client.get(reverse("dashboard"))
         content = response.content.decode()
         self.assertIn("CHARITY A", content)
         self.assertNotIn("CHARITY B", content)
 
         # Clear context
-        self.client.get(reverse("clear_client_context"))
+        self.client.get(reverse("clear_charity_context"))
         response = self.client.get(reverse("dashboard"))
         content = response.content.decode()
         self.assertIn("GLOBAL VIEW", content)

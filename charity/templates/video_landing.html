@@ -38,7 +38,7 @@
         <div class="cta-overlay" id="ctaOverlay">
             <div class="cta-card">
                 <h2>Thank you, {{ job.donor_name }}!</h2>
-                <p>Your generosity makes a real difference to {{ job.charity.organization_name }}.</p>
+                <p>Your generosity makes a real difference to {{ job.charity.charity_name }}.</p>
                 <button class="cta-btn" id="ctaBtn">{{ cta_label }}</button>
             </div>
         </div>
@@ -46,7 +46,7 @@
 
         <div class="branding">
             <h1>Thank You, {{ job.donor_name }}!</h1>
-            <p>A message from {{ job.charity.organization_name }}</p>
+            <p>A message from {{ job.charity.charity_name }}</p>
         </div>
     </div>
 

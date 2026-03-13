@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Thank you from {{ organization_name }}</title>
+    <title>Thank you from {{ charity_name }}</title>
     <style>
         body {
             margin: 0;
@@ -112,7 +112,7 @@
     </style>
 </head>
 <body>
-    <div class="preheader">A thank-you note from {{ organization_name }}.</div>
+    <div class="preheader">A thank-you note from {{ charity_name }}.</div>
     <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display:none;" alt="" />
 
     <table role="presentation" class="wrapper" width="100%">
@@ -122,14 +122,14 @@
                     {% if image_url %}
                     <tr>
                         <td>
-                            <img src="{{ image_url }}" alt="Thank you from {{ organization_name }}" width="640" style="width: 100%; max-width: 640px;">
+                            <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="640" style="width: 100%; max-width: 640px;">
                         </td>
                     </tr>
                     {% endif %}
                     <tr>
                         <td class="section-padding" style="padding: 40px 48px 24px; text-align: center;">
                             <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>
-                            <div class="headline" style="margin-bottom: 18px;">Thank you, {{ donor_name }}</div>
+                            <div class="headline" style="margin-bottom: 18px;">{{ greeting_line }},</div>
                             <div class="body-copy">
                                 <p style="margin: 0;">We noticed you recently received a message from us, and we wanted to acknowledge your new donation of <strong style="color: #13202b;">{{ donation_amount }}</strong> with a separate note of thanks.</p>
                             </div>
@@ -140,7 +140,7 @@
                             <table role="presentation" class="message-panel" width="100%" style="width: 100%; background-color: #f6f8fa; border: 1px solid #d7e0e8;">
                                 <tr>
                                     <td class="section-padding mobile-center" style="padding: 28px 32px; text-align: center;">
-                                        <div style="font-size: 16px; line-height: 25px; color: #425466; margin-bottom: 16px;">Please accept this digital thank-you card as a token of our continued appreciation for your support of <strong style="color: #13202b;">{{ organization_name }}</strong>.</div>
+                                        <div style="font-size: 16px; line-height: 25px; color: #425466; margin-bottom: 16px;">Please accept this digital thank-you card as a token of our continued appreciation for your support of <strong style="color: #13202b;">{{ charity_name }}</strong>.</div>
                                         {% if video_url %}
                                             {% if is_video_card %}
                                             <a href="{{ tracking_click_url|default:video_url }}" class="cta-button mobile-button">View thank-you message</a>
@@ -167,8 +167,12 @@
                             <table role="presentation" width="100%" style="width: 100%; border-top: 1px solid #d7e0e8;">
                                 <tr>
                                     <td style="padding-top: 24px; text-align: center;" class="footer-copy">
-                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">{{ organization_name }}</div>
-                                        <div style="margin-bottom: 12px;">{{ from_email }}</div>
+                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">{{ charity_name }}</div>
+                                        {% if charity_website_url %}
+                                        <div style="margin-bottom: 12px;">
+                                            <a href="{{ charity_website_url }}" class="secondary-link" style="color: #667788;">{{ charity_website_url }}</a>
+                                        </div>
+                                        {% endif %}
                                         {% if unsubscribe_url %}
                                         <div><a href="{{ unsubscribe_url }}" class="secondary-link" style="color: #667788;">Unsubscribe</a> from these updates.</div>
                                         {% endif %}

@@ -45,7 +45,7 @@ class Command(BaseCommand):
                     [
                         e.id,
                         e.charity.id if e.charity else "",
-                        getattr(e.charity, "client_name", ""),
+                        getattr(e.charity, "charity_name", ""),
                         e.sender,
                         e.recipient,
                         e.subject,

@@ -24,14 +24,19 @@ from .services.video_pipeline_service import (
     resolve_storage_video_url,
     stream_safe_upload,
 )
-from .utils.csv_rows import build_csv_recipient_name, get_csv_row_value
+from .utils.csv_rows import (
+    build_csv_recipient_name,
+    build_email_greeting_line,
+    build_vdm_recipient_name,
+    get_csv_row_value,
+)
 from .utils.resend_utils import send_video_email
 from .utils.tracking_security import build_tracking_token
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_VDM_EMAIL_BODY = (
-    "We are excited to share some amazing updates with you! At {{ organization_name }}, "
+    "We are excited to share some amazing updates with you! At {{ charity_name }}, "
     "we are constantly working to make a bigger impact, and we want you to be a part of it.\n\n"
     "Check out our latest campaign video to see what we've been up to.\n\n"
     "Your support makes everything possible. Let's make a difference together!"
@@ -55,7 +60,7 @@ def cleanup_intermediate(files, final_file):
                 logger.warning(f"Failed to delete file {f}: {err}")
 
 
-def build_vdm_email_paragraphs(*, campaign, job, organization_name: str) -> list[str]:
+def build_vdm_email_paragraphs(*, campaign, job, charity_name: str) -> list[str]:
     """Render the configurable VDM body into paragraph-sized chunks."""
     raw_body = (
         campaign.vdm_email_body if campaign and campaign.vdm_email_body else DEFAULT_VDM_EMAIL_BODY
@@ -64,7 +69,7 @@ def build_vdm_email_paragraphs(*, campaign, job, organization_name: str) -> list
         raw_body,
         {
             "donor_name": job.donor_name,
-            "organization_name": organization_name,
+            "charity_name": charity_name,
             "campaign_name": campaign.name if campaign else "WithThanks Campaign",
             "donation_amount": job.donation_amount,
         },
@@ -233,7 +238,7 @@ def generate_video_for_job(self, context):
                     spec = VideoSpec(
                         donor_name=str(job.donor_name),
                         donation_amount=str(job.donation_amount),
-                        charity_name=client.organization_name,
+                        charity_name=client.charity_name,
                         campaign_name=campaign.name if campaign else "",
                         voiceover_script=raw_script or None,
                         voice_id=client.default_voice_id or "",
@@ -394,10 +399,10 @@ def dispatch_email_for_job(self, context):
 
         # --- Render template ------------------------------------------------ #
         email_context = {
-            "donor_name": job.donor_name,
+            "greeting_line": build_email_greeting_line(job.donor_name),
             "donation_amount": job.donation_amount,
-            "organization_name": client.organization_name,
-            "from_email": client.contact_email,
+            "charity_name": client.charity_name,
+            "charity_website_url": client.website_url,
             "image_url": thumbnail_url,
             "video_url": video_url_link,
             "cf_stream_url": cf_stream_url,
@@ -411,7 +416,7 @@ def dispatch_email_for_job(self, context):
             email_context["vdm_body_paragraphs"] = build_vdm_email_paragraphs(
                 campaign=campaign,
                 job=job,
-                organization_name=client.organization_name,
+                charity_name=client.charity_name,
             )
         full_template_path = f"charity/email_templates/{template_name}"
         email_html = render_to_string(full_template_path, email_context)
@@ -432,7 +437,7 @@ def dispatch_email_for_job(self, context):
                 donor_name=job.donor_name,
                 donation_amount=job.donation_amount,
                 from_email=client.contact_email,
-                organization_name=client.organization_name,
+                charity_name=client.charity_name,
                 subject=subject,
                 video_url=video_url_link,
                 is_card_only=is_card_only,
@@ -567,7 +572,7 @@ def on_batch_complete(job_results, *, batch_id):
     # Admin notification via Django email backend
     admin_email = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", None)
     if admin_email:
-        charity_name = batch.charity.organization_name if batch.charity else "Unknown"
+        charity_name = batch.charity.charity_name if batch.charity else "Unknown"
         subject = f"[WithThanks] Batch #{batch.batch_number} complete — {charity_name}"
         body = (
             f"Batch #{batch.batch_number} for {charity_name} has finished.\n"
@@ -635,7 +640,11 @@ def batch_process_csv(self, batch_id):
 
             jobs_to_create = []
             for row in reader:
-                name = build_csv_recipient_name(row, default="Donor")
+                name = (
+                    build_vdm_recipient_name(row, default="Donor")
+                    if campaign and campaign.campaign_type == campaign.CampaignType.VDM
+                    else build_csv_recipient_name(row, default="Donor")
+                )
                 email = get_csv_row_value(
                     row,
                     "email",
@@ -841,7 +850,7 @@ def sync_charity_blackbaud(self, charity_id: int):
 
     # Resolve the active campaign for thank-you sends
     campaign = Campaign.objects.filter(
-        client=charity,
+        charity=charity,
         campaign_type=Campaign.CampaignType.THANK_YOU,
         status="active",
     ).first()

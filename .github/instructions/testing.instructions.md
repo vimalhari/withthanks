@@ -24,9 +24,8 @@ class MyFeatureTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="password")
         self.charity = Charity.objects.create(
-            client_name="Test Charity",
+            charity_name="Test Charity",
             contact_email="test@example.com",
-            organization_name="Test Org",
         )
         CharityMember.objects.create(
             charity=self.charity, user=self.user, role="Admin", status="ACTIVE"

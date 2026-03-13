@@ -11,7 +11,7 @@
     <p class="text-gray-400 text-base">Enterprise-grade tracking and engagement insights</p>
 </div>
 
-<!-- Client / External Reports — visible to all charity members -->
+<!-- Charity / External Reports — visible to all charity members -->
 <div class="mb-10">
     <div class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 mb-5">
         <i data-lucide="users" class="w-3.5 h-3.5"></i> Charity Reports
@@ -33,7 +33,7 @@
             </div>
         </a>
 
-        <a href="{% url 'client_campaign_summary' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <a href="{% url 'charity_campaign_summary' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="p-6 flex flex-col gap-3">
                 <div class="w-11 h-11 rounded-xl bg-indigo-50 text-brand flex items-center justify-center">
@@ -47,7 +47,7 @@
             </div>
         </a>
 
-        <a href="{% url 'client_video_engagement' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <a href="{% url 'charity_video_engagement' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="p-6 flex flex-col gap-3">
                 <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -61,7 +61,7 @@
             </div>
         </a>
 
-        <a href="{% url 'client_donor_heatmap' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <a href="{% url 'charity_donor_heatmap' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="p-6 flex flex-col gap-3">
                 <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
@@ -75,7 +75,7 @@
             </div>
         </a>
 
-        <a href="{% url 'client_list_hygiene' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <a href="{% url 'charity_list_hygiene' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="p-6 flex flex-col gap-3">
                 <div class="w-11 h-11 rounded-xl bg-red-50 text-red-500 flex items-center justify-center">
@@ -89,7 +89,7 @@
             </div>
         </a>
 
-        <a href="{% url 'client_billing_snapshot' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
+        <a href="{% url 'charity_billing_snapshot' %}" class="card group hover:-translate-y-1 hover:shadow-lg hover:border-brand transition-all relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div class="p-6 flex flex-col gap-3">
                 <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
@@ -137,7 +137,7 @@
                     <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
                 </div>
                 <h3 class="text-base font-bold text-gray-900">Platform Volume</h3>
-                <p class="text-sm text-gray-400 leading-relaxed">Total videos generated, emails dispatched, and delivery rates across all clients.</p>
+                <p class="text-sm text-gray-400 leading-relaxed">Total videos generated, emails dispatched, and delivery rates across all charities.</p>
                 <div class="mt-auto flex items-center justify-between text-sm font-semibold text-gray-700">
                     <span>View Report</span><i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </div>

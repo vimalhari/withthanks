@@ -104,7 +104,7 @@ def build_personalized_video(spec: VideoSpec) -> tuple[str, str]:
         "donor_name": spec.donor_name,
         "donation_amount": spec.donation_amount,
         "charity": spec.charity_name,
-        "organization_name": spec.charity_name,
+        "charity_name": spec.charity_name,
         "campaign_name": spec.campaign_name,
     }
 

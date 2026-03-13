@@ -7,11 +7,11 @@
     <title>Unsubscribe from Emails</title>
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-700 p-5 font-sans">
+<body class="min-h-screen flex items-center justify-center bg-linear-to-br from-indigo-500 to-purple-700 p-5 font-sans">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[500px] w-full overflow-hidden">
         {% if confirmed %}
             <!-- Post-unsubscribe confirmation -->
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-700 text-white text-center p-8">
+            <div class="bg-linear-to-br from-indigo-500 to-purple-700 text-white text-center p-8">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 <h2 class="mt-4 text-xl font-bold">{% if already_unsubscribed %}Already Unsubscribed{% else %}Successfully Unsubscribed{% endif %}</h2>
             </div>
@@ -34,7 +34,7 @@
             </div>
         {% else %}
             <!-- Initial unsubscribe form -->
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-700 text-white text-center p-8">
+            <div class="bg-linear-to-br from-indigo-500 to-purple-700 text-white text-center p-8">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><line x1="2" y1="20" x2="22" y2="20" stroke-dasharray="2 4"/></svg>
                 <h2 class="mt-4 text-xl font-bold">Unsubscribe</h2>
             </div>

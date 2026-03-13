@@ -95,7 +95,7 @@
             <tbody>
                 {% for row in per_charity %}
                 <tr>
-                    <td class="font-semibold text-gray-900">{{ row.charity__client_name }}</td>
+                    <td class="font-semibold text-gray-900">{{ row.charity__charity_name }}</td>
                     <td>£{{ row.total|floatformat:2 }}</td>
                     <td class="text-emerald-600 font-bold">£{{ row.paid|default:0|floatformat:2 }}</td>
                     <td class="text-amber-500 font-bold">£{{ row.outstanding|default:0|floatformat:2 }}</td>

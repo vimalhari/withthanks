@@ -62,7 +62,7 @@
                     <td>
                         {% if total_gb %}
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full w-[80px] overflow-hidden">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden" style="width: 5rem;">
                                 <div class="h-full bg-brand rounded-full" style="width: {% widthratio row.bytes total_gb|add:0 100 %}%"></div>
                             </div>
                             <span class="text-xs font-bold text-gray-600">{% widthratio row.gb total_gb 100 %}%</span>

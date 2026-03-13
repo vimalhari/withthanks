@@ -82,10 +82,10 @@ class AnalyticsBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateVi
             if model_class in (EmailEvent, VideoEvent):
                 qs = qs.filter(
                     Q(job__charity_id__in=user_charity_ids)
-                    | Q(campaign__client_id__in=user_charity_ids)
+                    | Q(campaign__charity_id__in=user_charity_ids)
                 ).distinct()
             elif model_class == Campaign:
-                qs = qs.filter(client_id__in=user_charity_ids)
+                qs = qs.filter(charity_id__in=user_charity_ids)
         return qs
 
 
@@ -97,9 +97,11 @@ class UnifiedAnalyticsView(AnalyticsBaseView):
 
         # Get list of clients/charities for filtering
         if self.request.user.is_superuser:
-            context["clients"] = Charity.objects.all().order_by("client_name")
+            context["clients"] = Charity.objects.all().order_by("charity_name")
         else:
-            context["clients"] = get_accessible_charities(self.request.user).order_by("client_name")
+            context["clients"] = get_accessible_charities(self.request.user).order_by(
+                "charity_name"
+            )
         context.update(self.get_date_params())
         return context
 
@@ -114,7 +116,7 @@ class UnifiedDashboardDataAPI(AnalyticsBaseView, View):
 
         charity = get_authorized_charity(request.user, charity_id)
         campaign = get_authorized_campaign(request.user, campaign_id)
-        if charity is None or campaign is None or campaign.client_id != charity.id:
+        if charity is None or campaign is None or campaign.charity_id != charity.id:
             raise Http404
 
         # 1. Caching Layer (CampaignStats)
@@ -618,7 +620,7 @@ class InternalRevenueReportView(SuperuserRequiredMixin, TemplateView):
 
         # Per-charity table
         per_charity = (
-            qs.values("charity__client_name", "charity__id")
+            qs.values("charity__charity_name", "charity__id")
             .annotate(
                 total=Sum("amount"),
                 paid=Sum("amount", filter=Q(status="Paid")),
@@ -681,7 +683,7 @@ class InternalVolumeReportView(SuperuserRequiredMixin, TemplateView):
 
         # Per-charity table
         per_charity = (
-            job_qs.values("charity__client_name")
+            job_qs.values("charity__charity_name")
             .annotate(
                 total=Count("id"),
                 success=Count("id", filter=Q(status="success")),
@@ -717,7 +719,7 @@ class InternalAdoptionReportView(SuperuserRequiredMixin, TemplateView):
 
         # Per-charity member breakdown (status and role counts)
         charities = (
-            CharityMember.objects.values("charity__id", "charity__client_name")
+            CharityMember.objects.values("charity__id", "charity__charity_name")
             .annotate(
                 total_members=Count("id"),
                 active=Count("id", filter=Q(status="ACTIVE")),
@@ -765,7 +767,7 @@ class InternalStorageReportView(SuperuserRequiredMixin, TemplateView):
 
 
 # =============================================================================
-# CLIENT / EXTERNAL REPORTS — charity-scoped
+# CHARITY / EXTERNAL REPORTS — charity-scoped
 # =============================================================================
 
 
@@ -776,7 +778,7 @@ def _get_active_charity_or_none(request):
     return get_active_charity(request)
 
 
-class ClientReportBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateView):
+class CharityReportBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, TemplateView):
     """Base for charity-scoped report views. Adds charity + date context."""
 
     def get_context_data(self, **kwargs):
@@ -789,14 +791,14 @@ class ClientReportBaseView(LoginRequiredMixin, AnalyticsPermissionMixin, Templat
         )
         context["date_to"] = self.request.GET.get("date_to", today.strftime(_DATE_FMT))
         if self.request.user.is_superuser:
-            context["all_charities"] = Charity.objects.all().order_by("client_name")
+            context["all_charities"] = Charity.objects.all().order_by("charity_name")
         return context
 
 
-class ClientCampaignSummaryView(ClientReportBaseView):
+class CharityCampaignSummaryView(CharityReportBaseView):
     """Campaign Performance Summary — open rates, click rates, video play rates per campaign."""
 
-    template_name = "analytics/client_campaign_summary.html"
+    template_name = "analytics/charity_campaign_summary.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -805,7 +807,7 @@ class ClientCampaignSummaryView(ClientReportBaseView):
         date_to = context["date_to"]
 
         campaigns = (
-            Campaign.objects.filter(client=charity).order_by("-created_at")
+            Campaign.objects.filter(charity=charity).order_by("-created_at")
             if charity
             else Campaign.objects.none()
         )
@@ -844,10 +846,10 @@ class ClientCampaignSummaryView(ClientReportBaseView):
         return context
 
 
-class ClientVideoEngagementView(ClientReportBaseView):
+class CharityVideoEngagementView(CharityReportBaseView):
     """Advanced Video Engagement — Cloudflare Stream GraphQL minutes viewed + local fallback."""
 
-    template_name = "analytics/client_video_engagement.html"
+    template_name = "analytics/charity_video_engagement.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -856,7 +858,7 @@ class ClientVideoEngagementView(ClientReportBaseView):
         date_to = context["date_to"]
 
         campaigns = (
-            Campaign.objects.filter(client=charity).exclude(cf_stream_video_id="")
+            Campaign.objects.filter(charity=charity).exclude(cf_stream_video_id="")
             if charity
             else Campaign.objects.none()
         )
@@ -902,10 +904,10 @@ class ClientVideoEngagementView(ClientReportBaseView):
         return context
 
 
-class ClientDonorHeatmapView(ClientReportBaseView):
+class CharityDonorHeatmapView(CharityReportBaseView):
     """Donor Engagement Heatmap — top donors ranked by engagement score."""
 
-    template_name = "analytics/client_donor_heatmap.html"
+    template_name = "analytics/charity_donor_heatmap.html"
 
     def get(self, request, *args, **kwargs):
         if request.GET.get("format") == "csv":
@@ -985,10 +987,10 @@ class ClientDonorHeatmapView(ClientReportBaseView):
         return response
 
 
-class ClientListHygieneView(ClientReportBaseView):
+class CharityListHygieneView(CharityReportBaseView):
     """List Hygiene & Delivery Issues — bounces, unsubscribes, complaints, failed sends."""
 
-    template_name = "analytics/client_list_hygiene.html"
+    template_name = "analytics/charity_list_hygiene.html"
 
     def get(self, request, *args, **kwargs):
         if request.GET.get("format") == "csv":
@@ -1005,7 +1007,7 @@ class ClientListHygieneView(ClientReportBaseView):
             # Bounces from EmailEvent
             bounces = (
                 EmailEvent.objects.filter(
-                    campaign__client=charity,
+                    campaign__charity=charity,
                     event_type="BOUNCED",
                     timestamp__date__range=(date_from, date_to),
                 )
@@ -1015,7 +1017,7 @@ class ClientListHygieneView(ClientReportBaseView):
             # Resend-style failures
             failures = (
                 EmailEvent.objects.filter(
-                    campaign__client=charity,
+                    campaign__charity=charity,
                     event_type__in=["FAILED", "SUPPRESSED"],
                     timestamp__date__range=(date_from, date_to),
                 )
@@ -1025,7 +1027,7 @@ class ClientListHygieneView(ClientReportBaseView):
             # Spam complaints from Resend
             complaints = (
                 EmailEvent.objects.filter(
-                    campaign__client=charity,
+                    campaign__charity=charity,
                     event_type="COMPLAINED",
                     timestamp__date__range=(date_from, date_to),
                 )
@@ -1065,7 +1067,7 @@ class ClientListHygieneView(ClientReportBaseView):
         event_type = type_map.get(tab, "BOUNCED")
         qs = (
             EmailEvent.objects.filter(
-                campaign__client=charity,
+                campaign__charity=charity,
                 event_type=event_type,
                 timestamp__date__range=(date_from, date_to),
             )
@@ -1084,10 +1086,10 @@ class ClientListHygieneView(ClientReportBaseView):
         return response
 
 
-class ClientBillingSnapshotView(ClientReportBaseView):
+class CharityBillingSnapshotView(CharityReportBaseView):
     """Billing & Tier Usage Snapshot — recent invoices with line items + current period volume."""
 
-    template_name = "analytics/client_billing_snapshot.html"
+    template_name = "analytics/charity_billing_snapshot.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

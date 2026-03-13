@@ -49,14 +49,14 @@
             <tbody>
                 {% for row in charities %}
                 <tr>
-                    <td class="font-semibold text-gray-900">{{ row.charity__client_name }}</td>
+                    <td class="font-semibold text-gray-900">{{ row.charity__charity_name }}</td>
                     <td>{{ row.total_members }}</td>
                     <td class="text-emerald-600 font-bold">{{ row.active }}</td>
                     <td class="text-amber-500">{{ row.pending }}</td>
                     <td>{{ row.admins }}</td>
                     <td>
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 h-2 bg-gray-100 rounded-full w-[80px] overflow-hidden">
+                            <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden" style="width: 5rem;">
                                 <div class="h-full rounded-full {% if row.adoption_score >= 75 %}bg-emerald-500{% elif row.adoption_score >= 40 %}bg-amber-400{% else %}bg-red-400{% endif %}"
                                      style="width: {{ row.adoption_score }}%"></div>
                             </div>

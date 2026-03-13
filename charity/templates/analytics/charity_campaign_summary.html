@@ -14,7 +14,7 @@
     <div>
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Campaign Summary</h1>
         {% if active_charity %}
-        <p class="text-gray-400 text-sm">{{ active_charity.client_name }}</p>
+        <p class="text-gray-400 text-sm">{{ active_charity.charity_name }}</p>
         {% else %}
         <p class="text-amber-500 text-sm font-semibold">No charity selected — showing all campaigns</p>
         {% endif %}
@@ -24,7 +24,7 @@
         <select name="charity_id" class="form-select w-[180px]" onchange="this.form.submit()">
             <option value="">All Charities</option>
             {% for ch in all_charities %}
-            <option value="{{ ch.id }}" {% if active_charity and active_charity.id == ch.id %}selected{% endif %}>{{ ch.client_name }}</option>
+            <option value="{{ ch.id }}" {% if active_charity and active_charity.id == ch.id %}selected{% endif %}>{{ ch.charity_name }}</option>
             {% endfor %}
         </select>
         {% endif %}

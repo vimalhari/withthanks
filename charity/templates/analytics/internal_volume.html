@@ -130,7 +130,7 @@
             <tbody>
                 {% for row in per_charity %}
                 <tr>
-                    <td class="font-semibold text-gray-900">{{ row.charity__client_name }}</td>
+                    <td class="font-semibold text-gray-900">{{ row.charity__charity_name }}</td>
                     <td>{{ row.total }}</td>
                     <td class="text-emerald-600 font-bold">{{ row.success }}</td>
                     <td class="text-red-500 font-bold">{{ row.failed }}</td>
