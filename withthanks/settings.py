@@ -515,13 +515,9 @@ CELERY_TASK_QUEUES = (
 )
 CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TASK_ROUTES = {
-    # Heavy processing — routed to the video queue
-    "charity.tasks.process_donation_row": {"queue": "video"},
     # Orchestration / callbacks — default queue
     "charity.tasks.batch_process_csv": {"queue": "default"},
     "charity.tasks.on_batch_complete": {"queue": "default"},
-    # Deprecated compat stub — default queue (lightweight)
-    "charity.tasks.dispatch_donation_video_task": {"queue": "default"},
     # Periodic maintenance — isolated from video work
     "charity.tasks.refresh_all_campaign_stats": {"queue": "maintenance"},
     "charity.tasks.mark_overdue_invoices": {"queue": "maintenance"},

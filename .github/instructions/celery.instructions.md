@@ -10,7 +10,7 @@ applyTo: "charity/tasks.py,charity/services/**/*.py"
 - Set explicit `queue` parameter matching `CELERY_TASK_ROUTES` in settings:
   ```python
   @shared_task(bind=True, queue="video")
-  def process_donation_row(self, job_id):
+  def generate_video_for_job(self, context):
       ...
   ```
 
@@ -30,7 +30,7 @@ applyTo: "charity/tasks.py,charity/services/**/*.py"
   - `chain(task1.s(), task2.s())` — sequential pipeline
   - `group(task1.s(), task2.s())` — parallel execution
   - `chord(group(...), callback.s())` — parallel with final callback
-- The video pipeline uses a 3-stage chain: Validate → Process → Deliver.
+- The video pipeline uses a 3-stage chain: Validate → Generate → Dispatch.
 
 ## Error Handling
 - Import and raise `FatalTaskError` from `charity.exceptions` for unrecoverable errors.
@@ -44,7 +44,6 @@ applyTo: "charity/tasks.py,charity/services/**/*.py"
 - Available services:
   - `video_build_service.py` — FFmpeg video composition
   - `video_pipeline_service.py` — Cloudflare Stream upload, URL resolution
-  - `video_dispatch_service.py` — orchestration of video processing
   - `invoice_service.py` — invoice generation and management
   - `batch_service.py` — batch processing logic
   - `cleanup_service.py` — file and data cleanup

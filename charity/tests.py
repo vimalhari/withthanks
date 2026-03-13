@@ -6,15 +6,25 @@ import tempfile
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from charity.models import Campaign, Charity, DonationBatch, DonationJob, EmailTracking
+from charity.models import (
+    Campaign,
+    Charity,
+    CharityMember,
+    DonationBatch,
+    DonationJob,
+    EmailTracking,
+)
 from charity.utils.tracking_security import build_tracking_token
 
 
@@ -179,6 +189,7 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
         self.assertEqual(mock_send.call_args[1]["from_email"], "a@charity.org")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
+        self.assertEqual(mock_send.call_args[1]["video_url"], "https://r2.example.com/v.mp4")
 
         # Reset mocks
         mock_tts.reset_mock()
@@ -193,108 +204,239 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])
         self.assertEqual(mock_send.call_args[1]["from_email"], "b@charity.org")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
+        self.assertEqual(mock_send.call_args[1]["video_url"], "https://r2.example.com/v.mp4")
 
-
-class VideoDispatchServiceTests(TestCase):
-    def setUp(self):
-        self.charity = Charity.objects.create(
-            client_name="Dispatch Charity",
-            contact_email="ops@charity.org",
-            organization_name="Dispatch Org",
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    def test_vdm_falls_back_to_public_storage_url_when_stream_unavailable(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        """VDM should send a public media URL, not the worker's /tmp path."""
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
         )
-        self.campaign = Campaign.objects.create(
-            name="Dispatch Campaign",
-            client=self.charity,
-            campaign_code="DSP-001",
+
+        vdm_campaign = Campaign.objects.create(
+            name="VDM Campaign",
+            client=self.charity_a,
+            campaign_code="VDM-001",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=2,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="VDM Donor",
+            email="vdm@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        self.assertEqual(
+            mock_send.call_args[1]["video_url"],
+            "http://127.0.0.1:8000/media/test/fake_video_a.mp4",
+        )
+        vdm_job.refresh_from_db()
+        self.assertEqual(vdm_job.video_path, "http://127.0.0.1:8000/media/test/fake_video_a.mp4")
+
+    def test_batch_process_csv_fails_fast_for_vdm_campaign_without_video(self):
+        from charity.tasks import batch_process_csv
+
+        vdm_campaign = Campaign.objects.create(
+            name="Broken VDM Campaign",
+            client=self.charity_a,
+            campaign_code="VDM-002",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+
+        csv_key = default_storage.save(
+            "uploads/test/vdm-preflight.csv",
+            ContentFile(b"donor_name,email,donation_amount\nDonor,vdm@example.com,15.00\n"),
+        )
+        batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=3,
+            csv_filename=csv_key,
+        )
+
+        batch_process_csv.run(batch.id)  # type: ignore[attr-defined]
+
+        batch.refresh_from_db()
+        self.assertEqual(batch.status, DonationBatch.BatchStatus.FAILED)
+        self.assertEqual(DonationJob.objects.filter(donation_batch=batch).count(), 0)
+
+    @patch("charity.tasks.chord")
+    def test_batch_process_csv_dispatches_vdm_jobs_when_campaign_is_configured(self, mock_chord):
+        from charity.tasks import batch_process_csv
+
+        chord_runner = Mock()
+        mock_chord.return_value = chord_runner
+
+        vdm_campaign = Campaign.objects.create(
+            name="Working VDM Campaign",
+            client=self.charity_a,
+            campaign_code="VDM-003",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+
+        csv_key = default_storage.save(
+            "uploads/test/vdm-dispatch.csv",
+            ContentFile(b"donor_name,email,donation_amount\nDonor,dispatch@example.com,15.00\n"),
+        )
+        batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=4,
+            csv_filename=csv_key,
+        )
+
+        batch_process_csv.run(batch.id)  # type: ignore[attr-defined]
+
+        batch.refresh_from_db()
+        self.assertEqual(batch.status, DonationBatch.BatchStatus.PROCESSING)
+        jobs = DonationJob.objects.filter(donation_batch=batch)
+        self.assertEqual(jobs.count(), 1)
+        self.assertEqual(jobs.first().campaign, vdm_campaign)
+        self.assertEqual(mock_chord.call_count, 1)
+        chord_runner.assert_called_once()
+
+    def test_validate_and_prep_job_ignores_gratitude_video_for_standard_withthanks(self):
+        from charity.tasks import validate_and_prep_job
+
+        gratitude_path = Path(settings.MEDIA_ROOT) / "test" / "fake_gratitude.mp4"
+        gratitude_path.write_bytes(b"gratitude")
+
+        campaign = Campaign.objects.create(
+            name="WithThanks Campaign",
+            client=self.charity_a,
+            campaign_code="WT-001",
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
             campaign_type=Campaign.CampaignType.THANK_YOU,
-            input_source=Campaign.InputSource.API,
+            input_source=Campaign.InputSource.CSV,
             video_mode=Campaign.VideoMode.PERSONALIZED,
-            from_email="campaign@charity.org",
+        )
+        Campaign.objects.filter(pk=campaign.pk).update(gratitude_video="test/fake_gratitude.mp4")
+        campaign.refresh_from_db()
+
+        batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=campaign,
+            batch_number=5,
+        )
+        job = DonationJob.objects.create(
+            donation_batch=batch,
+            donor_name="Standard Donor",
+            email="standard@example.com",
+            donation_amount=Decimal("20"),
+            charity=self.charity_a,
+            campaign=campaign,
         )
 
-    @patch("charity.services.video_dispatch_service.os.remove")
-    @patch("charity.services.video_dispatch_service.send_video_email")
-    @patch("charity.services.video_dispatch_service.stream_safe_upload")
-    @patch("charity.services.video_dispatch_service._build_personalized_video")
-    def test_dispatch_donation_video_prefers_stream_url_in_email(
-        self,
-        mock_build_video,
-        mock_stream_upload,
-        mock_send_email,
-        mock_remove,
-    ):
-        from charity.services.video_dispatch_service import dispatch_donation_video
+        ctx = validate_and_prep_job.run(job.id)  # type: ignore[attr-defined]
 
-        mock_build_video.return_value = (
-            "/tmp/final.mp4",
-            "https://r2.example.com/videos/final.mp4",
-        )
-        mock_stream_upload.return_value = SimpleNamespace(
-            video_id="stream-123",
-            playback_url="https://stream.example.com/videos/stream-123",
-            thumbnail_url="https://stream.example.com/videos/stream-123/thumb.jpg",
-        )
-        mock_send_email.return_value = {"id": "resend-123"}
+        self.assertEqual(ctx["mode"], "WithThanks")
+        self.assertEqual(ctx["base_video_path"], "test/fake_video_a.mp4")
 
-        result = dispatch_donation_video(
+
+class DonationIngestAPITests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="apiuser", password="password")
+        self.charity = Charity.objects.create(
+            client_name="API Charity",
+            contact_email="api@charity.org",
+            organization_name="API Org",
+        )
+        CharityMember.objects.create(
             charity=self.charity,
-            donor_email="donor@example.com",
-            donor_name="Donor Name",
-            amount=Decimal("25.00"),
+            user=self.user,
+            role="Admin",
+            status="ACTIVE",
+        )
+        self.api_client = APIClient()
+        token = RefreshToken.for_user(self.user)
+        self.api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+
+    def test_single_ingest_rejects_vdm_campaign_type(self):
+        response = self.api_client.post(
+            reverse("donation-ingest"),
+            {
+                "charity_id": self.charity.id,
+                "donor_email": "donor@example.com",
+                "donor_name": "API Donor",
+                "amount": "12.50",
+                "campaign_type": Campaign.CampaignType.VDM,
+            },
+            format="json",
         )
 
-        self.assertEqual(result.stream_playback_url, "https://stream.example.com/videos/stream-123")
-        self.assertEqual(result.video_path, "https://r2.example.com/videos/final.mp4")
-        self.assertTrue(mock_remove.called)
-        mock_send_email.assert_called_once()
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            mock_send_email.call_args.kwargs["video_url"],
-            "https://stream.example.com/videos/stream-123",
+            response.json()["campaign_type"],
+            ["VDM ingestion is only supported via CSV batch upload."],
         )
-        self.assertIsNone(mock_send_email.call_args.kwargs["file_path"])
-        self.assertEqual(mock_send_email.call_args.kwargs["from_email"], "campaign@charity.org")
-        self.assertEqual(mock_send_email.call_args.kwargs["organization_name"], "Dispatch Org")
-        self.assertEqual(mock_send_email.call_args.kwargs["subject"], "Dispatch Campaign")
+        self.assertEqual(DonationBatch.objects.count(), 0)
+        self.assertEqual(DonationJob.objects.count(), 0)
 
-    @patch("charity.services.video_dispatch_service.os.remove")
-    @patch("charity.services.video_dispatch_service.send_video_email")
-    @patch("charity.services.video_dispatch_service.stream_safe_upload", return_value=None)
-    @patch("charity.services.video_dispatch_service._build_template_video_path")
-    def test_dispatch_donation_video_falls_back_to_template_public_url(
-        self,
-        mock_build_template,
-        mock_stream_upload,
-        mock_send_email,
-        mock_remove,
-    ):
-        from charity.services.video_dispatch_service import dispatch_donation_video
-
-        self.campaign.video_mode = Campaign.VideoMode.TEMPLATE
-        self.campaign.save(update_fields=["video_mode"])
-
-        mock_build_template.return_value = (
-            "/tmp/template.mp4",
-            "https://cdn.example.com/templates/template.mp4",
-        )
-        mock_send_email.return_value = {"id": "resend-456"}
-
-        result = dispatch_donation_video(
-            charity=self.charity,
-            donor_email="donor@example.com",
-            donor_name="Donor Name",
-            amount=Decimal("10.00"),
+    def test_bulk_ingest_rejects_vdm_campaign_type(self):
+        response = self.api_client.post(
+            reverse("donation-bulk-ingest"),
+            {
+                "donations": [
+                    {
+                        "charity_id": self.charity.id,
+                        "donor_email": "bulk@example.com",
+                        "donor_name": "Bulk Donor",
+                        "amount": "15.00",
+                        "campaign_type": Campaign.CampaignType.VDM,
+                    }
+                ]
+            },
+            format="json",
         )
 
-        self.assertEqual(result.video_path, "https://cdn.example.com/templates/template.mp4")
-        mock_send_email.assert_called_once()
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            mock_send_email.call_args.kwargs["video_url"],
-            "https://cdn.example.com/templates/template.mp4",
+            response.json()["donations"][0]["campaign_type"],
+            ["VDM ingestion is only supported via CSV batch upload."],
         )
-        self.assertIsNone(mock_send_email.call_args.kwargs["file_path"])
+        self.assertEqual(DonationBatch.objects.count(), 0)
+        self.assertEqual(DonationJob.objects.count(), 0)
 
 
 @override_settings(RESEND_API_KEY="test-resend-key", DEFAULT_FROM_EMAIL="noreply@example.com")

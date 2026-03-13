@@ -1,14 +1,8 @@
 """
-Shared video delivery utilities used by both pipelines.
+Shared video delivery utilities used by the staged ``DonationJob`` pipeline.
 
-Both the CSV batch pipeline (``tasks.py``) and the API pipeline
-(``video_dispatch_service.py``) delegate their Cloudflare Stream upload and
-tracking-URL construction here so the logic is defined in exactly one place.
-
-Neither pipeline is forced into a single entry-point because their
-input/output models differ (DonationJob vs Donor/Donation/VideoSendLog).
-Once the campaign-type enum is unified (Phase 3) a true single-entry
-orchestrator becomes possible.
+Cloudflare Stream uploads, public fallback URL resolution, and tracking URL
+construction live here so the Celery tasks stay focused on orchestration.
 """
 
 from __future__ import annotations
@@ -25,6 +19,34 @@ if TYPE_CHECKING:
     from charity.utils.cloudflare_stream import StreamUploadResult
 
 logger = logging.getLogger(__name__)
+
+
+def _as_absolute_url(url_or_path: str, server_url: str) -> str:
+    """Return an absolute URL for a storage-backed asset or hosted URL."""
+    if not url_or_path:
+        return ""
+    if url_or_path.startswith(("http://", "https://")):
+        return url_or_path
+    return f"{server_url.rstrip('/')}/{url_or_path.lstrip('/')}"
+
+
+def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> str:
+    """Resolve a storage key or relative media URL to a public absolute URL."""
+    if not storage_path:
+        return ""
+
+    if storage_path.startswith(("http://", "https://")):
+        return storage_path
+
+    from django.core.files.storage import default_storage
+
+    try:
+        storage_url = default_storage.url(storage_path)
+    except Exception as exc:
+        logger.warning("Failed to resolve storage URL for %r: %s", storage_path, exc)
+        return ""
+
+    return _as_absolute_url(storage_url, server_url)
 
 
 # ---------------------------------------------------------------------------
@@ -195,15 +217,22 @@ def resolve_public_video_url(
     final_video_path: str | None,
     stream_delivery: StreamDelivery,
     server_url: str,
+    storage_video_path: str | None = None,
 ) -> str:
     """
     Return the public-facing URL to embed in the outbound email.
 
-    Prefers the Cloudflare Stream CDN URL when available; falls back to
-    ``final_video_path`` which is now always an R2 URL (never a local path).
+    Prefers the Cloudflare Stream CDN URL when available. When Stream is
+    unavailable, falls back to a persisted/public storage URL and never leaks
+    a worker-local temp path such as ``/tmp/...`` into donor emails.
     """
     if stream_delivery.is_uploaded:
         return stream_delivery.playback_url
 
-    # final_video_path is an R2 URL when set; return it directly.
-    return final_video_path or ""
+    if final_video_path and final_video_path.startswith(("http://", "https://")):
+        return final_video_path
+
+    if final_video_path and final_video_path.startswith("/media/"):
+        return _as_absolute_url(final_video_path, server_url)
+
+    return resolve_storage_video_url(storage_path=storage_video_path, server_url=server_url)

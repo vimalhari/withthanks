@@ -68,7 +68,7 @@ services:
       start_period: 60s
 
   # ── Celery worker — video + orchestration queues ─────────────────────────
-  # Handles process_donation_row (CPU/FFmpeg), batch_process_csv, and
+  # Handles generate_video_for_job (CPU/FFmpeg), batch_process_csv, and
   # on_batch_complete callbacks.  Scaled up independently of maintenance work.
   worker:
     build:

@@ -34,6 +34,13 @@ class DonationIngestSerializer(serializers.Serializer):
             raise serializers.ValidationError("amount must be greater than 0.")
         return value
 
+    def validate_campaign_type(self, value):
+        if value == Campaign.CampaignType.VDM:
+            raise serializers.ValidationError(
+                "VDM ingestion is only supported via CSV batch upload."
+            )
+        return value
+
     def validate(self, attrs):
         attrs.setdefault("donated_at", timezone.now())
         return attrs

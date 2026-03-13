@@ -29,13 +29,13 @@ A Django web application that helps charities send personalised thank-you videos
 ## Features
 
 - **Personalised thank-you videos** — generates a unique video per donor using ElevenLabs TTS voiceovers stitched onto a base video with FFmpeg.
-- **Multiple send modes** — `WithThanks` (personalised), `VDM` (shared Cloudflare Stream URL for mass campaigns), and `Gratitude` (repeat-donor special message).
+- **Multiple send modes** — `WithThanks` (personalised or card-only fallback) and `VDM` (shared campaign video for CSV-driven mass campaigns).
 - **30-day deduplication** — donors who already received a personalised video in the last 30 days get a "card only" fallback to avoid over-messaging.
 - **CSV batch processing** — upload a CSV to trigger video generation for many donors at once; the whole batch is tracked as a single `DonationBatch` and marked `completed` or `completed_with_errors` automatically.
-- **REST API** — single and bulk donation ingestion endpoints for external donation platforms; both paths now share the same `DonationJob`-based pipeline.
-- **Unified Celery pipeline** — one processing task (`process_donation_row`) handles both API and CSV jobs; groups + chords provide atomic batch completion tracking.
+- **REST API** — single and bulk donation ingestion endpoints for external donation platforms. The API accepts `THANK_YOU` jobs; `VDM` is intentionally restricted to CSV batch upload.
+- **Unified Celery pipeline** — both API and CSV jobs flow through the same 3-stage `DonationJob` pipeline: validate → generate → dispatch. Groups + chords provide atomic batch completion tracking for batches.
 - **Queue isolation** — `video` queue (CPU/FFmpeg), `default` queue (orchestration/callbacks), and `maintenance` queue (periodic tasks) run on separate workers.
-- **Cloudflare Stream** — VDM campaign videos are uploaded once per campaign and the CDN URL is cached; falls back to a local media URL if disabled.
+- **Cloudflare Stream** — VDM campaign videos are uploaded once per campaign and the CDN URL is cached. If Stream is unavailable, email links fall back to a public storage-backed media URL instead of a worker-local temp path.
 - **Resend email delivery** — personalised HTML emails with embedded video links sent via the Resend API.
 - **Admin notifications** — when a batch finishes, an email is sent to `ADMIN_NOTIFICATION_EMAIL` with job totals and pass/fail counts.
 - **Multi-tenant** — each charity has its own campaigns, templates, member users, and job history; superadmin can switch context.
@@ -46,16 +46,18 @@ A Django web application that helps charities send personalised thank-you videos
 
 ## Architecture Overview
 
-Both ingestion channels (REST API and CSV batch upload) converge on the same
-`DonationJob`-based Celery task. Batch fan-outs use Celery `group + chord`
-so every batch has an atomic completion callback.
+The API and CSV paths converge on the same `DonationJob`-based pipeline.
+The API is used for `THANK_YOU` jobs, while `VDM` is a CSV-only campaign flow.
+Batch fan-outs use Celery `group + chord` so every batch has an atomic
+completion callback.
 
 ```
 Donation event
      ┌────────────┴────────────┐
      │                         │
-  REST API                CSV batch upload
-  POST /api/donations/    POST /upload/
+    REST API                CSV batch upload
+    THANK_YOU only          THANK_YOU or VDM
+    POST /api/donations/*   POST /upload/
      │                         │
      ▼                         ▼
 Create DonationBatch      batch_process_csv
@@ -63,26 +65,24 @@ Create DonationBatch      batch_process_csv
      │                         │
      └──────────┬──────────────┘
                 │
-         group(process_donation_row, ...)
-                │          [video queue]
+      chain(validate, generate, dispatch)
+      per job / grouped under a chord for batches
+      │
                 ▼
-     process_donation_row(job_id)
+    DonationJob pipeline
                 │
-    ┌───────────┼───────────────┐
-    │           │               │
-  Mode:VDM   Mode:WithThanks  Mode:Gratitude
-  (shared CF  (personalised    (repeat-donor
-   Stream)     TTS+FFmpeg)      asset)
-                │
-        video_builder.build_personalized_video()
-                │
-    ┌───────────┼───────────────┐
-    ▼           ▼               ▼
-ElevenLabs   FFmpeg          Cloudflare Stream
-  (TTS)     (stitch)       (VDM upload, cached)
+      ┌───────────┴──────────────┐
+      │                          │
+    Mode:VDM                Mode:WithThanks
+    (shared campaign        (personalised TTS +
+     video / cached)         FFmpeg or card-only)
+      │                          │
+      ▼                          ▼
+  Cloudflare Stream       ElevenLabs + FFmpeg
+  or storage-backed URL     when personalised
                 │
                 ▼
-        send_video_email() → Resend
+    send_video_email() → Resend
                 │
                 ▼
          job.status = "success"
@@ -126,9 +126,10 @@ ElevenLabs   FFmpeg          Cloudflare Stream
 WithThanks/
 ├── charity/                    # Main Django application
 │   ├── models.py               # Charity, Campaign, DonationBatch, DonationJob, Donor, ...
-│   ├── tasks.py                # Celery tasks: process_donation_row, batch_process_csv,
-│   │                           #   on_batch_complete, dispatch_donation_video_task (deprecated),
-│   │                           #   and all periodic maintenance tasks
+│   ├── tasks.py                # Celery tasks: validate_and_prep_job,
+│   │                           #   generate_video_for_job, dispatch_email_for_job,
+│   │                           #   batch_process_csv, on_batch_complete,
+│   │                           #   and periodic maintenance tasks
 │   ├── views.py                # General views (dashboard, profile, etc.)
 │   ├── views_batches.py        # CSV upload, campaign blast, send wizard
 │   ├── views_billing.py        # Invoice billing views
@@ -142,9 +143,9 @@ WithThanks/
 │   │   │                       #   TaskStatusAPIView (now DonationJob-backed)
 │   │   └── serializers.py      # DonationIngestSerializer, BulkDonationIngestSerializer
 │   ├── services/
-│   │   ├── video_builder.py    # TTS + FFmpeg stitching (VideoSpec, build_personalized_video)
-│   │   ├── video_dispatch.py   # Stage-3 API pipeline service (Donor/Donation/VideoSendLog)
-│   │   └── sync_bridge.py      # Sync DonationJob → normalised Donor/Donation/VideoSendLog
+│   │   ├── video_build_service.py    # TTS + FFmpeg stitching
+│   │   ├── video_pipeline_service.py # Cloudflare Stream + public URL resolution
+│   │   └── sync_bridge.py            # Sync DonationJob → normalised Donor/Donation/VideoSendLog
 │   ├── utils/
 │   │   ├── video_utils.py      # FFmpeg stitching helpers
 │   │   ├── voiceover.py        # ElevenLabs TTS wrapper
@@ -231,7 +232,7 @@ MEDIA_ROOT=/app/media
 CELERY_BROKER_URL=redis://localhost:6379/0
 CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
-# Video
+# Video / delivery
 CLOUDFLARE_ACCOUNT_ID=your-account-id
 CLOUDFLARE_STREAM_TOKEN=your-api-token
 CLOUDFLARE_STREAM_ENABLED=true
@@ -251,6 +252,9 @@ CLOUDFLARE_R2_ACCESS_KEY_ID=your-r2-access-key
 CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-r2-secret-key
 CLOUDFLARE_R2_BUCKET_NAME=your-bucket
 CLOUDFLARE_R2_ACCOUNT_ID=your-account-id
+
+# Public URL used in email tracking links and media fallbacks
+SERVER_BASE_URL=http://127.0.0.1:8000
 
 ```
 
@@ -327,18 +331,19 @@ uv run python manage.py test
 
 | Queue | Worker | Tasks routed here |
 |---|---|---|
-| `video` | `worker` | `process_donation_row` |
-| `default` | `worker` | `batch_process_csv`, `on_batch_complete`, `dispatch_donation_video_task` (deprecated) |
+| `video` | `worker` | `generate_video_for_job` |
+| `default` | `worker` | `validate_and_prep_job`, `dispatch_email_for_job`, `batch_process_csv`, `on_batch_complete` |
 | `maintenance` | `worker-maintenance` | `refresh_all_campaign_stats`, `mark_overdue_invoices`, `cleanup_stale_jobs`, `prune_voiceover_cache`, `cleanup_old_videos` |
 
 ### Key tasks
 
 | Task | Description |
 |---|---|
-| `process_donation_row(job_id)` | Core pipeline — TTS, FFmpeg stitch, email send, job status update. `bind=True, max_retries=10, rate_limit="2/s"`. Duplicate-email-on-retry bug fixed: won't retry if the job is already committed as `failed`. |
-| `batch_process_csv(batch_id)` | Reads CSV, bulk-creates `DonationJob` rows, dispatches a `group + chord` to the video queue. `bind=True, max_retries=3`. Marks `DonationBatch.status = processing` before dispatch. |
+| `validate_and_prep_job(job_id)` | Stage 1. Resolves mode, template, base asset, and the thank-you dedup/card-only decision. Runs on the `default` queue. |
+| `generate_video_for_job(context)` | Stage 2. Builds personalised videos for `THANK_YOU` jobs or downloads the shared campaign asset for `VDM`. Runs on the `video` queue. |
+| `dispatch_email_for_job(context)` | Stage 3. Uploads to Cloudflare Stream when applicable, resolves a public video URL, sends via Resend, and persists final job status. Runs on the `default` queue. |
+| `batch_process_csv(batch_id)` | Reads CSV, bulk-creates `DonationJob` rows, and dispatches per-job validate → generate → dispatch chains under a `group + chord`. Fails fast for VDM campaigns that have no `charity_video`. |
 | `on_batch_complete(results, batch_id)` | Chord callback. Marks `DonationBatch.status` as `completed` or `completed_with_errors` and sends an admin notification email. |
-| `dispatch_donation_video_task(...)` | **Deprecated.** Compat stub that creates a `DonationJob` and delegates to `process_donation_row`. External callers continue to work without any changes. |
 | `refresh_all_campaign_stats` | Beat: every 15 min. Refreshes `CampaignStats` for all campaigns. |
 | `mark_overdue_invoices` | Beat: daily 06:00 UTC. Transitions `Sent` invoices past due date to `Overdue`. |
 | `cleanup_stale_jobs` | Beat: every 30 min. Resets jobs stuck in `processing` for more than 2 hours to `failed`. |
@@ -362,6 +367,8 @@ All endpoints are prefix-routed under `/api/` (see `withthanks/urls.py`).
 ### `POST /api/donations/ingest/`
 
 Trigger a thank-you video for a single donation.
+
+`VDM` is not accepted on this endpoint. Use CSV batch upload for VDM campaigns.
 
 **Request body:**
 
@@ -391,6 +398,8 @@ Trigger a thank-you video for a single donation.
 ### `POST /api/donations/bulk-ingest/`
 
 Trigger videos for multiple donations. All jobs are tracked in one `DonationBatch`; a chord fires `on_batch_complete` when all jobs finish.
+
+`VDM` is not accepted on this endpoint. Use CSV batch upload for VDM campaigns.
 
 **Request body:**
 
@@ -462,9 +471,12 @@ bob@example.com,Bob Jones,25.00
 
 On submission:
 1. A `DonationBatch` record is created with `status = pending`.
-2. `batch_process_csv` runs in the background — bulk-creates all `DonationJob` rows and fans them out via `group + chord`.
-3. Each `DonationJob` is processed by `process_donation_row` on the `video` queue.
-4. When all jobs finish, `on_batch_complete` marks the batch as `completed` or `completed_with_errors` and emails `ADMIN_NOTIFICATION_EMAIL`.
+2. `batch_process_csv` runs in the background.
+3. If the selected campaign is `VDM`, the batch fails fast unless the campaign has a `charity_video` configured.
+4. Valid rows are bulk-created as `DonationJob` records and fanned out via `group + chord`.
+5. Each job runs through `validate_and_prep_job` → `generate_video_for_job` → `dispatch_email_for_job`.
+6. VDM uploads the campaign video once to Cloudflare Stream and caches the playback URL on the campaign. If Stream is unavailable, donor links fall back to a public storage-backed media URL.
+7. When all jobs finish, `on_batch_complete` marks the batch as `completed` or `completed_with_errors` and emails `ADMIN_NOTIFICATION_EMAIL`.
 
 ---
 
@@ -512,7 +524,7 @@ Runs the full CI suite first, then triggers the Coolify **prod** application web
 | Model | Description |
 |---|---|
 | `Charity` | A registered charity organisation linked to a Django `User` account. |
-| `Campaign` | Links a charity to an appeal type (`WithThanks`, `VDM`, `Gratitude`), video template, text template, and personalisation settings. |
+| `Campaign` | Links a charity to an appeal type (`THANK_YOU` or `VDM`), campaign media, template selection, and delivery settings. |
 | `DonationBatch` | Groups a set of `DonationJob` records. Tracks `status` (`pending → processing → completed / completed_with_errors / failed`) and is the target of the Celery chord callback. |
 | `DonationJob` | A single donor send job — tracks `status`, `video_path`, `generation_time`, `completed_at`, and `error_message`. The single source of truth for both API and CSV pipeline jobs. |
 | `VideoTemplate` | An uploaded base video used as the canvas for FFmpeg stitching. |

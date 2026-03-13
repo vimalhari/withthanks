@@ -701,8 +701,8 @@ class Campaign(models.Model):
     def __str__(self):
         return self.name
 
-    # Compatibility properties — video_dispatch.py uses `charity` while the
-    # CSV pipeline uses `client`.  Both refer to the same FK.
+    # Historical code paths use `charity` while newer code uses `client`.
+    # Both refer to the same FK.
     @property
     def charity(self):
         return self.client

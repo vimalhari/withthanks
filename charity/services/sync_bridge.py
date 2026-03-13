@@ -1,10 +1,9 @@
 """
-Bridge between the CSV batch pipeline (DonationJob) and the API pipeline's
-normalized models (Donor → Donation → VideoSendLog).
+Bridge from completed ``DonationJob`` rows into the normalized
+Donor → Donation → VideoSendLog models.
 
-Called at the end of a successful ``process_donation_row`` to keep both model
-hierarchies in sync so analytics, reporting, and the donor timeline reflect
-*all* send activity — regardless of the ingestion channel.
+Called at the end of a successful staged pipeline run so analytics,
+reporting, and the donor timeline reflect all send activity.
 """
 
 from __future__ import annotations

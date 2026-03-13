@@ -22,7 +22,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U withthanks"]
+      test: [ "CMD-SHELL", "pg_isready -U withthanks" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,7 +34,7 @@ services:
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -70,7 +70,7 @@ services:
         condition: service_healthy
 
   # ── Celery worker — video + orchestration queues ─────────────────────────
-  # Handles process_donation_row (CPU/FFmpeg), batch_process_csv, and
+  # Handles generate_video_for_job (CPU/FFmpeg), batch_process_csv, and
   # on_batch_complete callbacks.  Scaled up independently of maintenance work.
   worker:
     build:

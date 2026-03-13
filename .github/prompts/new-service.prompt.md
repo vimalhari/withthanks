@@ -60,7 +60,6 @@ def ${4:function_name}(charity: Charity, ${5:params}) -> ${6:ReturnType}:
 ## Existing Services
 - `video_build_service.py` — FFmpeg video composition (`VideoSpec`, `build_personalized_video`)
 - `video_pipeline_service.py` — Cloudflare Stream upload (`StreamDelivery`, `stream_safe_upload`)
-- `video_dispatch_service.py` — orchestration of video processing pipeline
 - `invoice_service.py` — invoice generation and lifecycle management
 - `batch_service.py` — batch processing coordination
 - `cleanup_service.py` — file and data cleanup operations

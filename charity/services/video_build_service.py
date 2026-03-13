@@ -2,9 +2,8 @@
 Shared video production service.
 
 Pure functions that handle TTS generation and FFmpeg stitching without any
-model or ORM dependencies.  Both the CSV batch pipeline (``tasks.py``) and the
-API pipeline (``video_dispatch_service.py``) delegate their video work here so that
-production logic is defined in exactly one place.
+model or ORM dependencies. The staged ``DonationJob`` tasks delegate their
+video work here so that production logic is defined in exactly one place.
 """
 
 from __future__ import annotations

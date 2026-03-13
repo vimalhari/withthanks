@@ -72,8 +72,6 @@ def validate_and_prep_job(self, job_id):
     if campaign:
         if mode == "VDM" and campaign.charity_video:
             base_video_path = campaign.charity_video.name
-        elif mode == "WithThanks" and campaign.gratitude_video:
-            base_video_path = campaign.gratitude_video.name
         elif campaign.video_template_override:
             base_video_path = campaign.video_template_override.name
     if not base_video_path and client and client.default_template_video:
@@ -88,12 +86,6 @@ def validate_and_prep_job(self, job_id):
     if mode == "VDM":
         template_name = "vdm.html"
         image_url = f"{settings.MEDIA_URL}email_templates/vdm_banner.png"
-
-    elif mode == "Gratitude":
-        template_name = "emails/donation_thank_you.html"
-        if campaign and campaign.image_banner:
-            with contextlib.suppress(Exception):
-                image_url = campaign.image_banner.url
 
     elif mode == "WithThanks":
         # 30-day dedup check — uses the compound index added in migration 0059
@@ -131,8 +123,8 @@ def generate_video_for_job(self, context):
     Stage 2 of 3.  CPU / IO-heavy step running on the *video* queue.
 
     Runs TTS + FFmpeg stitching *only* when the mode actually requires a
-    personalised video.  For VDM, Gratitude, and card-only / default
-    WithThanks modes an existing base video is referenced directly.
+    personalised video. For VDM and card-only / default WithThanks modes,
+    an existing base video is referenced directly.
 
     For personalised jobs the finished video is uploaded to R2 and
     ``job.video_path`` is persisted to the DB *before* returning so that if
@@ -165,17 +157,6 @@ def generate_video_for_job(self, context):
             local_base = download_base_video_to_tmp(base_video_path)
             intermediate_files.append(local_base)
             final_video_path = local_base
-
-        elif mode == "Gratitude":
-            if not base_video_path:
-                if campaign and campaign.gratitude_video:
-                    base_video_path = campaign.gratitude_video.name
-                elif campaign and campaign.charity_video:
-                    base_video_path = campaign.charity_video.name
-            if base_video_path:
-                local_base = download_base_video_to_tmp(base_video_path)
-                intermediate_files.append(local_base)
-                final_video_path = local_base
 
         elif mode == "WithThanks":
             if is_card_only:
@@ -334,6 +315,7 @@ def dispatch_email_for_job(self, context):
             final_video_path=final_video_path,
             stream_delivery=stream_delivery,
             server_url=server_url,
+            storage_video_path=job.video_path or context.get("base_video_path"),
         )
 
         # --- Tracking URLs -------------------------------------------------- #
@@ -433,7 +415,7 @@ def dispatch_email_for_job(self, context):
         # Preserve R2 URL written by Stage 2; fall back to local path for
         # non-personalised modes where no R2 upload occurred.
         if not job.video_path:
-            job.video_path = final_video_path or ""
+            job.video_path = video_url_link or final_video_path or ""
         job.campaign_type = mode
         job.generation_time = generation_time
         job.completed_at = now()
@@ -550,86 +532,6 @@ def on_batch_complete(job_results, *, batch_id):
     return {"batch_id": batch_id, "total": total, "failed": failed, "status": new_status}
 
 
-# ---------------------------------------------------------------------------
-# Async wrapper for the Stage-3 API video dispatch pipeline (DEPRECATED)
-# ---------------------------------------------------------------------------
-
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=10)
-def dispatch_donation_video_task(
-    self,
-    *,
-    charity_id: int,
-    donor_email: str,
-    donor_name: str,
-    amount: str,
-    donated_at: str | None = None,
-    source: str = "API",
-    campaign_type: str = "THANK_YOU",
-) -> dict:
-    """
-    DEPRECATED — use the DonationJob-based pipeline instead.
-
-    This stub creates a DonationBatch + DonationJob and delegates to
-    ``process_donation_row`` so that any external callers that have not yet
-    been migrated continue to work without code changes.
-    """
-    import warnings
-
-    warnings.warn(
-        "dispatch_donation_video_task is deprecated. "
-        "Create a DonationJob directly and call process_donation_row instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    logger.warning(
-        "dispatch_donation_video_task is deprecated (charity_id=%s, donor_email=%s). "
-        "Routing to process_donation_row via DonationJob.",
-        charity_id,
-        donor_email,
-    )
-
-    try:
-        from charity.models import Campaign, Charity
-
-        charity = Charity.objects.get(id=charity_id)
-
-        # Resolve the active campaign of the requested type
-        campaign = Campaign.objects.filter(
-            client=charity,
-            campaign_type=campaign_type,
-            status="active",
-        ).first()
-
-        batch, _ = DonationBatch.objects.get_or_create(
-            charity=charity,
-            campaign_name=f"API — {campaign_type}",
-            status=DonationBatch.BatchStatus.PROCESSING,
-            defaults={"batch_number": DonationBatch.get_next_batch_number(charity)},
-        )
-
-        job = DonationJob.objects.create(
-            donor_name=donor_name,
-            email=donor_email,
-            donation_amount=amount,
-            status="pending",
-            charity=charity,
-            campaign=campaign,
-            donation_batch=batch,
-        )
-
-        chain(
-            validate_and_prep_job.s(job.id).set(queue="default"),
-            generate_video_for_job.s().set(queue="video"),
-            dispatch_email_for_job.s().set(queue="default"),
-        ).apply_async()
-        return {"status": "queued", "job_id": job.id, "batch_id": batch.id}
-
-    except Exception as exc:
-        logger.error("dispatch_donation_video_task (compat stub) failed: %s", exc)
-        raise self.retry(exc=exc) from exc
-
-
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
 def batch_process_csv(self, batch_id):
     """
@@ -641,6 +543,20 @@ def batch_process_csv(self, batch_id):
         batch = DonationBatch.objects.select_related("charity", "campaign").get(id=batch_id)
         client = batch.charity
         campaign = batch.campaign
+
+        if (
+            campaign
+            and campaign.campaign_type == campaign.CampaignType.VDM
+            and not campaign.charity_video
+        ):
+            logger.error(
+                "Batch %s: VDM campaign %s is missing charity_video; failing preflight.",
+                batch_id,
+                campaign.id,
+            )
+            batch.status = DonationBatch.BatchStatus.FAILED
+            batch.save(update_fields=["status"])
+            return
 
         # Mark batch as processing before dispatching workers
         batch.status = DonationBatch.BatchStatus.PROCESSING
