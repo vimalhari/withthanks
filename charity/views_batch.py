@@ -28,19 +28,14 @@ from .utils.access_control import (
     get_authorized_campaign,
     get_authorized_charity,
 )
+from .utils.csv_rows import build_csv_recipient_name, get_csv_row_value
 
 logger = logging.getLogger(__name__)
 
 
 def get_col(row, *keys):
     """Flexibly grab a CSV column (case-insensitive)."""
-    for k in keys:
-        for key in row:
-            if key and key.strip().lower() == k.strip().lower():
-                val = row.get(key)
-                if val:
-                    return val.strip()
-    return ""
+    return get_csv_row_value(row, *keys)
 
 
 def _dispatch_batch_chord(batch, job_ids):
@@ -236,10 +231,8 @@ def send_email_wizard(request):
             elif method == "bulk" and "wizard_csv_data" in request.session:
                 jobs_to_create = []
                 for row in request.session["wizard_csv_data"]:
-                    name, email = (
-                        get_col(row, "name", "donor name"),
-                        get_col(row, "email", "email address"),
-                    )
+                    name = build_csv_recipient_name(row, default="Donor")
+                    email = get_col(row, "email", "email address", "recipient email", "email-id")
                     if email:
                         jobs_to_create.append(
                             DonationJob(

@@ -258,8 +258,65 @@ class VideoProcessingIsolationTests(TestCase):
             mock_send.call_args[1]["video_url"],
             "http://127.0.0.1:8000/media/test/fake_video_a.mp4",
         )
+        self.assertIn("Dear VDM Donor,", mock_send.call_args[1]["html"])
         vdm_job.refresh_from_db()
         self.assertEqual(vdm_job.video_path, "http://127.0.0.1:8000/media/test/fake_video_a.mp4")
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    def test_vdm_uses_campaign_configured_email_body(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        vdm_campaign = Campaign.objects.create(
+            name="Custom Copy Campaign",
+            client=self.charity_a,
+            campaign_code="VDM-005",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+            vdm_email_body=(
+                "Welcome to {{ campaign_name }} from {{ organization_name }}.\n\n"
+                "We made this update for {{ donor_name }}."
+            ),
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=6,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Jane",
+            email="custom@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn("Welcome to Custom Copy Campaign from", html)
+        self.assertIn("We made this update for Jane.", html)
+        self.assertNotIn("We are excited to share some amazing updates with you!", html)
 
     def test_batch_process_csv_fails_fast_for_vdm_campaign_without_video(self):
         from charity.tasks import batch_process_csv
@@ -333,6 +390,50 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertEqual(jobs.first().campaign, vdm_campaign)
         self.assertEqual(mock_chord.call_count, 1)
         chord_runner.assert_called_once()
+
+    @patch("charity.tasks.chord")
+    def test_batch_process_csv_uses_first_name_then_title_surname_for_vdm(self, mock_chord):
+        from charity.tasks import batch_process_csv
+
+        chord_runner = Mock()
+        mock_chord.return_value = chord_runner
+
+        vdm_campaign = Campaign.objects.create(
+            name="Greeting VDM Campaign",
+            client=self.charity_a,
+            campaign_code="VDM-004",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+
+        csv_key = default_storage.save(
+            "uploads/test/vdm-greetings.csv",
+            ContentFile(
+                b"Title,First Name,Surname,Email\n"
+                b"Dr,Jane,Doe,jane@example.com\n"
+                b"Ms,,Smith,smith@example.com\n"
+            ),
+        )
+        batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=5,
+            csv_filename=csv_key,
+        )
+
+        batch_process_csv.run(batch.id)  # type: ignore[attr-defined]
+
+        jobs = DonationJob.objects.filter(donation_batch=batch).order_by("email")
+        self.assertEqual(jobs.count(), 2)
+        self.assertEqual(jobs[0].email, "jane@example.com")
+        self.assertEqual(jobs[0].donor_name, "Jane")
+        self.assertEqual(jobs[1].email, "smith@example.com")
+        self.assertEqual(jobs[1].donor_name, "Ms Smith")
 
     def test_validate_and_prep_job_ignores_gratitude_video_for_standard_withthanks(self):
         from charity.tasks import validate_and_prep_job

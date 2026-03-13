@@ -15,7 +15,7 @@ from django.utils.timezone import now
 from .analytics_models import EmailEvent, VideoEvent
 from .exceptions import FatalTaskError
 from .models import DonationBatch, DonationJob, EmailTracking
-from .services.video_build_service import VideoSpec, build_personalized_video
+from .services.video_build_service import VideoSpec, build_personalized_video, render_script
 from .services.video_pipeline_service import (
     StreamDelivery,
     build_tracking_urls,
@@ -23,10 +23,18 @@ from .services.video_pipeline_service import (
     resolve_public_video_url,
     stream_safe_upload,
 )
+from .utils.csv_rows import build_csv_recipient_name, get_csv_row_value
 from .utils.resend_utils import send_video_email
 from .utils.tracking_security import build_tracking_token
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_VDM_EMAIL_BODY = (
+    "We are excited to share some amazing updates with you! At {{ organization_name }}, "
+    "we are constantly working to make a bigger impact, and we want you to be a part of it.\n\n"
+    "Check out our latest campaign video to see what we've been up to.\n\n"
+    "Your support makes everything possible. Let's make a difference together!"
+)
 
 
 def cleanup_intermediate(files, final_file):
@@ -37,6 +45,23 @@ def cleanup_intermediate(files, final_file):
                 os.remove(f)
             except Exception as err:
                 logger.warning(f"Failed to delete file {f}: {err}")
+
+
+def build_vdm_email_paragraphs(*, campaign, job, organization_name: str) -> list[str]:
+    """Render the configurable VDM body into paragraph-sized chunks."""
+    raw_body = (
+        campaign.vdm_email_body if campaign and campaign.vdm_email_body else DEFAULT_VDM_EMAIL_BODY
+    )
+    rendered_body = render_script(
+        raw_body,
+        {
+            "donor_name": job.donor_name,
+            "organization_name": organization_name,
+            "campaign_name": campaign.name if campaign else "WithThanks Campaign",
+            "donation_amount": job.donation_amount,
+        },
+    )
+    return [paragraph.strip() for paragraph in rendered_body.split("\n\n") if paragraph.strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +387,12 @@ def dispatch_email_for_job(self, context):
             "tracking_pixel_url": tracking.pixel_url,
             "tracking_click_url": tracking.click_url,
         }
+        if mode == "VDM":
+            email_context["vdm_body_paragraphs"] = build_vdm_email_paragraphs(
+                campaign=campaign,
+                job=job,
+                organization_name=client.organization_name,
+            )
         full_template_path = f"charity/email_templates/{template_name}"
         email_html = render_to_string(full_template_path, email_context)
 
@@ -584,15 +615,22 @@ def batch_process_csv(self, batch_id):
 
             jobs_to_create = []
             for row in reader:
-                name = row.get("donor_name") or row.get("name") or row.get("full name") or "Donor"
-                email = (
-                    row.get("email")
-                    or row.get("recipient email")
-                    or row.get("email-id")
-                    or row.get("email address")
+                name = build_csv_recipient_name(row, default="Donor")
+                email = get_csv_row_value(
+                    row,
+                    "email",
+                    "recipient email",
+                    "email-id",
+                    "email address",
                 )
                 amount = (
-                    row.get("donation_amount") or row.get("amount") or row.get("donation") or "0"
+                    get_csv_row_value(
+                        row,
+                        "donation_amount",
+                        "amount",
+                        "donation",
+                    )
+                    or "0"
                 )
 
                 if not email:

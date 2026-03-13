@@ -549,7 +549,7 @@ class CampaignAdmin(ModelAdmin):
             "Email Settings",
             {
                 "classes": ("collapse",),
-                "fields": ("from_email",),
+                "fields": ("from_email", "vdm_email_body"),
             },
         ),
         (

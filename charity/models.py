@@ -667,6 +667,14 @@ class Campaign(models.Model):
     from_email = models.EmailField(
         blank=True, null=True, help_text="Override sender email address for this campaign"
     )
+    vdm_email_body = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Optional VDM email copy. Supports {{ donor_name }}, {{ organization_name }}, "
+            "{{ campaign_name }}, and {{ donation_amount }} placeholders."
+        ),
+    )
 
     # Cloudflare Stream cache — populated on first VDM send, reused for all subsequent jobs
     cf_stream_video_id = models.CharField(

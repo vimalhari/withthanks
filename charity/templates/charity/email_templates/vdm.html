@@ -114,11 +114,11 @@
             </div>
             
             <div class="content">
-                <h2>Hello {{ donor_name }},</h2>
-                
-                <p>We are excited to share some amazing updates with you! At <strong style="color: #0f172a;">{{ organization_name }}</strong>, we are constantly working to make a bigger impact, and we want you to be a part of it.</p>
-                
-                <p>Check out our latest campaign video to see what we've been up to.</p>
+                <h2>Dear {{ donor_name }},</h2>
+
+                {% for paragraph in vdm_body_paragraphs %}
+                <p>{{ paragraph|linebreaksbr }}</p>
+                {% endfor %}
                 
                 {% if cf_stream_url %}
                 {# Cloudflare Stream hosted player — no egress from our server #}
@@ -141,8 +141,6 @@
                     <a href="{{ tracking_click_url }}" class="cta-button">&#9654; Watch Video</a>
                 </div>
                 {% endif %}
-                
-                <p>Your support makes everything possible. Let's make a difference together!</p>
             </div>
             
             <div class="footer">
