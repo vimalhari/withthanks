@@ -38,7 +38,7 @@ class CampaignReportAPIView(LoginRequiredMixin, View):
         }
 
         # 4. Conditional logic for VDM-only metrics
-        if campaign.campaign_type == "VDM":
+        if campaign.is_vdm:
             data["total_unsubs"] = stats.total_unsubs
         else:
             # For THANKYOU campaigns, ensure unsub metrics aren't leaked

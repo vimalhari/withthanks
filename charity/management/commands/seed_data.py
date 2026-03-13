@@ -93,7 +93,7 @@ CAMPAIGNS: dict[str, list[dict]] = {
         {
             "name": "Spring Campaign 2025",
             "campaign_code": "GE-2025-SPR",
-            "campaign_type": "THANK_YOU",
+            "campaign_mode": "THANK_YOU_PERSONALIZED",
             "campaign_start": date(2025, 3, 1),
             "campaign_end": date(2025, 5, 31),
             "status": "closed",
@@ -102,7 +102,7 @@ CAMPAIGNS: dict[str, list[dict]] = {
         {
             "name": "Summer Giving 2025",
             "campaign_code": "GE-2025-SUM",
-            "campaign_type": "THANK_YOU",
+            "campaign_mode": "THANK_YOU_PERSONALIZED",
             "campaign_start": date(2025, 6, 1),
             "campaign_end": date(2025, 8, 31),
             "status": "active",
@@ -113,7 +113,7 @@ CAMPAIGNS: dict[str, list[dict]] = {
         {
             "name": "Education Fund 2025",
             "campaign_code": "BF-2025-EDU",
-            "campaign_type": "THANK_YOU",
+            "campaign_mode": "THANK_YOU_PERSONALIZED",
             "campaign_start": date(2025, 1, 15),
             "campaign_end": date(2025, 6, 30),
             "status": "active",
@@ -122,7 +122,7 @@ CAMPAIGNS: dict[str, list[dict]] = {
         {
             "name": "VDM Outreach Q1",
             "campaign_code": "BF-2025-VDM",
-            "campaign_type": "VDM",
+            "campaign_mode": "VDM",
             "campaign_start": date(2025, 1, 1),
             "campaign_end": date(2025, 3, 31),
             "status": "closed",
@@ -309,7 +309,7 @@ class Command(BaseCommand):
                 client=charity,
                 campaign_code=data["campaign_code"],
                 name=data["name"],
-                campaign_type=data["campaign_type"],
+                campaign_mode=data["campaign_mode"],
                 campaign_start=data["campaign_start"],
                 campaign_end=data["campaign_end"],
                 status=data["status"],
@@ -326,7 +326,7 @@ class Command(BaseCommand):
                     )
                 )
             campaign.name = data["name"]
-            campaign.campaign_type = data["campaign_type"]
+            campaign.campaign_mode = data["campaign_mode"]
             campaign.campaign_start = data["campaign_start"]
             campaign.campaign_end = data["campaign_end"]
             campaign.status = data["status"]

@@ -105,7 +105,7 @@ class VideoProcessingIsolationTests(TestCase):
             charity=self.charity_a,
             campaign_start=date.today(),
             campaign_end=date.today(),
-            video_mode=Campaign.VideoMode.PERSONALIZED,
+            campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
             voiceover_script="Hello A {{donor_name}}",
         )
         # Provide a fake base video path (os.path.exists is mocked True in tests)
@@ -116,7 +116,7 @@ class VideoProcessingIsolationTests(TestCase):
             charity=self.charity_b,
             campaign_start=date.today(),
             campaign_end=date.today(),
-            video_mode=Campaign.VideoMode.PERSONALIZED,
+            campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
             voiceover_script="Hello B {{donor_name}}",
         )
         Campaign.objects.filter(pk=self.campaign_b.pk).update(base_video="test/fake_video_b.mp4")
@@ -226,9 +226,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
@@ -281,9 +279,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
             vdm_email_body=(
                 "Welcome to {{ campaign_name }} from {{ charity_name }}.\n\n"
                 "We made this update for {{ donor_name }}."
@@ -346,9 +342,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
             email_thumbnail=thumbnail,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
@@ -399,9 +393,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
@@ -495,9 +487,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
@@ -536,9 +526,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
 
         csv_key = default_storage.save(
@@ -572,9 +560,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
 
@@ -613,9 +599,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
 
@@ -656,9 +640,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             status="active",
-            campaign_type=Campaign.CampaignType.THANK_YOU,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.PERSONALIZED,
+            campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
         Campaign.objects.filter(pk=campaign.pk).update(
             gratitude_video="test/fake_gratitude.mp4",
@@ -711,7 +693,7 @@ class DonationIngestAPITests(TestCase):
                 "donor_email": "donor@example.com",
                 "donor_name": "API Donor",
                 "amount": "12.50",
-                "campaign_type": Campaign.CampaignType.VDM,
+                "campaign_type": "VDM",
             },
             format="json",
         )
@@ -734,7 +716,7 @@ class DonationIngestAPITests(TestCase):
                         "donor_email": "bulk@example.com",
                         "donor_name": "Bulk Donor",
                         "amount": "15.00",
-                        "campaign_type": Campaign.CampaignType.VDM,
+                        "campaign_type": "VDM",
                     }
                 ]
             },
@@ -820,9 +802,7 @@ class TrackingSecurityTests(TestCase):
             campaign_start=today,
             campaign_end=today,
             status="active",
-            campaign_type=Campaign.CampaignType.VDM,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.TEMPLATE,
+            campaign_mode=Campaign.CampaignMode.VDM,
         )
         self.batch = DonationBatch.objects.create(charity=self.charity, campaign=self.campaign)
         self.job = DonationJob.objects.create(
@@ -840,7 +820,7 @@ class TrackingSecurityTests(TestCase):
             batch=self.batch,
             job=self.job,
             user_id=self.job.id,
-            campaign_type=self.campaign.campaign_type,
+            campaign_type="VDM" if self.campaign.is_vdm else "THANK_YOU",
         )
 
     def test_track_open_accepts_signed_tracking_token(self):

@@ -487,15 +487,13 @@ class CampaignAdmin(ModelAdmin):
         "name",
         "charity",
         "status",
-        "campaign_type",
-        "input_source",
-        "video_mode",
+        "campaign_mode",
         "campaign_start",
         "campaign_end",
     )
-    list_filter = ("status", "campaign_type", "input_source", "video_mode")
+    list_filter = ("status", "campaign_mode")
     search_fields = ("name", "charity__charity_name", "campaign_code")
-    readonly_fields = ("id", "created_at", "is_personalized")
+    readonly_fields = ("id", "created_at")
     warn_unsaved_tabs = True
     inlines = [CampaignFieldInline, DonationBatchCampaignInline]
     fieldsets = (
@@ -516,11 +514,8 @@ class CampaignAdmin(ModelAdmin):
             "Type & Mode",
             {
                 "fields": (
-                    "campaign_type",
-                    "input_source",
-                    "video_mode",
-                    "is_personalized",  # read-only — derived from video_mode
-                    "gratitude_cooldown_days",  # Thank You only
+                    "campaign_mode",
+                    "gratitude_cooldown_days",  # Thank You campaigns only
                 )
             },
         ),

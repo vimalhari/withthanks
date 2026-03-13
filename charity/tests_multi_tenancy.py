@@ -86,9 +86,7 @@ class MultiTenancyIsolationTest(TestCase):
             campaign_start=today,
             campaign_end=today,
             status="active",
-            campaign_type=Campaign.CampaignType.THANK_YOU,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.PERSONALIZED,
+            campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
         self.campaign_b = Campaign.objects.create(
             name="Campaign B",
@@ -97,9 +95,7 @@ class MultiTenancyIsolationTest(TestCase):
             campaign_start=today,
             campaign_end=today,
             status="active",
-            campaign_type=Campaign.CampaignType.THANK_YOU,
-            input_source=Campaign.InputSource.CSV,
-            video_mode=Campaign.VideoMode.PERSONALIZED,
+            campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
 
     def test_dashboard_isolation(self):
@@ -187,7 +183,7 @@ class MultiTenancyIsolationTest(TestCase):
                 "donor_email": "intruder@example.com",
                 "donor_name": "Intruder",
                 "amount": "15.00",
-                "campaign_type": Campaign.CampaignType.THANK_YOU,
+                "campaign_type": "THANK_YOU",
             },
         )
 

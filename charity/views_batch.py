@@ -233,8 +233,7 @@ def send_email_wizard(request):
                 for row in request.session["wizard_csv_data"]:
                     name = (
                         build_vdm_recipient_name(row, default="Donor")
-                        if selected_campaign
-                        and selected_campaign.campaign_type == selected_campaign.CampaignType.VDM
+                        if selected_campaign and selected_campaign.is_vdm
                         else build_csv_recipient_name(row, default="Donor")
                     )
                     email = get_col(row, "email", "email address", "recipient email", "email-id")

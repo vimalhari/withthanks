@@ -100,8 +100,8 @@ def validate_and_prep_job(self, job_id):
 
     # Determine processing mode (default: WithThanks)
     mode = "WithThanks"
-    if campaign and campaign.campaign_type:
-        mode = "VDM" if campaign.campaign_type == campaign.CampaignType.VDM else "WithThanks"
+    if campaign and campaign.is_vdm:
+        mode = "VDM"
 
     logger.info("Prep Job %s — mode: %s", job_id, mode)
 
@@ -361,9 +361,7 @@ def dispatch_email_for_job(self, context):
         )
 
         # --- Tracking URLs -------------------------------------------------- #
-        suppress_unsub = bool(
-            campaign and campaign.campaign_type == campaign.CampaignType.THANK_YOU
-        )
+        suppress_unsub = bool(campaign and campaign.is_thank_you)
         # --- EmailTracking record ------------------------------------------- #
         tracking_record, _ = EmailTracking.objects.get_or_create(
             job=job,
@@ -592,11 +590,7 @@ def batch_process_csv(self, batch_id):
         client = batch.charity
         campaign = batch.campaign
 
-        if (
-            campaign
-            and campaign.campaign_type == campaign.CampaignType.VDM
-            and not campaign.charity_video
-        ):
+        if campaign and campaign.is_vdm and not campaign.charity_video:
             logger.error(
                 "Batch %s: VDM campaign %s is missing charity_video; failing preflight.",
                 batch_id,
@@ -634,7 +628,7 @@ def batch_process_csv(self, batch_id):
             for row in reader:
                 name = (
                     build_vdm_recipient_name(row, default="Donor")
-                    if campaign and campaign.campaign_type == campaign.CampaignType.VDM
+                    if campaign and campaign.is_vdm
                     else build_csv_recipient_name(row, default="Donor")
                 )
                 email = get_csv_row_value(

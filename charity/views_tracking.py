@@ -101,9 +101,7 @@ def track_unsubscribe_full_view(request, job_id=None):
 
             # Check if it's VDM. If not, don't process unsubscribes
             is_vdm = False
-            if tracking.campaign_type == "VDM" or (
-                campaign and campaign.campaign_type == campaign.CampaignType.VDM
-            ):
+            if tracking.campaign_type == "VDM" or (campaign and campaign.is_vdm):
                 is_vdm = True
 
             if not is_vdm:

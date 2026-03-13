@@ -28,7 +28,7 @@ def sync_job_to_normalized_models(job) -> dict | None:
     the CSV pipeline.
     """
     # Lazy imports to avoid circular dependencies at module level.
-    from charity.models import Campaign, Donation, Donor, VideoSendLog
+    from charity.models import Donation, Donor, VideoSendLog
 
     try:
         charity = job.charity
@@ -57,10 +57,10 @@ def sync_job_to_normalized_models(job) -> dict | None:
         except (InvalidOperation, TypeError, ValueError):
             amount = Decimal("0")
 
-        campaign_type = Campaign.CampaignType.THANK_YOU
+        campaign_type = "THANK_YOU"
         raw_mode = getattr(job, "campaign_type", None) or ""
         if raw_mode.upper() == "VDM":
-            campaign_type = Campaign.CampaignType.VDM
+            campaign_type = "VDM"
 
         donated_at = getattr(job, "completed_at", None) or now()
 

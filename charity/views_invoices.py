@@ -179,18 +179,16 @@ def create_invoice_view(request):
                     .count()
                 )
 
-                # Auto-set one-time package defaults from campaign type
-                auto_vdm_package = (
-                    "standard" if campaign.campaign_type == campaign.CampaignType.VDM else "none"
-                )
-                auto_gratitude_card = campaign.campaign_type == campaign.CampaignType.THANK_YOU
+                # Auto-set one-time package defaults from campaign mode
+                auto_vdm_package = "standard" if campaign.is_vdm else "none"
+                auto_gratitude_card = campaign.is_thank_you
 
                 wizard_data.update(
                     {
                         "charity_id": str(d["charity"].id),
                         "campaign_id": str(campaign.id),
                         "campaign_name": campaign.name,
-                        "campaign_type": campaign.campaign_type or "",
+                        "campaign_type": ("VDM" if campaign.is_vdm else "THANK_YOU"),
                         "period_start": str(start_date),
                         "period_end": str(end_date),
                         "campaign_volume": campaign_volume,

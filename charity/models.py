@@ -549,6 +549,11 @@ class VideoTemplate(models.Model):
         return self.name
 
 
+# ---------------------------------------------------------------------------
+# Audit label choices — stored on Donation, VideoSendLog, and EmailTracking records
+CAMPAIGN_TYPE_CHOICES = [("THANK_YOU", "Thank You"), ("VDM", "Video Direct Mail")]
+
+
 class Campaign(models.Model):
     STATUS_CHOICES = [
         ("draft", "Draft"),
@@ -556,17 +561,10 @@ class Campaign(models.Model):
         ("closed", "Closed"),
     ]
 
-    class CampaignType(models.TextChoices):
-        THANK_YOU = "THANK_YOU", "Thank You"
+    class CampaignMode(models.TextChoices):
+        THANK_YOU_PERSONALIZED = "THANK_YOU_PERSONALIZED", "Thank You — Personalized (TTS + stitch)"
+        THANK_YOU_STANDARD = "THANK_YOU_STANDARD", "Thank You — Standard (pre-rendered)"
         VDM = "VDM", "Video Direct Mail"
-
-    class InputSource(models.TextChoices):
-        API = "API", "API"
-        CSV = "CSV", "CSV"
-
-    class VideoMode(models.TextChoices):
-        PERSONALIZED = "PERSONALIZED", "Personalized (TTS + stitch)"
-        TEMPLATE = "TEMPLATE", "Template-only (pre-rendered)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -580,23 +578,17 @@ class Campaign(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
 
-    campaign_type = models.CharField(
-        max_length=20,
-        choices=CampaignType.choices,
-        default=CampaignType.THANK_YOU,
-        help_text="Campaign type: Thank You (donor acknowledgement) or VDM (video direct mail)",
-    )
-    input_source = models.CharField(
-        max_length=10,
-        choices=InputSource.choices,
-        default=InputSource.CSV,
-        help_text="Data ingest source. VDM is always CSV; Thank You can be API or CSV.",
-    )
-    video_mode = models.CharField(
-        max_length=20,
-        choices=VideoMode.choices,
-        default=VideoMode.PERSONALIZED,
-        help_text="How the video is produced for the API pipeline",
+    campaign_mode = models.CharField(
+        max_length=30,
+        choices=CampaignMode.choices,
+        null=True,
+        blank=True,
+        help_text=(
+            "How this campaign delivers video. "
+            "Thank You — Personalized: TTS voiceover + per-donor video stitch. "
+            "Thank You — Standard: pre-rendered template video, personalised email. "
+            "VDM: shared campaign video sent to all donors (CSV only)."
+        ),
     )
     text_template = models.ForeignKey(
         TextTemplate,
@@ -661,11 +653,25 @@ class Campaign(models.Model):
         max_length=128, blank=True, help_text="ElevenLabs voice ID for this campaign"
     )
 
-    # Personalization Settings (derived from video_mode — not a DB column)
+    # --- Convenience properties (derived from campaign_mode) ---
+
     @property
     def is_personalized(self) -> bool:
-        """True when the campaign uses TTS + personalised stitching (Thank You campaign only)."""
-        return self.video_mode == self.VideoMode.PERSONALIZED
+        """True when the campaign uses TTS + personalised stitching."""
+        return self.campaign_mode == self.CampaignMode.THANK_YOU_PERSONALIZED
+
+    @property
+    def is_vdm(self) -> bool:
+        """True for Video Direct Mail campaigns."""
+        return self.campaign_mode == self.CampaignMode.VDM
+
+    @property
+    def is_thank_you(self) -> bool:
+        """True for any Thank You campaign (personalized or standard)."""
+        return self.campaign_mode in (
+            self.CampaignMode.THANK_YOU_PERSONALIZED,
+            self.CampaignMode.THANK_YOU_STANDARD,
+        )
 
     # Email Settings
     from_email = models.EmailField(
@@ -783,8 +789,8 @@ class Donation(models.Model):
     donated_at = models.DateTimeField()
     campaign_type = models.CharField(
         max_length=20,
-        choices=Campaign.CampaignType.choices,
-        default=Campaign.CampaignType.THANK_YOU,
+        choices=CAMPAIGN_TYPE_CHOICES,
+        default="THANK_YOU",
     )
     source = models.CharField(max_length=50, default="API")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -820,8 +826,8 @@ class VideoSendLog(models.Model):
 
     campaign_type = models.CharField(
         max_length=20,
-        choices=Campaign.CampaignType.choices,
-        default=Campaign.CampaignType.THANK_YOU,
+        choices=CAMPAIGN_TYPE_CHOICES,
+        default="THANK_YOU",
     )
     send_kind = models.CharField(max_length=20, choices=SendKind.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
@@ -871,8 +877,8 @@ class EmailTracking(models.Model):
     )
     campaign_type = models.CharField(
         max_length=20,
-        choices=Campaign.CampaignType.choices,
-        default=Campaign.CampaignType.THANK_YOU,
+        choices=CAMPAIGN_TYPE_CHOICES,
+        default="THANK_YOU",
     )
 
     # Tracking Status

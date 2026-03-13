@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 
-from charity.models import Campaign, Charity
+from charity.models import Charity
 from charity.utils.access_control import get_authorized_charity
 
 
@@ -14,8 +14,8 @@ class DonationIngestSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     donated_at = serializers.DateTimeField(required=False)
     campaign_type = serializers.ChoiceField(
-        choices=Campaign.CampaignType.choices,
-        default=Campaign.CampaignType.THANK_YOU,
+        choices=[("THANK_YOU", "Thank You"), ("VDM", "Video Direct Mail")],
+        default="THANK_YOU",
     )
 
     def validate_charity_id(self, value):
@@ -35,7 +35,7 @@ class DonationIngestSerializer(serializers.Serializer):
         return value
 
     def validate_campaign_type(self, value):
-        if value == Campaign.CampaignType.VDM:
+        if value == "VDM":
             raise serializers.ValidationError(
                 "VDM ingestion is only supported via CSV batch upload."
             )

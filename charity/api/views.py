@@ -19,10 +19,19 @@ from charity.utils.access_control import get_accessible_jobs, get_authorized_cha
 
 def _resolve_campaign(charity, campaign_type):
     """Return the first active campaign matching *campaign_type*, or None."""
+    if campaign_type == "VDM":
+        mode_filter = {"campaign_mode": Campaign.CampaignMode.VDM}
+    else:  # THANK_YOU
+        mode_filter = {
+            "campaign_mode__in": [
+                Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
+                Campaign.CampaignMode.THANK_YOU_STANDARD,
+            ]
+        }
     return Campaign.objects.filter(
         charity=charity,
-        campaign_type=campaign_type,
         status="active",
+        **mode_filter,
     ).first()
 
 
