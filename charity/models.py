@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import uuid
+from datetime import date
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -554,13 +557,39 @@ class VideoTemplate(models.Model):
 CAMPAIGN_TYPE_CHOICES = [("THANK_YOU", "Thank You"), ("VDM", "Video Direct Mail")]
 
 
-class Campaign(models.Model):
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("active", "Active"),
-        ("closed", "Closed"),
-    ]
+class CampaignQuerySet(models.QuerySet):
+    """Date-aware queryset helpers for Campaign."""
 
+    def _today(self) -> date:
+        return date.today()
+
+    def active(self) -> CampaignQuerySet:
+        """Campaigns whose date window is live and that are not paused."""
+        today = self._today()
+        return self.filter(
+            campaign_start__lte=today,
+            campaign_end__gte=today,
+            is_paused=False,
+        )
+
+    def upcoming(self) -> CampaignQuerySet:
+        """Campaigns that haven't started yet and are not paused."""
+        today = self._today()
+        return self.filter(campaign_start__gt=today, is_paused=False)
+
+    def closed(self) -> CampaignQuerySet:
+        """Campaigns whose end date has passed."""
+        return self.filter(campaign_end__lt=self._today())
+
+    def accepting_donations(self) -> CampaignQuerySet:
+        """Active + upcoming campaigns — not closed, not paused."""
+        return self.filter(campaign_end__gte=self._today(), is_paused=False)
+
+
+CampaignManager = models.Manager.from_queryset(CampaignQuerySet)
+
+
+class Campaign(models.Model):
     class CampaignMode(models.TextChoices):
         THANK_YOU_PERSONALIZED = "THANK_YOU_PERSONALIZED", "Thank You — Personalized (TTS + stitch)"
         THANK_YOU_STANDARD = "THANK_YOU_STANDARD", "Thank You — Standard (pre-rendered)"
@@ -576,7 +605,10 @@ class Campaign(models.Model):
     campaign_start = models.DateField()
     campaign_end = models.DateField()
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    is_paused = models.BooleanField(
+        default=False,
+        help_text="Manually suspend this campaign regardless of dates. Paused campaigns are treated as closed for donation ingestion.",
+    )
 
     campaign_mode = models.CharField(
         max_length=30,
@@ -716,12 +748,27 @@ class Campaign(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    objects: CampaignManager = CampaignManager()
+
     def __str__(self):
         return self.name
 
     @property
-    def is_active(self):
-        return self.status == "active"
+    def status(self) -> str:
+        """Computed status string for display — never stored in the database."""
+        today = date.today()
+        if self.campaign_end < today:
+            return "closed"
+        if self.is_paused:
+            return "paused"
+        if self.campaign_start > today:
+            return "upcoming"
+        return "active"
+
+    @property
+    def is_active(self) -> bool:
+        today = date.today()
+        return not self.is_paused and self.campaign_start <= today <= self.campaign_end
 
 
 class CampaignField(models.Model):

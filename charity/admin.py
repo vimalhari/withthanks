@@ -75,7 +75,6 @@ def create_default_campaign(
             campaign_code=f"PC-{charity.id}-{year}",
             campaign_start=timezone.now().date(),
             campaign_end=timezone.now().date() + datetime.timedelta(days=365),
-            status="active",
         )
         created += 1
     if created:
@@ -486,12 +485,12 @@ class CampaignAdmin(ModelAdmin):
     list_display = (
         "name",
         "charity",
-        "status",
-        "campaign_mode",
         "campaign_start",
         "campaign_end",
+        "is_paused",
+        "campaign_mode",
     )
-    list_filter = ("status", "campaign_mode")
+    list_filter = ("is_paused", "campaign_mode")
     search_fields = ("name", "charity__charity_name", "campaign_code")
     readonly_fields = ("id", "created_at")
     warn_unsaved_tabs = True
@@ -505,7 +504,6 @@ class CampaignAdmin(ModelAdmin):
                     "name",
                     "charity",
                     "campaign_code",
-                    "status",
                     "created_at",
                 )
             },
@@ -525,6 +523,7 @@ class CampaignAdmin(ModelAdmin):
                 "fields": (
                     "campaign_start",
                     "campaign_end",
+                    "is_paused",
                 )
             },
         ),

@@ -96,27 +96,24 @@ CAMPAIGNS: dict[str, list[dict]] = {
             "campaign_mode": "THANK_YOU_PERSONALIZED",
             "campaign_start": date(2025, 3, 1),
             "campaign_end": date(2025, 5, 31),
-            "status": "closed",
             "description": "Spring fundraising campaign targeting regular donors.",
         },
         {
             "name": "Summer Giving 2025",
             "campaign_code": "GE-2025-SUM",
             "campaign_mode": "THANK_YOU_PERSONALIZED",
-            "campaign_start": date(2025, 6, 1),
-            "campaign_end": date(2025, 8, 31),
-            "status": "active",
+            "campaign_start": date(2026, 6, 1),
+            "campaign_end": date(2026, 8, 31),
             "description": "Summer campaign with video personalisation.",
         },
     ],
     "bright_futures": [
         {
-            "name": "Education Fund 2025",
+            "name": "Education Fund 2026",
             "campaign_code": "BF-2025-EDU",
             "campaign_mode": "THANK_YOU_PERSONALIZED",
-            "campaign_start": date(2025, 1, 15),
-            "campaign_end": date(2025, 6, 30),
-            "status": "active",
+            "campaign_start": date(2026, 1, 15),
+            "campaign_end": date(2026, 6, 30),
             "description": "Annual education fund campaign.",
         },
         {
@@ -125,7 +122,6 @@ CAMPAIGNS: dict[str, list[dict]] = {
             "campaign_mode": "VDM",
             "campaign_start": date(2025, 1, 1),
             "campaign_end": date(2025, 3, 31),
-            "status": "closed",
             "description": "Direct mail video campaign Q1.",
         },
     ],
@@ -312,7 +308,6 @@ class Command(BaseCommand):
                 campaign_mode=data["campaign_mode"],
                 campaign_start=data["campaign_start"],
                 campaign_end=data["campaign_end"],
-                status=data["status"],
                 description=data.get("description", ""),
             )
         else:
@@ -329,7 +324,6 @@ class Command(BaseCommand):
             campaign.campaign_mode = data["campaign_mode"]
             campaign.campaign_start = data["campaign_start"]
             campaign.campaign_end = data["campaign_end"]
-            campaign.status = data["status"]
             campaign.description = data.get("description", "")
             campaign.save()
 

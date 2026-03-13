@@ -28,9 +28,8 @@ def _resolve_campaign(charity, campaign_type):
                 Campaign.CampaignMode.THANK_YOU_STANDARD,
             ]
         }
-    return Campaign.objects.filter(
+    return Campaign.objects.accepting_donations().filter(
         charity=charity,
-        status="active",
         **mode_filter,
     ).first()
 

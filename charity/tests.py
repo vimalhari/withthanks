@@ -225,7 +225,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-001",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
@@ -278,7 +277,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-005",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
             vdm_email_body=(
                 "Welcome to {{ campaign_name }} from {{ charity_name }}.\n\n"
@@ -341,7 +339,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-006",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
             email_thumbnail=thumbnail,
         )
@@ -392,7 +389,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-007",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
@@ -486,7 +482,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-008",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
@@ -525,7 +520,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-002",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
 
@@ -559,7 +553,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-003",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
@@ -598,7 +591,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="VDM-004",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
         Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
@@ -639,7 +631,6 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_code="WT-001",
             campaign_start=date.today(),
             campaign_end=date.today(),
-            status="active",
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
         Campaign.objects.filter(pk=campaign.pk).update(
@@ -801,7 +792,6 @@ class TrackingSecurityTests(TestCase):
             campaign_code="TRK-001",
             campaign_start=today,
             campaign_end=today,
-            status="active",
             campaign_mode=Campaign.CampaignMode.VDM,
         )
         self.batch = DonationBatch.objects.create(charity=self.charity, campaign=self.campaign)

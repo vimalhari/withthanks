@@ -58,7 +58,19 @@
                             <span class="font-bold text-sm text-emerald-600">{{ cp.play_rate }}%</span>
                         </div>
                     </td>
-                    <td><span class="badge badge-success">Active</span></td>
+                    <td>
+                        {% with status=cp.status %}
+                        {% if status == "active" %}
+                        <span class="badge badge-success">Active</span>
+                        {% elif status == "upcoming" %}
+                        <span class="badge badge-info">Upcoming</span>
+                        {% elif status == "paused" %}
+                        <span class="badge badge-warning">Paused</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Closed</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
                     <td class="text-right">
                         <button class="btn-secondary btn-sm"><i data-lucide="eye" class="w-4 h-4"></i></button>
                     </td>

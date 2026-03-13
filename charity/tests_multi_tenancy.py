@@ -85,7 +85,6 @@ class MultiTenancyIsolationTest(TestCase):
             campaign_code="A-001",
             campaign_start=today,
             campaign_end=today,
-            status="active",
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
         self.campaign_b = Campaign.objects.create(
@@ -94,7 +93,6 @@ class MultiTenancyIsolationTest(TestCase):
             campaign_code="B-001",
             campaign_start=today,
             campaign_end=today,
-            status="active",
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
 

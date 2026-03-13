@@ -835,10 +835,9 @@ def sync_charity_blackbaud(self, charity_id: int):
         return {"charity_id": charity_id, "created": 0}
 
     # Resolve the active campaign for thank-you sends
-    campaign = Campaign.objects.filter(
+    campaign = Campaign.objects.accepting_donations().filter(
         charity=charity,
         campaign_type=Campaign.CampaignType.THANK_YOU,
-        status="active",
     ).first()
 
     batch = DonationBatch.objects.create(
