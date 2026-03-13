@@ -20,20 +20,22 @@ def preserve_manual_closes(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0077_replace_campaign_type_with_campaign_mode'),
+        ("charity", "0077_replace_campaign_type_with_campaign_mode"),
     ]
 
     operations = [
         migrations.RunPython(preserve_manual_closes, migrations.RunPython.noop),
         migrations.RemoveField(
-            model_name='campaign',
-            name='status',
+            model_name="campaign",
+            name="status",
         ),
         migrations.AddField(
-            model_name='campaign',
-            name='is_paused',
-            field=models.BooleanField(default=False, help_text='Manually suspend this campaign regardless of dates. Paused campaigns are treated as closed for donation ingestion.'),
+            model_name="campaign",
+            name="is_paused",
+            field=models.BooleanField(
+                default=False,
+                help_text="Manually suspend this campaign regardless of dates. Paused campaigns are treated as closed for donation ingestion.",
+            ),
         ),
     ]

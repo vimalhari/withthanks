@@ -28,10 +28,14 @@ def _resolve_campaign(charity, campaign_type):
                 Campaign.CampaignMode.THANK_YOU_STANDARD,
             ]
         }
-    return Campaign.objects.accepting_donations().filter(
-        charity=charity,
-        **mode_filter,
-    ).first()
+    return (
+        Campaign.objects.accepting_donations()
+        .filter(
+            charity=charity,
+            **mode_filter,
+        )
+        .first()
+    )
 
 
 class DonationIngestAPIView(APIView):

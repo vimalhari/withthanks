@@ -157,9 +157,13 @@ def send_email_wizard(request):
 
     if not selected_charity:
         selected_charity = get_accessible_charities(request.user).order_by("id").first()
-    campaigns = get_accessible_campaigns(request.user).filter(
-        charity=selected_charity,
-    ).accepting_donations()
+    campaigns = (
+        get_accessible_campaigns(request.user)
+        .filter(
+            charity=selected_charity,
+        )
+        .accepting_donations()
+    )
 
     if request.method == "POST":
         if step == 4 and method == "bulk" and "csv_file" in request.FILES:
