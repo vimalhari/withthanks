@@ -646,6 +646,12 @@ class Campaign(models.Model):
         null=True,
         help_text="Gratitude Video (Thank You Campaign — sent to repeat donors within cooldown window)",
     )
+    email_thumbnail = models.ImageField(
+        upload_to=get_client_media_path,
+        blank=True,
+        null=True,
+        help_text="Thumbnail image shown in donor emails and linked to the video landing page",
+    )
 
     video_template_override = models.FileField(
         upload_to=get_client_media_path,

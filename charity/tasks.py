@@ -21,6 +21,7 @@ from .services.video_pipeline_service import (
     build_tracking_urls,
     get_or_upload_campaign_stream,
     resolve_public_video_url,
+    resolve_storage_video_url,
     stream_safe_upload,
 )
 from .utils.csv_rows import build_csv_recipient_name, get_csv_row_value
@@ -35,6 +36,13 @@ DEFAULT_VDM_EMAIL_BODY = (
     "Check out our latest campaign video to see what we've been up to.\n\n"
     "Your support makes everything possible. Let's make a difference together!"
 )
+
+
+def _resolve_campaign_email_image(*, campaign, mode: str, fallback_image: str) -> str:
+    """Return the storage path to the campaign email thumbnail or the mode fallback."""
+    if campaign and campaign.email_thumbnail:
+        return campaign.email_thumbnail.name
+    return fallback_image
 
 
 def cleanup_intermediate(files, final_file):
@@ -106,13 +114,22 @@ def validate_and_prep_job(self, job_id):
     is_card_only = False
     template_name = "withthanks.html"
     server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com").rstrip("/")
-    image_url = f"{settings.MEDIA_URL}email_templates/thankyou.png"
+    image_url = "email_templates/thankyou.png"
 
     if mode == "VDM":
         template_name = "vdm.html"
-        image_url = f"{settings.MEDIA_URL}email_templates/vdm_banner.png"
+        image_url = _resolve_campaign_email_image(
+            campaign=campaign,
+            mode=mode,
+            fallback_image="email_templates/vdm_banner.png",
+        )
 
     elif mode == "WithThanks":
+        image_url = _resolve_campaign_email_image(
+            campaign=campaign,
+            mode=mode,
+            fallback_image=image_url,
+        )
         # 30-day dedup check — uses the compound index added in migration 0059
         thirty_days_ago = now() - timedelta(days=30)
         has_recent_video = DonationJob.objects.filter(
@@ -316,7 +333,9 @@ def dispatch_email_for_job(self, context):
         )
         client = job.charity
         campaign = job.campaign
-        full_image_url = f"{server_url}{image_url}"
+        full_image_url = resolve_storage_video_url(storage_path=image_url, server_url=server_url)
+        if not full_image_url and image_url:
+            full_image_url = f"{server_url}/{image_url.lstrip('/')}"
 
         # --- Cloudflare Stream upload --------------------------------------- #
         if mode == "VDM":
@@ -336,6 +355,7 @@ def dispatch_email_for_job(self, context):
             )
 
         cf_stream_url = stream_delivery.playback_url or None
+        thumbnail_url = full_image_url or stream_delivery.thumbnail_url or None
         video_url_link = resolve_public_video_url(
             final_video_path=final_video_path,
             stream_delivery=stream_delivery,
@@ -378,7 +398,7 @@ def dispatch_email_for_job(self, context):
             "donation_amount": job.donation_amount,
             "organization_name": client.organization_name,
             "from_email": client.contact_email,
-            "image_url": full_image_url,
+            "image_url": thumbnail_url,
             "video_url": video_url_link,
             "cf_stream_url": cf_stream_url,
             "is_video_card": is_card_only,

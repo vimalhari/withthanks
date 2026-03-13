@@ -12,6 +12,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -317,6 +318,68 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("Welcome to Custom Copy Campaign from", html)
         self.assertIn("We made this update for Jane.", html)
         self.assertNotIn("We are excited to share some amazing updates with you!", html)
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    def test_vdm_uses_campaign_email_thumbnail_as_clickable_image(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        thumbnail = SimpleUploadedFile(
+            "vdm-thumb.gif",
+            (
+                b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+                b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                b"\x00\x02\x02D\x01\x00;"
+            ),
+            content_type="image/gif",
+        )
+        vdm_campaign = Campaign.objects.create(
+            name="Thumbnail Campaign",
+            client=self.charity_a,
+            campaign_code="VDM-006",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.VDM,
+            input_source=Campaign.InputSource.CSV,
+            video_mode=Campaign.VideoMode.TEMPLATE,
+            email_thumbnail=thumbnail,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=7,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Thumbnail Donor",
+            email="thumb@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn('src="http://127.0.0.1:8000/media/', html)
+        self.assertIn("vdm-thumb", html)
+        self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
 
     def test_batch_process_csv_fails_fast_for_vdm_campaign_without_video(self):
         from charity.tasks import batch_process_csv

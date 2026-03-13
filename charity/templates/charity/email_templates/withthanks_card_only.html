@@ -1,170 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thank You from {{ organization_name }}</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Thank you from {{ organization_name }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #f4f5f7; 
-            margin: 0; 
-            padding: 0; 
-            -webkit-font-smoothing: antialiased;
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #edf1f4;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #243342;
+        }
+        table {
+            border-spacing: 0;
+            border-collapse: collapse;
+        }
+        td {
+            padding: 0;
+        }
+        img {
+            border: 0;
+            display: block;
+            line-height: 100%;
+            max-width: 100%;
+            height: auto;
         }
         .wrapper {
             width: 100%;
-            table-layout: fixed;
-            background-color: #f4f5f7;
-            padding: 40px 0;
+            background-color: #edf1f4;
         }
-        .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background-color: #ffffff; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-            overflow: hidden; 
+        .container {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            background-color: #ffffff;
         }
-        .header { 
-            text-align: center; 
-            background-color: #ffffff; 
+        .preheader {
+            display: none;
+            font-size: 1px;
+            color: #edf1f4;
+            line-height: 1px;
+            max-height: 0;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            mso-hide: all;
         }
-        .header img { 
-            width: 100%; 
-            max-width: 600px; 
-            height: auto; 
-            display: block; 
-            border-bottom: 1px solid #f0f0f0;
+        .section-padding {
+            padding: 40px 48px;
         }
-        .content { 
-            padding: 45px 40px; 
-            color: #334155; 
-            line-height: 1.7; 
-            font-size: 16px; 
-            text-align: center;
+        .eyebrow {
+            font-size: 12px;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #5f7386;
         }
-        h2 {
-            color: #0f172a;
-            font-size: 24px;
-            font-weight: 700;
-            margin-top: 0;
-            margin-bottom: 20px;
+        .headline {
+            font-size: 28px;
+            line-height: 36px;
+            font-weight: bold;
+            color: #13202b;
         }
-        p {
-            margin: 0 0 20px 0;
+        .body-copy {
+            font-size: 16px;
+            line-height: 26px;
+            color: #425466;
         }
-        .highlight { 
-            color: #0f172a; 
-            font-weight: 600; 
-        }
-        .card-message { 
-            background-color: #f8fafc; 
-            padding: 30px; 
-            border-radius: 12px; 
-            border: 1px dashed #cbd5e1; 
-            margin: 30px 0; 
+        .message-panel {
+            background-color: #f6f8fa;
+            border: 1px solid #d7e0e8;
         }
         .cta-button {
-            display: inline-block; 
-            background-color: #0f172a; 
-            color: #ffffff; 
-            padding: 14px 28px; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            font-weight: 600; 
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: #1f4f78;
+            color: #ffffff;
+            text-decoration: none;
             font-size: 15px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
-            transition: all 0.2s ease;
-            margin-top: 15px;
+            line-height: 15px;
+            font-weight: bold;
+            border-radius: 4px;
         }
-        .cta-button:hover {
-            background-color: #1e293b;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
-        }
-        .video-card-image {
-            max-width: 100%; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            margin-top: 20px;
-            transition: transform 0.2s ease;
-        }
-        .video-card-image:hover {
-            transform: translateY(-2px);
-        }
-        .footer { 
-            background-color: #f8fafc; 
-            padding: 30px 40px; 
-            text-align: center; 
-            font-size: 13px; 
-            color: #94a3b8; 
-            border-top: 1px solid #e2e8f0;
-        }
-        .footer p {
-            margin: 0 0 8px 0;
-        }
-        .unsubscribe-link {
-            color: #94a3b8; 
+        .secondary-link {
+            color: #1f4f78;
             text-decoration: underline;
         }
-        @media screen and (max-width: 600px) {
-            .wrapper { padding: 20px 10px; }
-            .content { padding: 30px 20px; }
-            .card-message { padding: 20px 15px; }
-            .cta-button { display: block; width: auto; }
+        .footer-copy {
+            font-size: 13px;
+            line-height: 20px;
+            color: #667788;
+        }
+        @media screen and (max-width: 640px) {
+            .section-padding {
+                padding: 28px 20px;
+            }
+            .headline {
+                font-size: 24px;
+                line-height: 31px;
+            }
+            .mobile-button {
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            .mobile-center {
+                text-align: center !important;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="preheader">A thank-you note from {{ organization_name }}.</div>
     <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display:none;" alt="" />
-    
-    <div class="wrapper">
-        <div class="container">
-            <div class="header">
-                <img src="{{ image_url }}" alt="Thank You Card">
-            </div>
-            
-            <div class="content">
-                <h2>Thank You, {{ donor_name }}! ❤️</h2>
-                
-                <div class="card-message">
-                    <p>We noticed you recently received a video message from us, but we couldn't let your new donation of <span class="highlight">{{ donation_amount }}</span> go unnoticed!</p>
-                    <p>Please accept this digital thank-you card as a heartfelt token of our continued appreciation.</p>
-                    
-                    {% if video_url %}
-                        {% if is_video_card %}
-                        <div style="margin-top: 25px;">
-                            <a href="{{ tracking_click_url }}" class="cta-button">▶ Watch Gratitude Video</a>
-                            <p style="font-size: 12px; color: #64748b; margin-top: 15px;">
-                                (Or click here: <a href="{{ tracking_click_url }}" style="color: #64748b;">{{ video_url }}</a>)
-                            </p>
-                        </div>
-                        {% else %}
-                        <div style="margin-top: 25px;">
-                            <a href="{{ tracking_click_url }}">
-                                <img src="{{ video_url }}" alt="Gratitude Card" class="video-card-image">
-                            </a>
-                        </div>
-                        {% endif %}
+
+    <table role="presentation" class="wrapper" width="100%">
+        <tr>
+            <td align="center" style="padding: 24px 12px;">
+                <table role="presentation" class="container" width="100%" style="max-width: 640px; border: 1px solid #d7e0e8;">
+                    {% if image_url %}
+                    <tr>
+                        <td>
+                            <img src="{{ image_url }}" alt="Thank you from {{ organization_name }}" width="640" style="width: 100%; max-width: 640px;">
+                        </td>
+                    </tr>
                     {% endif %}
-                </div>
-                
-                <p>Your support to <strong style="color: #0f172a;">{{ organization_name }}</strong> takes us one step closer to our goals.</p>
-            </div>
-            
-            <div class="footer">
-                <p>Sent with ❤️ by <strong>{{ organization_name }}</strong></p>
-                <p>{{ from_email }}</p>
-                
-                {% if unsubscribe_url %}
-                <p style="margin-top: 20px; font-size: 12px;">
-                    <a href="{{ unsubscribe_url }}" class="unsubscribe-link">Unsubscribe</a> from these updates.
-                </p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+                    <tr>
+                        <td class="section-padding" style="padding: 40px 48px 24px; text-align: center;">
+                            <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>
+                            <div class="headline" style="margin-bottom: 18px;">Thank you, {{ donor_name }}</div>
+                            <div class="body-copy">
+                                <p style="margin: 0;">We noticed you recently received a message from us, and we wanted to acknowledge your new donation of <strong style="color: #13202b;">{{ donation_amount }}</strong> with a separate note of thanks.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="section-padding" style="padding: 0 48px 32px;">
+                            <table role="presentation" class="message-panel" width="100%" style="width: 100%; background-color: #f6f8fa; border: 1px solid #d7e0e8;">
+                                <tr>
+                                    <td class="section-padding mobile-center" style="padding: 28px 32px; text-align: center;">
+                                        <div style="font-size: 16px; line-height: 25px; color: #425466; margin-bottom: 16px;">Please accept this digital thank-you card as a token of our continued appreciation for your support of <strong style="color: #13202b;">{{ organization_name }}</strong>.</div>
+                                        {% if video_url %}
+                                            {% if is_video_card %}
+                                            <a href="{{ tracking_click_url|default:video_url }}" class="cta-button mobile-button">View thank-you message</a>
+                                            <div style="font-size: 13px; line-height: 20px; color: #667788; margin-top: 16px;">If the button does not open, use this link: <a href="{{ tracking_click_url|default:video_url }}" class="secondary-link">Open your message</a></div>
+                                            {% else %}
+                                            <a href="{{ tracking_click_url|default:video_url }}" style="display: inline-block; margin-top: 6px;">
+                                                <img src="{{ video_url }}" alt="Thank-you card" width="480" style="width: 100%; max-width: 480px; border: 1px solid #d7e0e8;">
+                                            </a>
+                                            <div style="font-size: 13px; line-height: 20px; color: #667788; margin-top: 14px;">Open the full card: <a href="{{ tracking_click_url|default:video_url }}" class="secondary-link">View online</a></div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="section-padding" style="padding: 0 48px 28px; text-align: center;">
+                            <div class="body-copy">Your support brings us one step closer to our goals, and we are grateful for it.</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0 48px 40px;">
+                            <table role="presentation" width="100%" style="width: 100%; border-top: 1px solid #d7e0e8;">
+                                <tr>
+                                    <td style="padding-top: 24px; text-align: center;" class="footer-copy">
+                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">{{ organization_name }}</div>
+                                        <div style="margin-bottom: 12px;">{{ from_email }}</div>
+                                        {% if unsubscribe_url %}
+                                        <div><a href="{{ unsubscribe_url }}" class="secondary-link" style="color: #667788;">Unsubscribe</a> from these updates.</div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
