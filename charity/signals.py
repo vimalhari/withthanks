@@ -21,12 +21,7 @@ def cleanup_charity_media(sender, instance, **kwargs):
     Delete individual media files attached to a Charity row when it is deleted.
     Also removes the per-charity media folder if it exists.
     """
-    for field in (instance.default_template_video, instance.gratitude_card):
-        if field:
-            try:
-                field.delete(save=False)
-            except Exception as exc:
-                logger.warning("cleanup_charity_media: could not delete %s: %s", field.name, exc)
+    # No file fields remain on Charity after video defaults were moved to Campaign.
 
     charity_dir = os.path.join(settings.MEDIA_ROOT, "charities", f"charity_{instance.id}")
     if os.path.isdir(charity_dir):

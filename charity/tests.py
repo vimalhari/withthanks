@@ -106,13 +106,10 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             video_mode=Campaign.VideoMode.PERSONALIZED,
+            voiceover_script="Hello A {{donor_name}}",
         )
-        self.charity_a.default_voiceover_script = "Hello A {{donor_name}}"
         # Provide a fake base video path (os.path.exists is mocked True in tests)
-        self.charity_a.save()
-        Charity.objects.filter(pk=self.charity_a.pk).update(
-            default_template_video="test/fake_video_a.mp4"
-        )
+        Campaign.objects.filter(pk=self.campaign_a.pk).update(base_video="test/fake_video_a.mp4")
 
         self.campaign_b = Campaign.objects.create(
             name="Campaign B",
@@ -120,12 +117,9 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             video_mode=Campaign.VideoMode.PERSONALIZED,
+            voiceover_script="Hello B {{donor_name}}",
         )
-        self.charity_b.default_voiceover_script = "Hello B {{donor_name}}"
-        self.charity_b.save()
-        Charity.objects.filter(pk=self.charity_b.pk).update(
-            default_template_video="test/fake_video_b.mp4"
-        )
+        Campaign.objects.filter(pk=self.campaign_b.pk).update(base_video="test/fake_video_b.mp4")
 
         # Jobs for A — must link campaign so is_personalized is reachable
         self.batch_a = DonationBatch.objects.create(
@@ -666,7 +660,10 @@ class VideoProcessingIsolationTests(TestCase):
             input_source=Campaign.InputSource.CSV,
             video_mode=Campaign.VideoMode.PERSONALIZED,
         )
-        Campaign.objects.filter(pk=campaign.pk).update(gratitude_video="test/fake_gratitude.mp4")
+        Campaign.objects.filter(pk=campaign.pk).update(
+            gratitude_video="test/fake_gratitude.mp4",
+            base_video="test/fake_video_a.mp4",
+        )
         campaign.refresh_from_db()
 
         batch = DonationBatch.objects.create(

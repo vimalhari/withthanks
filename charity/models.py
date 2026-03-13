@@ -16,16 +16,6 @@ class Charity(models.Model):
         null=True,
         help_text="Optional public website URL shown in donor email footers",
     )
-    default_template_video = models.FileField(
-        upload_to=get_charity_media_path, blank=True, null=True, help_text="fallback MP4"
-    )
-    gratitude_card = models.FileField(
-        upload_to=get_charity_media_path,
-        blank=True,
-        null=True,
-        help_text="Gratitude card (Video or Image)",
-    )
-
     # Billing Information
     billing_email = models.EmailField(
         blank=True, null=True, help_text="Override contact email for invoices"
@@ -54,15 +44,6 @@ class Charity(models.Model):
         blank=True,
         null=True,
         help_text="Timestamp of the last successful donation sync from Raiser's Edge; used as the incremental cursor",
-    )
-
-    # Defaults used by processing pipeline
-    default_voiceover_script = models.TextField(
-        blank=True,
-        help_text="Default script with placeholders {{donor_name}}, {{donation_amount}}, {{charity_name}}",
-    )
-    default_voice_id = models.CharField(
-        max_length=128, blank=True, help_text="Default ElevenLabs voice ID"
     )
 
     # User Access
@@ -666,14 +647,18 @@ class Campaign(models.Model):
         help_text="Thumbnail image shown in donor emails and linked to the video landing page",
     )
 
-    video_template_override = models.FileField(
+    base_video = models.FileField(
         upload_to=get_charity_media_path,
         blank=True,
         null=True,
-        help_text="Override the default template video",
+        help_text="Base template video for personalised (TTS+stitch) campaigns",
     )
-    voiceover_script_override = models.TextField(
-        blank=True, help_text="Override the default charity voiceover script"
+    voiceover_script = models.TextField(
+        blank=True,
+        help_text="Voiceover script with {{donor_name}}, {{donation_amount}}, {{charity_name}} placeholders",
+    )
+    voice_id = models.CharField(
+        max_length=128, blank=True, help_text="ElevenLabs voice ID for this campaign"
     )
 
     # Personalization Settings (derived from video_mode — not a DB column)

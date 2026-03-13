@@ -110,10 +110,8 @@ def validate_and_prep_job(self, job_id):
     if campaign:
         if mode == "VDM" and campaign.charity_video:
             base_video_path = campaign.charity_video.name
-        elif campaign.video_template_override:
-            base_video_path = campaign.video_template_override.name
-    if not base_video_path and client and client.default_template_video:
-        base_video_path = client.default_template_video.name
+        elif campaign.base_video:
+            base_video_path = campaign.base_video.name
 
     # Per-mode template / image defaults
     is_card_only = False
@@ -210,8 +208,6 @@ def generate_video_for_job(self, context):
                 card_r2_key = None
                 if campaign and campaign.gratitude_video:
                     card_r2_key = campaign.gratitude_video.name
-                elif client and client.gratitude_card:
-                    card_r2_key = client.gratitude_card.name
                 if card_r2_key:
                     local_card = download_base_video_to_tmp(card_r2_key)
                     intermediate_files.append(local_card)
@@ -225,11 +221,7 @@ def generate_video_for_job(self, context):
                             f"Base video template missing for stitching Job {job_id}"
                         )
 
-                    raw_script = ""
-                    if campaign and campaign.voiceover_script_override:
-                        raw_script = campaign.voiceover_script_override
-                    elif client and client.default_voiceover_script:
-                        raw_script = client.default_voiceover_script
+                    raw_script = campaign.voiceover_script if campaign else ""
 
                     # Download base video from R2 to /tmp/.
                     local_base = download_base_video_to_tmp(base_video_path)
@@ -241,7 +233,7 @@ def generate_video_for_job(self, context):
                         charity_name=client.charity_name,
                         campaign_name=campaign.name if campaign else "",
                         voiceover_script=raw_script or None,
-                        voice_id=client.default_voice_id or "",
+                        voice_id=(campaign.voice_id if campaign else "") or "",
                         base_video_path=local_base,
                     )
                     final_video_path, tts_path = build_personalized_video(spec)
@@ -268,8 +260,8 @@ def generate_video_for_job(self, context):
                         is_card_only = True
                         template_name = "withthanks_card_only.html"
                         card_r2_key = (
-                            client.gratitude_card.name
-                            if (client and client.gratitude_card)
+                            campaign.gratitude_video.name
+                            if (campaign and campaign.gratitude_video)
                             else None
                         )
                         if card_r2_key:

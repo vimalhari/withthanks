@@ -135,18 +135,6 @@ class CharityAdmin(ModelAdmin):
             },
         ),
         (
-            "Video Defaults",
-            {
-                "classes": ("collapse",),
-                "fields": (
-                    "default_voice_id",
-                    "default_voiceover_script",
-                    "default_template_video",
-                    "gratitude_card",
-                ),
-            },
-        ),
-        (
             "Blackbaud Raiser's Edge NXT",
             {
                 "classes": ("collapse",),
@@ -561,8 +549,9 @@ class CampaignAdmin(ModelAdmin):
                     "cf_stream_video_url",
                     "charity_video",
                     "gratitude_video",
-                    "video_template_override",
-                    "voiceover_script_override",
+                    "base_video",
+                    "voiceover_script",
+                    "voice_id",
                 ),
             },
         ),
