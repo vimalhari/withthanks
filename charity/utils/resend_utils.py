@@ -56,8 +56,11 @@ def send_video_email(
     subject: str | None = None,
     html: str | None = None,
     from_email: str | None = None,
+    video_url: str | None = None,
     is_card_only: bool = False,
 ) -> dict[str, Any]:
+
+    video_extensions = {".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv"}
 
     _ensure_api_key()
 
@@ -72,16 +75,20 @@ def send_video_email(
         file = Path(file_path)
         if not file.exists() or not file.is_file():
             logger.warning(f"Video file not found at {file_path}, falling back to card mode.")
-            is_card_only = True
+            is_card_only = is_card_only or not video_url
+            file = None
+        elif file.suffix.lower() in video_extensions:
+            logger.info(
+                "Skipping local video attachment for %s; email delivery is link-only.", file
+            )
             file = None
     else:
-        is_card_only = True
+        is_card_only = is_card_only or not video_url
 
     server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com")
 
-    # video_url is used only as a fallback when no Stream URL is available;
-    # the caller should prefer passing an html kwarg with Cloud Stream URLs.
-    video_url = ""
+    # video_url is used only as a fallback when no custom HTML is supplied.
+    video_url = video_url or ""
 
     tracking_pixel_url = f"{server_url}/track/email/{job_id}/"
     unsubscribe_url = f"{server_url}/charity/unsubscribe/{job_id}/"
@@ -178,11 +185,11 @@ def send_video_email(
             # BUT we need to update the HTML to reference 'cid:filename'.
 
             is_image_ext = file.name.lower().endswith((".png", ".jpg", ".jpeg", ".gif"))
-            if is_image_ext and html and video_url in html:
+            if is_image_ext and video_url and params["html"] and video_url in params["html"]:
                 # The HTML references the video_url. We should swap it for cid:
                 # This makes localhost testing work perfectly as the image is embedded.
                 cid_id = f"image-{file.name}"
-                params["html"] = html.replace(video_url, f"cid:{cid_id}")
+                params["html"] = params["html"].replace(video_url, f"cid:{cid_id}")
 
                 params["attachments"] = [
                     {

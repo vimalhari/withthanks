@@ -78,11 +78,7 @@ def _should_send_gratitude(
 
 
 def _build_template_video_path(campaign: Campaign, use_gratitude_template: bool) -> str:
-    """
-    Download a campaign template video from R2 to a ``/tmp/`` path and return it.
-
-    The caller is responsible for deleting the returned path after use.
-    """
+    """Download a campaign template video and return ``(tmp_path, public_url)``."""
     from charity.utils.video_utils import download_base_video_to_tmp
 
     template_obj = (
@@ -90,8 +86,11 @@ def _build_template_video_path(campaign: Campaign, use_gratitude_template: bool)
     )
     if not template_obj or not template_obj.video_file:
         raise ValueError("Campaign template video is not configured.")
+    public_url = ""
+    with contextlib.suppress(Exception):
+        public_url = template_obj.video_file.url
     r2_key = template_obj.video_file.name
-    return download_base_video_to_tmp(r2_key)
+    return download_base_video_to_tmp(r2_key), public_url
 
 
 def _resolve_script_and_voice(campaign: Campaign, gratitude_mode: bool) -> tuple[str | None, str]:
@@ -117,7 +116,7 @@ def _build_personalized_video(
     Build a personalised donor video.
 
     Returns ``(tmp_video_path, r2_url)``:
-    - ``tmp_video_path`` — local ``/tmp/`` path for Stream upload / email attachment.
+    - ``tmp_video_path`` — local ``/tmp/`` path for Stream upload.
     - ``r2_url`` — permanent cloud URL stored in ``VideoSendLog.video_file``.
 
     The caller is responsible for deleting ``tmp_video_path`` after use.
@@ -197,9 +196,8 @@ def dispatch_donation_video(
     if gratitude_mode:
         if campaign.gratitude_video_template:
             send_kind = VideoSendLog.SendKind.GRATITUDE
-            tmp_video_path = _build_template_video_path(campaign, use_gratitude_template=True)
-            r2_video_url = (
-                tmp_video_path  # template videos already live in R2; use tmp path for delivery
+            tmp_video_path, r2_video_url = _build_template_video_path(
+                campaign, use_gratitude_template=True
             )
         else:
             send_kind = VideoSendLog.SendKind.GRATITUDE
@@ -212,8 +210,9 @@ def dispatch_donation_video(
             )
     elif campaign.video_mode == Campaign.VideoMode.TEMPLATE:
         send_kind = VideoSendLog.SendKind.TEMPLATE
-        tmp_video_path = _build_template_video_path(campaign, use_gratitude_template=False)
-        r2_video_url = tmp_video_path
+        tmp_video_path, r2_video_url = _build_template_video_path(
+            campaign, use_gratitude_template=False
+        )
     else:
         send_kind = VideoSendLog.SendKind.PERSONALIZED
         tmp_video_path, r2_video_url = _build_personalized_video(
@@ -229,15 +228,19 @@ def dispatch_donation_video(
         tmp_video_path,
         meta_name=f"{charity.name} - {donor.email}",
     )
+    public_video_url = stream_result.playback_url if stream_result else r2_video_url
 
     try:
         provider_resp = send_video_email(
             to_email=donor.email,
-            file_path=tmp_video_path,
+            file_path=None,
             job_id=str(donation.id),
             donor_name=donor.full_name or donor.email,
             donation_amount=str(amount),
-            organization_name=charity.name,
+            organization_name=charity.organization_name or charity.name,
+            subject=campaign.name,
+            from_email=campaign.from_email or charity.contact_email,
+            video_url=public_video_url,
         )
         message_id = provider_resp.get("id", "") if isinstance(provider_resp, dict) else ""
         log = VideoSendLog.objects.create(

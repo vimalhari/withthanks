@@ -9,16 +9,18 @@ production logic is defined in exactly one place.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 import tempfile
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from django.utils import timezone
 
 from charity.utils.filenames import safe_filename
-from charity.utils.video_utils import stitch_voice_and_overlay
+from charity.utils.video_utils import concat_intro_to_base, generate_intro_clip
 from charity.utils.voiceover_utils import generate_voiceover
 
 if TYPE_CHECKING:
@@ -136,17 +138,27 @@ def build_personalized_video(spec: VideoSpec) -> tuple[str, str]:
         voice_id=spec.voice_id,
     )
 
-    # --- Stitch video --------------------------------------------------- #
-    # Write output to an isolated /tmp/ directory — nothing goes to MEDIA_ROOT.
+    # --- Build intro and prepend to template ---------------------------- #
+    # Write outputs to an isolated /tmp/ directory — nothing goes to MEDIA_ROOT.
     tmp_output_dir = tempfile.mkdtemp(prefix="wt_video_")
-    output_path, _elapsed = stitch_voice_and_overlay(
-        input_video=input_video,
+    intro_path = generate_intro_clip(
+        template_video=input_video,
         tts_mp3=voiceover_path,
-        overlay_text=spec.overlay_text if spec.overlay_text is not None else text,
-        out_filename=f"{file_base}.mp4",
+        caption_text=spec.overlay_text if spec.overlay_text is not None else text,
+        out_filename=f"{file_base}_intro.mp4",
         output_dir=tmp_output_dir,
-        intro_duration=spec.intro_duration,
         logo_path=spec.logo_path,
     )
+
+    try:
+        output_path = concat_intro_to_base(
+            intro_clip=intro_path,
+            base_video=input_video,
+            out_filename=f"{file_base}.mp4",
+            output_dir=tmp_output_dir,
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            Path(intro_path).unlink()
 
     return output_path, voiceover_path

@@ -214,7 +214,6 @@ def generate_video_for_job(self, context):
                         voiceover_script=raw_script or None,
                         voice_id=client.default_voice_id or "",
                         base_video_path=local_base,
-                        overlay_text="",
                     )
                     final_video_path, tts_path = build_personalized_video(spec)
                     intermediate_files.append(tts_path)
@@ -394,13 +393,14 @@ def dispatch_email_for_job(self, context):
         try:
             resend_response = send_video_email(
                 to_email=job.email,
-                file_path=final_video_path,
+                file_path=None,
                 job_id=str(job.id),
                 donor_name=job.donor_name,
                 donation_amount=job.donation_amount,
                 from_email=client.contact_email,
                 organization_name=client.organization_name,
                 subject=subject,
+                video_url=video_url_link,
                 is_card_only=is_card_only,
                 html=email_html,
             )

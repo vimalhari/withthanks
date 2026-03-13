@@ -2,6 +2,7 @@ import tempfile
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.conf import settings
@@ -136,12 +137,20 @@ class VideoProcessingIsolationTests(TestCase):
         "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
     )
     @patch("charity.services.video_build_service.generate_voiceover")
-    @patch("charity.services.video_build_service.stitch_voice_and_overlay")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.stream_safe_upload", return_value=None)
     @patch("os.path.exists")
     def test_processing_isolation(
-        self, mock_exists, mock_stream, mock_send, mock_stitch, mock_tts, mock_upload
+        self,
+        mock_exists,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        mock_upload,
     ):
         """Verify that jobs for different charities use their respective templates/branding"""
         from charity.tasks import (
@@ -152,7 +161,8 @@ class VideoProcessingIsolationTests(TestCase):
 
         mock_exists.return_value = True
         mock_tts.return_value = "/tmp/tts.mp3"
-        mock_stitch.return_value = ("/tmp/final.mp4", 10)
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
         mock_send.return_value = {"id": "test-resend-id"}
 
         # Process Job A through all 3 stages
@@ -163,6 +173,7 @@ class VideoProcessingIsolationTests(TestCase):
         # Verify Job A used Script A and Sender A
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
         self.assertEqual(mock_send.call_args[1]["from_email"], "a@charity.org")
+        self.assertIsNone(mock_send.call_args[1]["file_path"])
 
         # Reset mocks
         mock_tts.reset_mock()
@@ -176,3 +187,132 @@ class VideoProcessingIsolationTests(TestCase):
         # Verify Job B used Script B and Sender B
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])
         self.assertEqual(mock_send.call_args[1]["from_email"], "b@charity.org")
+        self.assertIsNone(mock_send.call_args[1]["file_path"])
+
+
+class VideoDispatchServiceTests(TestCase):
+    def setUp(self):
+        self.charity = Charity.objects.create(
+            client_name="Dispatch Charity",
+            contact_email="ops@charity.org",
+            organization_name="Dispatch Org",
+        )
+        self.campaign = Campaign.objects.create(
+            name="Dispatch Campaign",
+            client=self.charity,
+            campaign_code="DSP-001",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            status="active",
+            campaign_type=Campaign.CampaignType.THANK_YOU,
+            input_source=Campaign.InputSource.API,
+            video_mode=Campaign.VideoMode.PERSONALIZED,
+            from_email="campaign@charity.org",
+        )
+
+    @patch("charity.services.video_dispatch_service.os.remove")
+    @patch("charity.services.video_dispatch_service.send_video_email")
+    @patch("charity.services.video_dispatch_service.stream_safe_upload")
+    @patch("charity.services.video_dispatch_service._build_personalized_video")
+    def test_dispatch_donation_video_prefers_stream_url_in_email(
+        self,
+        mock_build_video,
+        mock_stream_upload,
+        mock_send_email,
+        mock_remove,
+    ):
+        from charity.services.video_dispatch_service import dispatch_donation_video
+
+        mock_build_video.return_value = (
+            "/tmp/final.mp4",
+            "https://r2.example.com/videos/final.mp4",
+        )
+        mock_stream_upload.return_value = SimpleNamespace(
+            video_id="stream-123",
+            playback_url="https://stream.example.com/videos/stream-123",
+            thumbnail_url="https://stream.example.com/videos/stream-123/thumb.jpg",
+        )
+        mock_send_email.return_value = {"id": "resend-123"}
+
+        result = dispatch_donation_video(
+            charity=self.charity,
+            donor_email="donor@example.com",
+            donor_name="Donor Name",
+            amount=Decimal("25.00"),
+        )
+
+        self.assertEqual(result.stream_playback_url, "https://stream.example.com/videos/stream-123")
+        self.assertEqual(result.video_path, "https://r2.example.com/videos/final.mp4")
+        self.assertTrue(mock_remove.called)
+        mock_send_email.assert_called_once()
+        self.assertEqual(
+            mock_send_email.call_args.kwargs["video_url"],
+            "https://stream.example.com/videos/stream-123",
+        )
+        self.assertIsNone(mock_send_email.call_args.kwargs["file_path"])
+        self.assertEqual(mock_send_email.call_args.kwargs["from_email"], "campaign@charity.org")
+        self.assertEqual(mock_send_email.call_args.kwargs["organization_name"], "Dispatch Org")
+        self.assertEqual(mock_send_email.call_args.kwargs["subject"], "Dispatch Campaign")
+
+    @patch("charity.services.video_dispatch_service.os.remove")
+    @patch("charity.services.video_dispatch_service.send_video_email")
+    @patch("charity.services.video_dispatch_service.stream_safe_upload", return_value=None)
+    @patch("charity.services.video_dispatch_service._build_template_video_path")
+    def test_dispatch_donation_video_falls_back_to_template_public_url(
+        self,
+        mock_build_template,
+        mock_stream_upload,
+        mock_send_email,
+        mock_remove,
+    ):
+        from charity.services.video_dispatch_service import dispatch_donation_video
+
+        self.campaign.video_mode = Campaign.VideoMode.TEMPLATE
+        self.campaign.save(update_fields=["video_mode"])
+
+        mock_build_template.return_value = (
+            "/tmp/template.mp4",
+            "https://cdn.example.com/templates/template.mp4",
+        )
+        mock_send_email.return_value = {"id": "resend-456"}
+
+        result = dispatch_donation_video(
+            charity=self.charity,
+            donor_email="donor@example.com",
+            donor_name="Donor Name",
+            amount=Decimal("10.00"),
+        )
+
+        self.assertEqual(result.video_path, "https://cdn.example.com/templates/template.mp4")
+        mock_send_email.assert_called_once()
+        self.assertEqual(
+            mock_send_email.call_args.kwargs["video_url"],
+            "https://cdn.example.com/templates/template.mp4",
+        )
+        self.assertIsNone(mock_send_email.call_args.kwargs["file_path"])
+
+
+@override_settings(RESEND_API_KEY="test-resend-key", DEFAULT_FROM_EMAIL="noreply@example.com")
+class ResendUtilsTests(TestCase):
+    @patch("charity.utils.resend_utils.resend.Emails.send", return_value={"id": "resend-789"})
+    def test_send_video_email_skips_local_video_attachment(self, mock_resend_send):
+        from charity.utils.resend_utils import send_video_email
+
+        temp_dir = Path(tempfile.mkdtemp())
+        local_video = temp_dir / "local-video.mp4"
+        local_video.write_bytes(b"fake-video")
+
+        send_video_email(
+            to_email="donor@example.com",
+            file_path=str(local_video),
+            job_id="job-123",
+            donor_name="Donor",
+            donation_amount="20",
+            organization_name="WithThanks",
+            from_email="sender@example.com",
+            video_url="https://stream.example.com/videos/stream-123",
+        )
+
+        params = mock_resend_send.call_args.args[0]
+        self.assertNotIn("attachments", params)
+        self.assertIn("https://stream.example.com/videos/stream-123", params["html"])

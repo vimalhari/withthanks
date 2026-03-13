@@ -1,5 +1,8 @@
+import contextlib
+import json
 import logging
 import subprocess
+import textwrap
 import time
 import uuid
 from pathlib import Path
@@ -194,6 +197,244 @@ def get_video_duration_ffmpeg(video_path: str | Path) -> float:
     except Exception as e:
         logger.error(f"Error getting video duration: {e}")
         return 0.0
+
+
+def _parse_frame_rate(raw_value: str | None) -> float:
+    if not raw_value:
+        return 30.0
+
+    try:
+        numerator, denominator = raw_value.split("/", 1)
+        denominator_value = float(denominator)
+        if denominator_value == 0:
+            return 30.0
+        return float(numerator) / denominator_value
+    except Exception:
+        with contextlib.suppress(Exception):
+            return float(raw_value)
+        return 30.0
+
+
+def _probe_media_streams(media_path: str | Path) -> dict[str, int | float | str]:
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_streams",
+        "-of",
+        "json",
+        str(media_path),
+    ]
+    result = subprocess.run(cmd, text=True, capture_output=True, check=True)
+    payload = json.loads(result.stdout)
+    streams = payload.get("streams", [])
+
+    video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
+    audio_stream = next((item for item in streams if item.get("codec_type") == "audio"), None)
+    if not video_stream or not audio_stream:
+        raise ValueError(f"Expected video and audio streams in {media_path}")
+
+    return {
+        "width": int(video_stream.get("width") or 1280),
+        "height": int(video_stream.get("height") or 720),
+        "fps": _parse_frame_rate(
+            video_stream.get("avg_frame_rate") or video_stream.get("r_frame_rate")
+        ),
+        "pix_fmt": str(video_stream.get("pix_fmt") or "yuv420p"),
+        "video_codec": str(video_stream.get("codec_name") or ""),
+        "sample_rate": int(audio_stream.get("sample_rate") or 48000),
+        "channels": int(audio_stream.get("channels") or 2),
+        "audio_codec": str(audio_stream.get("codec_name") or ""),
+    }
+
+
+def _build_drawtext_lines(text: str) -> str:
+    wrapped = textwrap.fill(text.strip(), width=28) if text.strip() else ""
+    return escape_drawtext(wrapped).replace("\n", r"\n")
+
+
+def _select_intro_video_encoder(video_codec: str) -> str:
+    if video_codec and video_codec != "h264":
+        raise ValueError(
+            "Personalized intro prepend requires H.264 template videos for stream-copy concat. "
+            f"Found codec: {video_codec or 'unknown'}"
+        )
+
+    if getattr(settings, "USE_GPU", False):
+        return "h264_nvenc"
+    return "libx264"
+
+
+def _select_intro_audio_encoder(audio_codec: str) -> str:
+    if audio_codec and audio_codec != "aac":
+        raise ValueError(
+            "Personalized intro prepend requires AAC template audio for stream-copy concat. "
+            f"Found codec: {audio_codec or 'unknown'}"
+        )
+    return "aac"
+
+
+def generate_intro_clip(
+    *,
+    template_video: str | Path,
+    tts_mp3: str | Path,
+    caption_text: str,
+    out_filename: str,
+    output_dir: str | Path,
+    logo_path: str | None = None,
+    overlay_spec: dict | None = None,
+) -> str:
+    """
+    Build a short intro clip for the donor-specific TTS.
+
+    The intro is encoded to match the base template's stream parameters closely
+    enough that it can be concatenated in front of the template without
+    re-encoding the full template video.
+    """
+    template_path = Path(template_video)
+    tts_path = Path(tts_mp3)
+    if not template_path.exists():
+        raise FileNotFoundError(f"Template video missing: {template_path}")
+    if not tts_path.exists():
+        raise FileNotFoundError(f"TTS file missing: {tts_path}")
+
+    stream_info = _probe_media_streams(template_path)
+    duration = max(get_video_duration_ffmpeg(tts_path) + 0.25, 0.5)
+    fps = round(float(stream_info["fps"]), 3)
+    width = int(stream_info["width"])
+    height = int(stream_info["height"])
+
+    spec = overlay_spec or {}
+    fontsize = spec.get("fontsize", 44)
+    fontcolor = spec.get("fontcolor", "white")
+    x_pos = spec.get("x", "(w-text_w)/2")
+    y_pos = spec.get("y", "h-text_h-180")
+    box = spec.get("box", 1)
+    boxcolor = spec.get("boxcolor", "black@0.6")
+    boxborderw = spec.get("boxborderw", 15)
+    bg_color = spec.get("background", "black")
+
+    safe_text = _build_drawtext_lines(caption_text)
+    font_candidates = [
+        "C:/Windows/Fonts/arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]
+    font = next((candidate for candidate in font_candidates if Path(candidate).exists()), "")
+    font_arg = f"fontfile='{fix_windows_fontpath(font)}':" if font else ""
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    intro_path = output_dir / out_filename
+
+    filter_complex = [
+        (
+            f'[0:v]drawtext=text="{safe_text}":{font_arg}'
+            f"fontsize={fontsize}:fontcolor={fontcolor}:x={x_pos}:y={y_pos}:"
+            f"box={box}:boxcolor={boxcolor}:boxborderw={boxborderw}[v_text]"
+        )
+    ]
+    final_video_label = "[v_text]"
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c={bg_color}:s={width}x{height}:r={fps}:d={duration}",
+        "-i",
+        str(tts_path),
+    ]
+
+    if logo_path and Path(logo_path).exists():
+        cmd.extend(["-i", str(logo_path)])
+        filter_complex.append("[2:v]scale=150:-1[logo_scaled]")
+        filter_complex.append("[v_text][logo_scaled]overlay=main_w-overlay_w-20:20[v_out]")
+        final_video_label = "[v_out]"
+
+    cmd.extend(
+        [
+            "-filter_complex",
+            ";".join(filter_complex),
+            "-map",
+            final_video_label,
+            "-map",
+            "1:a:0",
+            "-c:v",
+            _select_intro_video_encoder(str(stream_info["video_codec"])),
+            "-preset",
+            "fast" if getattr(settings, "USE_GPU", False) else "ultrafast",
+            "-pix_fmt",
+            str(stream_info["pix_fmt"]),
+            "-c:a",
+            _select_intro_audio_encoder(str(stream_info["audio_codec"])),
+            "-ar",
+            str(stream_info["sample_rate"]),
+            "-ac",
+            str(stream_info["channels"]),
+            "-shortest",
+            "-movflags",
+            "+faststart",
+            str(intro_path),
+        ]
+    )
+
+    proc = subprocess.run(cmd, text=True, capture_output=True)
+    if proc.returncode != 0:
+        logger.error(proc.stderr)
+        raise RuntimeError(proc.stderr)
+
+    return str(intro_path)
+
+
+def concat_intro_to_base(
+    *,
+    intro_clip: str | Path,
+    base_video: str | Path,
+    out_filename: str,
+    output_dir: str | Path,
+) -> str:
+    """Prepend an intro clip to the base template without re-encoding the template."""
+    intro_path = Path(intro_clip)
+    base_path = Path(base_video)
+    if not intro_path.exists():
+        raise FileNotFoundError(f"Intro clip missing: {intro_path}")
+    if not base_path.exists():
+        raise FileNotFoundError(f"Base video missing: {base_path}")
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    final_path = output_dir / out_filename
+    concat_file = output_dir / f"{final_path.stem}_concat.txt"
+    concat_file.write_text(
+        f"file '{intro_path.as_posix()}'\nfile '{base_path.as_posix()}'\n",
+        encoding="utf-8",
+    )
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_file),
+        "-c",
+        "copy",
+        "-movflags",
+        "+faststart",
+        str(final_path),
+    ]
+    proc = subprocess.run(cmd, text=True, capture_output=True)
+    with contextlib.suppress(Exception):
+        concat_file.unlink()
+
+    if proc.returncode != 0:
+        logger.error(proc.stderr)
+        raise RuntimeError(proc.stderr)
+
+    return str(final_path)
 
 
 def merge_video_audio_no_reencode(
