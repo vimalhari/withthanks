@@ -126,6 +126,13 @@
                         </td>
                     </tr>
                     {% endif %}
+                    {% if charity_logo_url %}
+                    <tr>
+                        <td align="center" style="padding: 32px 48px 0;">
+                            <img src="{{ charity_logo_url }}" alt="{{ charity_name }} logo" width="160" style="width: auto; max-width: 160px; max-height: 72px; margin: 0 auto; object-fit: contain;">
+                        </td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td class="section-padding" style="padding: 40px 48px 28px;">
                             <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>

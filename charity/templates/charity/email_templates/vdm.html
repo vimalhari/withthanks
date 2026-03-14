@@ -131,6 +131,13 @@
                     <tr>
                         <td class="top-rule" style="height: 5px; background-color: #8a6c45;"></td>
                     </tr>
+                    {% if charity_logo_url %}
+                    <tr>
+                        <td align="center" style="padding: 28px 46px 0;">
+                            <img src="{{ charity_logo_url }}" alt="{{ charity_name }} logo" width="160" style="width: auto; max-width: 160px; max-height: 72px; margin: 0 auto; object-fit: contain;">
+                        </td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td class="section-padding" style="padding: 34px 46px 18px;">
                             <div class="headline">{{ greeting_line }},</div>

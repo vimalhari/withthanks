@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
+from django.core.files.storage import default_storage
 from django.db.models import Count, Q, QuerySet
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
@@ -49,6 +51,62 @@ from .utils.batch_uploads import create_and_enqueue_csv_batch
 # ---------------------------------------------------------------------------
 # Charity & Members
 # ---------------------------------------------------------------------------
+
+ALLOWED_LOGO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+MAX_LOGO_FILE_SIZE = 2 * 1024 * 1024
+
+
+def _resolve_admin_file_preview_url(file_value) -> str:
+    if not file_value or not getattr(file_value, "name", ""):
+        return ""
+
+    resolved_url = resolve_storage_video_url(
+        storage_path=file_value.name,
+        server_url=settings.SERVER_BASE_URL,
+    )
+    if resolved_url:
+        return resolved_url
+
+    try:
+        fallback_url = file_value.url
+    except ValueError:
+        return ""
+
+    if ".r2.cloudflarestorage.com" in fallback_url:
+        return ""
+    return fallback_url
+
+
+def _delete_storage_asset(storage_path: str) -> None:
+    if not storage_path:
+        return
+
+    try:
+        default_storage.delete(storage_path)
+    except Exception:
+        pass
+
+
+class CharityAdminForm(forms.ModelForm):
+    class Meta:
+        model = Charity
+        fields = "__all__"
+
+    def clean_logo(self):
+        logo = self.cleaned_data.get("logo")
+        if not logo:
+            return logo
+
+        extension = Path(logo.name).suffix.lower()
+        if extension not in ALLOWED_LOGO_EXTENSIONS:
+            raise forms.ValidationError(
+                "Upload a PNG, JPG, JPEG, GIF, or WEBP image for the charity logo."
+            )
+
+        if logo.size > MAX_LOGO_FILE_SIZE:
+            raise forms.ValidationError("Logo files must be 2 MB or smaller.")
+
+        return logo
 
 
 class CharityMemberInline(TabularInline):
@@ -119,6 +177,7 @@ def resubscribe_selected_donors(
 
 @admin.register(Charity)
 class CharityAdmin(ModelAdmin):
+    form = CharityAdminForm
     list_display = ("charity_name", "contact_email", "created_at")
     search_fields = ("charity_name", "contact_email")
     warn_unsaved_tabs = True
@@ -130,6 +189,7 @@ class CharityAdmin(ModelAdmin):
         "blackbaud_token_expires_at",
         "blackbaud_last_synced_at",
         "blackbaud_crm_status",
+        "logo_preview",
     )
     fieldsets = (
         (
@@ -141,6 +201,15 @@ class CharityAdmin(ModelAdmin):
                     "contact_email",
                     "contact_phone",
                     "company_number",
+                )
+            },
+        ),
+        (
+            "Branding",
+            {
+                "fields": (
+                    "logo",
+                    "logo_preview",
                 )
             },
         ),
@@ -245,6 +314,38 @@ class CharityAdmin(ModelAdmin):
             "</a>",
             connect_url,
         )
+
+    @admin.display(description="Logo preview")
+    def logo_preview(self, obj):
+        if not obj or not obj.logo:
+            return "No logo uploaded."
+
+        preview_url = _resolve_admin_file_preview_url(obj.logo)
+        if not preview_url:
+            return "Logo uploaded, but no public preview URL is available."
+
+        return format_html(
+            '<a href="{url}" target="_blank" rel="noopener">'
+            '<img src="{url}" alt="{name} logo" '
+            'style="display:block;max-width:220px;max-height:100px;object-fit:contain;'
+            'border:1px solid #d5d7da;border-radius:6px;background:#fff;padding:8px;">'
+            "</a>",
+            url=preview_url,
+            name=obj.charity_name,
+        )
+
+    def save_model(self, request, obj, form, change):
+        previous_logo_name = ""
+        if change and obj.pk:
+            previous_logo_name = (
+                Charity.objects.filter(pk=obj.pk).values_list("logo", flat=True).first()
+            )
+
+        super().save_model(request, obj, form, change)
+
+        current_logo_name = obj.logo.name if obj.logo else ""
+        if previous_logo_name and previous_logo_name != current_logo_name:
+            _delete_storage_asset(previous_logo_name)
 
 
 @admin.register(CharityMember)

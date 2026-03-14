@@ -14,6 +14,12 @@ class Charity(models.Model):
     # CHARITY MODEL (MINIMAL & FINAL)
     charity_name = models.CharField(max_length=255)
     contact_email = models.EmailField()
+    logo = models.ImageField(
+        upload_to=get_charity_media_path,
+        blank=True,
+        null=True,
+        help_text="Optional charity logo used in settings previews and donor emails",
+    )
     website_url = models.URLField(
         blank=True,
         null=True,

@@ -45,6 +45,7 @@ def logout_view(request):
 @login_required(login_url="charity_login")
 def profile_view(request):
     current_charity = get_active_charity(request)
+
     return render(
         request,
         "profile.html",

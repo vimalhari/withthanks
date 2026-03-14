@@ -370,6 +370,12 @@ def dispatch_email_for_job(self, context):
             return {"status": "skipped", "job_id": job_id}
 
         full_image_url = resolve_storage_video_url(storage_path=image_url, server_url=server_url)
+        charity_logo_url = ""
+        if client and client.logo:
+            charity_logo_url = resolve_storage_video_url(
+                storage_path=client.logo.name,
+                server_url=server_url,
+            )
 
         # --- Cloudflare Stream upload --------------------------------------- #
         if mode == "VDM":
@@ -435,6 +441,7 @@ def dispatch_email_for_job(self, context):
             "donation_amount": job.donation_amount,
             "charity_name": client.charity_name,
             "charity_website_url": client.website_url,
+            "charity_logo_url": charity_logo_url,
             "image_url": thumbnail_url,
             "video_url": video_url_link,
             "cf_stream_url": cf_stream_url,

@@ -44,6 +44,18 @@ def build_stream_delivery(video_id: str = "stream-123") -> StreamDelivery:
     )
 
 
+def build_test_image_upload(name: str = "logo.gif") -> SimpleUploadedFile:
+    return SimpleUploadedFile(
+        name,
+        (
+            b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+            b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+            b"\x00\x02\x02D\x01\x00;"
+        ),
+        content_type="image/gif",
+    )
+
+
 class MultiTenantIsolationTests(TestCase):
     def setUp(self):
         # Create two users/charities
@@ -503,6 +515,68 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn('src="https://videodelivery.net/stream-thumb/thumbnails/thumbnail.jpg', html)
         self.assertNotIn('src="http://127.0.0.1:8000/media/', html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
+
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload")
+    @patch("charity.tasks.resolve_storage_video_url")
+    @patch("os.path.exists")
+    def test_withthanks_email_includes_public_charity_logo_without_replacing_banner(
+        self,
+        mock_exists,
+        mock_resolve_storage_url,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        _mock_upload,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-logo")
+        mock_tts.return_value = "/tmp/tts.mp3"
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        self.charity_a.logo = build_test_image_upload("charity-logo.gif")
+        self.charity_a.save(update_fields=["logo"])
+        self.campaign_a.email_thumbnail = build_test_image_upload("campaign-banner.gif")
+        self.campaign_a.save(update_fields=["email_thumbnail"])
+        self.charity_a.refresh_from_db()
+        self.campaign_a.refresh_from_db()
+
+        resolved_urls = {
+            self.charity_a.logo.name: f"https://assets.example.com/{self.charity_a.logo.name}",
+            self.campaign_a.email_thumbnail.name: (
+                f"https://assets.example.com/{self.campaign_a.email_thumbnail.name}"
+            ),
+        }
+        mock_resolve_storage_url.side_effect = lambda *, storage_path, server_url: (
+            resolved_urls.get(storage_path, "")
+        )
+
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn(f'src="https://assets.example.com/{self.charity_a.logo.name}"', html)
+        self.assertIn(
+            f'src="https://assets.example.com/{self.campaign_a.email_thumbnail.name}"',
+            html,
+        )
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
@@ -1307,6 +1381,74 @@ class CampaignAdminCSVUploadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "This field is required.")
         self.assertEqual(DonationBatch.objects.filter(campaign=self.campaign).count(), 0)
+
+
+@override_settings(
+    MEDIA_ROOT=tempfile.mkdtemp(),
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    },
+)
+class CharityAdminLogoTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.superuser = User.objects.create_superuser(
+            username="admin-logo",
+            email="admin-logo@example.com",
+            password="password123",
+        )
+        self.client.force_login(self.superuser)
+        self.charity = Charity.objects.create(
+            charity_name="Admin Logo Charity",
+            contact_email="logo@example.com",
+        )
+        today = date.today()
+        self.campaign = Campaign.objects.create(
+            name="Admin Logo Campaign",
+            charity=self.charity,
+            campaign_code="LOGO-001",
+            campaign_start=today,
+            campaign_end=today,
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+
+    def test_charity_change_page_shows_logo_upload_field(self):
+        response = self.client.get(reverse("admin:charity_charity_change", args=[self.charity.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="logo"', html=False)
+
+    @patch("charity.admin.resolve_storage_video_url")
+    def test_charity_admin_logo_preview_uses_resolved_storage_url(self, mock_resolve_storage_url):
+        from charity.admin import CharityAdmin
+
+        self.charity.logo = build_test_image_upload("admin-logo.gif")
+        self.charity.save(update_fields=["logo"])
+        mock_resolve_storage_url.return_value = "https://assets.example.com/charity-logo.gif"
+
+        model_admin = CharityAdmin(Charity, admin.site)
+        preview_html = str(model_admin.logo_preview(self.charity))
+
+        self.assertIn("https://assets.example.com/charity-logo.gif", preview_html)
+        self.assertIn("<img", preview_html)
+
+    @patch("charity.admin.default_storage.delete")
+    def test_charity_admin_replacing_logo_deletes_previous_file(self, mock_delete):
+        from charity.admin import CharityAdmin
+
+        self.charity.logo = build_test_image_upload("old-admin-logo.gif")
+        self.charity.save(update_fields=["logo"])
+        previous_logo_name = self.charity.logo.name
+
+        self.charity.logo = build_test_image_upload("new-admin-logo.gif")
+        model_admin = CharityAdmin(Charity, admin.site)
+        request = self.client.request().wsgi_request
+        request.user = self.superuser
+
+        model_admin.save_model(request, self.charity, form=None, change=True)
+
+        mock_delete.assert_called_once_with(previous_logo_name)
 
     @patch(
         "charity.admin.resolve_storage_video_url",
