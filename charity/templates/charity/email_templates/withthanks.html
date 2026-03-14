@@ -1,193 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{{ campaign_name }}</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #edf1f4;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #243342;
-        }
-        table {
-            border-spacing: 0;
-            border-collapse: collapse;
-        }
-        td {
-            padding: 0;
-        }
-        img {
-            border: 0;
-            display: block;
-            line-height: 100%;
-            max-width: 100%;
-            height: auto;
-        }
-        .wrapper {
-            width: 100%;
-            background-color: #edf1f4;
-        }
-        .container {
-            width: 100%;
-            max-width: 640px;
-            margin: 0 auto;
-            background-color: #ffffff;
-        }
-        .preheader {
-            display: none;
-            font-size: 1px;
-            color: #edf1f4;
-            line-height: 1px;
-            max-height: 0;
-            max-width: 0;
-            opacity: 0;
-            overflow: hidden;
-            mso-hide: all;
-        }
-        .section-padding {
-            padding: 40px 48px;
-        }
-        .eyebrow {
-            font-size: 12px;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            color: #5f7386;
-        }
-        .headline {
-            font-size: 28px;
-            line-height: 36px;
-            font-weight: bold;
-            color: #13202b;
-        }
-        .body-copy {
-            font-size: 16px;
-            line-height: 26px;
-            color: #425466;
-        }
-        .cta-panel {
-            background-color: #f6f8fa;
-            border: 1px solid #d7e0e8;
-        }
-        .cta-button {
-            display: inline-block;
-            padding: 14px 28px;
-            background-color: #1f4f78;
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 15px;
-            line-height: 15px;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-        .secondary-link {
-            color: #1f4f78;
-            text-decoration: underline;
-        }
-        .footer-copy {
-            font-size: 13px;
-            line-height: 20px;
-            color: #667788;
-        }
-        @media screen and (max-width: 640px) {
-            .section-padding {
-                padding: 28px 20px;
-            }
-            .headline {
-                font-size: 24px;
-                line-height: 31px;
-            }
-            .mobile-button {
-                display: block !important;
-                width: 100% !important;
-                box-sizing: border-box;
-            }
-            .mobile-center {
-                text-align: center !important;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="preheader">A thank-you message from {{ charity_name }}.</div>
-    <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display:none;" alt="" />
+{% extends "charity/email_templates/_base_campaign_email.html" %}
 
-    <table role="presentation" class="wrapper" width="100%">
-        <tr>
-            <td align="center" style="padding: 24px 12px;">
-                <table role="presentation" class="container" width="100%" style="max-width: 640px; border: 1px solid #d7e0e8;">
-                    {% if image_url %}
-                    <tr>
-                        <td>
-                            <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="640" style="width: 100%; max-width: 640px;">
-                        </td>
-                    </tr>
+{% block preheader_text %}A thank-you message from {{ charity_name }}.{% endblock %}
+
+{% block hero_eyebrow %}<div class="eyebrow">Thank you</div>{% endblock %}
+
+{% block hero_support %}
+<div class="hero-support">Your support helps sustain the work of {{ charity_name }}, and we have prepared a personal message to say thank you.</div>
+{% endblock %}
+
+{% block media_section %}
+{% if primary_cta_url or image_url %}
+<tr>
+    <td class="media-section">
+        <table role="presentation" class="video-card" width="100%">
+            {% if image_url %}
+            <tr>
+                <td>
+                    {% if primary_cta_url %}
+                    <a href="{{ primary_cta_url }}" style="display:block; text-decoration:none;">
+                        <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="620" class="featured-image">
+                    </a>
+                    {% else %}
+                    <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="620" class="featured-image">
                     {% endif %}
-                    {% if charity_logo_url %}
-                    <tr>
-                        <td align="center" style="padding: 32px 48px 0;">
-                            <img src="{{ charity_logo_url }}" alt="{{ charity_name }} logo" width="160" style="width: auto; max-width: 160px; max-height: 72px; margin: 0 auto; object-fit: contain;">
-                        </td>
-                    </tr>
-                    {% endif %}
-                    <tr>
-                        <td class="section-padding" style="padding: 40px 48px 28px;">
-                            <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>
-                            <div class="headline" style="margin-bottom: 20px;">{{ greeting_line }},</div>
-                            <div class="body-copy">
-                                {% if email_body_paragraphs %}
-                                    {% for paragraph in email_body_paragraphs %}
-                                    <p style="margin: 0 0 18px;">{{ paragraph|linebreaksbr }}</p>
-                                    {% endfor %}
-                                {% else %}
-                                <p style="margin: 0 0 18px;">On behalf of <strong style="color: #13202b;">{{ charity_name }}</strong>, thank you for your generous donation of <strong style="color: #13202b;">{{ donation_amount }}</strong>.</p>
-                                <p style="margin: 0;">Your support helps sustain our work, and we have prepared a personal video message to express our appreciation.</p>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% if video_url %}
-                    <tr>
-                        <td class="section-padding" style="padding: 0 48px 32px;">
-                            <table role="presentation" class="cta-panel" width="100%" style="width: 100%; background-color: #f6f8fa; border: 1px solid #d7e0e8;">
-                                <tr>
-                                    <td class="section-padding mobile-center" style="padding: 28px 32px; text-align: center;">
-                                        <div style="font-size: 18px; line-height: 26px; font-weight: bold; color: #13202b; margin-bottom: 10px;">Your video message is ready</div>
-                                        <div style="font-size: 14px; line-height: 22px; color: #5f7386; margin-bottom: 22px;">Use the link below to view your message in your browser.</div>
-                                        <a href="{{ tracking_click_url|default:video_url }}" class="cta-button mobile-button">View video message</a>
-                                        <div style="font-size: 13px; line-height: 20px; color: #667788; margin-top: 18px;">If the button does not open, use this link: <a href="{{ tracking_click_url|default:video_url }}" class="secondary-link">Open your message</a></div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    {% endif %}
-                    <tr>
-                        <td style="padding: 0 48px 40px;">
-                            <table role="presentation" width="100%" style="width: 100%; border-top: 1px solid #d7e0e8;">
-                                <tr>
-                                    <td style="padding-top: 24px;" class="footer-copy">
-                                        <div style="margin-bottom: 4px;">With thanks,</div>
-                                        <div style="font-weight: bold; color: #425466; margin-bottom: 4px;">{{ charity_name }} Team</div>
-                                        {% if charity_website_url %}
-                                        <div style="margin-bottom: 12px;">
-                                            <a href="{{ charity_website_url }}" class="secondary-link" style="color: #667788;">{{ charity_website_url }}</a>
-                                        </div>
-                                        {% endif %}
-                                        {% if unsubscribe_url %}
-                                        <div><a href="{{ unsubscribe_url }}" class="secondary-link" style="color: #667788;">Unsubscribe</a> from these updates.</div>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
+                </td>
+            </tr>
+            {% endif %}
+            {% if primary_cta_url %}
+            <tr>
+                <td class="video-cta-row">
+                    <div class="media-title">Your video message is ready</div>
+                    <div class="media-copy">Use the button below to watch your message in your browser.</div>
+                    <a href="{{ primary_cta_url }}" class="cta-button">View video message</a>
+                    <div class="media-link-copy">If the button does not open, use this link: <a href="{{ primary_cta_url }}" class="secondary-link">Open your message</a></div>
+                </td>
+            </tr>
+            {% endif %}
+        </table>
+    </td>
+</tr>
+{% endif %}
+{% endblock %}
+
+{% block footer_intro %}<div class="footer-intro">With thanks,</div>{% endblock %}
+
+{% block unsubscribe_suffix %} from these updates.{% endblock %}

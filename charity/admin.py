@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,10 +82,8 @@ def _delete_storage_asset(storage_path: str) -> None:
     if not storage_path:
         return
 
-    try:
+    with contextlib.suppress(Exception):
         default_storage.delete(storage_path)
-    except Exception:
-        pass
 
 
 class CharityAdminForm(forms.ModelForm):

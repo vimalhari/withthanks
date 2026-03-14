@@ -47,6 +47,11 @@ DEFAULT_THANK_YOU_EMAIL_BODY = (
     "Your support helps sustain our work, and we have prepared a personal video message to express our appreciation."
 )
 
+DEFAULT_CARD_ONLY_EMAIL_BODY = (
+    "On behalf of {{ charity_name }}, thank you for your generous donation of {{ donation_amount }}.\n\n"
+    "We wanted to acknowledge your latest support with a separate digital thank-you card as a small token of our appreciation."
+)
+
 
 def _resolve_campaign_email_image(*, campaign, mode: str, fallback_image: str) -> str:
     """Return the storage path to the campaign email thumbnail or the mode fallback."""
@@ -445,6 +450,7 @@ def dispatch_email_for_job(self, context):
             "image_url": thumbnail_url,
             "video_url": video_url_link,
             "cf_stream_url": cf_stream_url,
+            "primary_cta_url": tracking.click_url or cf_stream_url or video_url_link,
             "is_video_card": is_card_only,
             "campaign_name": campaign.name if campaign else "WithThanks Campaign",
             "unsubscribe_url": tracking.unsubscribe_url,
@@ -459,11 +465,14 @@ def dispatch_email_for_job(self, context):
                 default_body=DEFAULT_VDM_EMAIL_BODY,
             )
         else:
+            default_body = (
+                DEFAULT_CARD_ONLY_EMAIL_BODY if is_card_only else DEFAULT_THANK_YOU_EMAIL_BODY
+            )
             email_context["email_body_paragraphs"] = build_email_paragraphs(
                 campaign=campaign,
                 job=job,
                 charity_name=client.charity_name,
-                default_body=DEFAULT_THANK_YOU_EMAIL_BODY,
+                default_body=default_body,
             )
         full_template_path = f"charity/email_templates/{template_name}"
         email_html = render_to_string(full_template_path, email_context)

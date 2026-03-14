@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title_text %}{{ campaign_name }}{% endblock %}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #e8f0f5;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #1a2a35;
+            -webkit-font-smoothing: antialiased;
+        }
+        table {
+            border-spacing: 0;
+            border-collapse: collapse;
+        }
+        td {
+            padding: 0;
+        }
+        img {
+            border: 0;
+            display: block;
+            line-height: 100%;
+            max-width: 100%;
+            height: auto;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #e8f0f5;
+        }
+        .container {
+            width: 100%;
+            max-width: 620px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .outer-frame {
+            border: 1px solid #c8dde8;
+        }
+        .preheader {
+            display: none;
+            font-size: 1px;
+            color: #e8f0f5;
+            line-height: 1px;
+            max-height: 0;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            mso-hide: all;
+        }
+        .header-top-rule {
+            height: 4px;
+            background-color: #4da8c0;
+        }
+        .header-band {
+            background-color: #ffffff;
+            border-bottom: 1px solid #d0e8f0;
+        }
+        .header-inner {
+            padding: 28px 48px 26px;
+        }
+        .header-wordmark {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 24px;
+            line-height: 30px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #1a3d52;
+        }
+        .hero-section {
+            background-color: #ffffff;
+            padding: 44px 48px 10px;
+        }
+        .eyebrow {
+            margin: 0 0 14px;
+            font-size: 11px;
+            line-height: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #5e7f91;
+        }
+        .headline {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 38px;
+            line-height: 46px;
+            font-weight: bold;
+            color: #1a3d52;
+            margin: 0 0 8px;
+            letter-spacing: -0.3px;
+        }
+        .headline-rule {
+            width: 40px;
+            height: 2px;
+            background-color: #4da8c0;
+            margin: 20px 0 0;
+        }
+        .hero-support {
+            margin-top: 18px;
+            font-size: 14px;
+            line-height: 24px;
+            color: #5c7584;
+        }
+        .body-section {
+            padding: 0 48px 36px;
+            background-color: #ffffff;
+        }
+        .body-copy {
+            font-size: 15px;
+            line-height: 27px;
+            color: #3a4f5c;
+        }
+        .body-copy p {
+            margin: 0 0 18px;
+        }
+        .media-section {
+            padding: 8px 48px 44px;
+            background-color: #ffffff;
+        }
+        .video-card {
+            background-color: #ffffff;
+            border: 1px solid #d0e8f0;
+            overflow: hidden;
+        }
+        .featured-image {
+            width: 100%;
+            display: block;
+        }
+        .image-frame {
+            padding: 18px;
+            background-color: #f7fbfd;
+        }
+        .image-border {
+            border: 1px solid #d0e8f0;
+            background-color: #ffffff;
+        }
+        .video-cta-row {
+            padding: 20px 24px 24px;
+            background-color: #ffffff;
+            text-align: center;
+            border-top: 1px solid #d0e8f0;
+        }
+        .media-title {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 24px;
+            line-height: 30px;
+            color: #1a3d52;
+            margin: 0 0 10px;
+        }
+        .media-copy {
+            margin: 0 0 20px;
+            font-size: 14px;
+            line-height: 24px;
+            color: #5c7584;
+        }
+        .media-link-copy {
+            margin-top: 16px;
+            font-size: 13px;
+            line-height: 22px;
+            color: #6b8798;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 13px 32px;
+            background-color: #4da8c0;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 11px;
+            line-height: 11px;
+            font-weight: bold;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            border-radius: 2px;
+        }
+        .secondary-link {
+            color: #4da8c0;
+            text-decoration: none;
+            border-bottom: 1px solid #c2dde8;
+        }
+        .ornament-divider {
+            background-color: #ffffff;
+            text-align: center;
+            padding: 0 48px 40px;
+        }
+        .ornament-copy {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 14px;
+            line-height: 14px;
+            color: #b8d4e0;
+            letter-spacing: 6px;
+        }
+        .footer-section {
+            background-color: #f4f8fb;
+            border-top: 1px solid #d0e8f0;
+            padding: 28px 48px 32px;
+        }
+        .footer-intro {
+            margin: 0 0 10px;
+            font-size: 13px;
+            line-height: 22px;
+            color: #5c7584;
+        }
+        .footer-org {
+            font-size: 12px;
+            line-height: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #1a3d52;
+            margin-bottom: 10px;
+        }
+        .footer-rule {
+            height: 1px;
+            background-color: #d0e8f0;
+            margin: 12px 0;
+        }
+        .footer-copy {
+            font-size: 11px;
+            line-height: 20px;
+            color: #7a97a8;
+        }
+        .centered {
+            text-align: center;
+        }
+        @media screen and (max-width: 640px) {
+            .header-inner,
+            .hero-section,
+            .body-section,
+            .media-section,
+            .ornament-divider,
+            .footer-section {
+                padding-left: 24px !important;
+                padding-right: 24px !important;
+            }
+            .headline {
+                font-size: 30px !important;
+                line-height: 38px !important;
+            }
+            .cta-button {
+                display: block !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="preheader">{% block preheader_text %}A message from {{ charity_name }}.{% endblock %}</div>
+    <img src="{{ tracking_pixel_url }}" width="1" height="1" style="display:none;" alt="" />
+
+    <table role="presentation" class="wrapper" width="100%">
+        <tr>
+            <td align="center" style="padding: 32px 16px;">
+                <table role="presentation" class="container outer-frame" width="100%" style="max-width: 620px;">
+                    <tr>
+                        <td class="header-top-rule"></td>
+                    </tr>
+                    <tr>
+                        <td class="header-band">
+                            <div class="header-inner">
+                                {% if charity_logo_url %}
+                                <img src="{{ charity_logo_url }}" alt="{{ charity_name }} logo" width="140" style="width: auto; max-width: 140px; max-height: 60px; object-fit: contain;">
+                                {% else %}
+                                <div class="header-wordmark">{{ charity_name }}</div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="hero-section">
+                            {% block hero_eyebrow %}{% endblock %}
+                            <div class="headline">{% block headline_text %}{{ greeting_line }},{% endblock %}</div>
+                            <div class="headline-rule"></div>
+                            {% block hero_support %}{% endblock %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="body-section">
+                            <div class="body-copy">
+                                {% block body_content %}
+                                {% for paragraph in email_body_paragraphs %}
+                                <p>{{ paragraph|linebreaksbr }}</p>
+                                {% endfor %}
+                                {% endblock %}
+                            </div>
+                        </td>
+                    </tr>
+
+                    {% block media_section %}{% endblock %}
+
+                    <tr>
+                        <td class="ornament-divider">
+                            <span class="ornament-copy">* * *</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="footer-section">
+                            {% block footer_intro %}{% endblock %}
+                            <div class="footer-org">{{ charity_name }}</div>
+                            <div class="footer-rule"></div>
+                            <div class="footer-copy">
+                                {% if charity_website_url %}
+                                <a href="{{ charity_website_url }}" class="footer-link secondary-link">{{ charity_website_url }}</a>{% if unsubscribe_url %}&ensp;&middot;&ensp;{% endif %}
+                                {% endif %}
+                                {% if unsubscribe_url %}
+                                <a href="{{ unsubscribe_url }}" class="footer-link secondary-link">Unsubscribe</a>{% block unsubscribe_suffix %}{% endblock %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

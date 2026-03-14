@@ -410,6 +410,59 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("We made this update for Jane.", html)
         self.assertNotIn("We are excited to share some amazing updates with you!", html)
 
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.get_or_upload_campaign_stream")
+    def test_vdm_email_uses_shared_shell_and_tracking_links(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        vdm_campaign = Campaign.objects.create(
+            name="Shared Shell VDM",
+            charity=self.charity_a,
+            campaign_code="VDM-007",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=8,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Shared Shell Donor",
+            email="shared-vdm@example.com",
+            donation_amount=Decimal("18"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_stream.return_value = build_stream_delivery("stream-shared-vdm")
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn('class="header-top-rule"', html)
+        self.assertIn("Campaign update", html)
+        self.assertIn("Watch the latest update", html)
+        self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
+        self.assertIn('src="http://127.0.0.1:8000/charity/track/open/?t=', html)
+        self.assertIn("Unsubscribe", html)
+
     @override_settings(DEFAULT_FROM_EMAIL="noreply@example.com")
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
@@ -579,6 +632,50 @@ class VideoProcessingIsolationTests(TestCase):
             f'src="https://assets.example.com/{self.campaign_a.email_thumbnail.name}"',
             html,
         )
+
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload")
+    @patch("os.path.exists")
+    def test_withthanks_email_uses_shared_shell_sections(
+        self,
+        mock_exists,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        _mock_upload,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-shared-thanks")
+        mock_tts.return_value = "/tmp/tts.mp3"
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn('class="header-top-rule"', html)
+        self.assertIn("Your video message is ready", html)
+        self.assertIn("View video message", html)
+        self.assertIn("With thanks,", html)
+        self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
+        self.assertNotIn("Unsubscribe", html)
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
@@ -1049,6 +1146,66 @@ class VideoProcessingIsolationTests(TestCase):
 
         self.assertEqual(ctx["mode"], "WithThanks")
         self.assertEqual(ctx["base_video_path"], "test/fake_video_a.mp4")
+
+    @patch("charity.tasks.send_video_email")
+    def test_card_only_email_uses_shared_shell_sections(self, mock_send):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        job = DonationJob.objects.create(
+            donation_batch=self.batch_a,
+            donor_name="Card Only Donor",
+            email="card-only@example.com",
+            donation_amount=Decimal("12"),
+            charity=self.charity_a,
+            campaign=self.campaign_a,
+            media_type_override="image",
+        )
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(job.id)  # type: ignore[attr-defined]
+        self.assertEqual(ctx["template_name"], "withthanks_card_only.html")
+
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn('class="header-top-rule"', html)
+        self.assertIn("A small token of thanks", html)
+        self.assertIn("View thank-you message", html)
+        self.assertIn("With thanks,", html)
+        self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
+        self.assertNotIn("Unsubscribe", html)
+
+    @patch("charity.tasks.send_video_email")
+    def test_card_only_email_uses_card_specific_default_copy(self, mock_send):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        job = DonationJob.objects.create(
+            donation_batch=self.batch_a,
+            donor_name="Card Copy Donor",
+            email="card-copy@example.com",
+            donation_amount=Decimal("12"),
+            charity=self.charity_a,
+            campaign=self.campaign_a,
+            media_type_override="image",
+        )
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn("digital thank-you card", html)
+        self.assertNotIn("personal video message", html)
 
 
 class DonationIngestAPITests(TestCase):
