@@ -19,7 +19,6 @@ require_env() {
 
 if [ "${DJANGO_ENV:-development}" = "production" ]; then
   require_env DJANGO_SECRET_KEY
-  require_env DJANGO_SUPERUSER_PASSWORD
   require_env ALLOWED_HOSTS
   require_env CSRF_TRUSTED_ORIGINS
   require_env DEFAULT_FROM_EMAIL
@@ -55,11 +54,15 @@ if is_true "${SEED_ANALYTICS_ON_START:-false}"; then
   fi
 fi
 
-echo "Ensuring superuser exists..."
-python manage.py ensure_superuser \
-  --username "${DJANGO_SUPERUSER_USERNAME:-admin}" \
-  --email "${DJANGO_SUPERUSER_EMAIL:-admin@withthanks.example.com}" \
-  --password "${DJANGO_SUPERUSER_PASSWORD:-}"
+if [ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
+  echo "Ensuring superuser exists..."
+  python manage.py ensure_superuser \
+    --username "${DJANGO_SUPERUSER_USERNAME:-admin}" \
+    --email "${DJANGO_SUPERUSER_EMAIL:-admin@withthanks.example.com}" \
+    --password "${DJANGO_SUPERUSER_PASSWORD:-}"
+else
+  echo "Skipping superuser bootstrap; DJANGO_SUPERUSER_PASSWORD is not set."
+fi
 
 echo "Starting Gunicorn..."
 exec gunicorn withthanks.wsgi:application \

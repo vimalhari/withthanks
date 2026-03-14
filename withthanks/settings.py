@@ -407,16 +407,29 @@ CLOUDFLARE_STREAM_ENABLED = os.environ.get("CLOUDFLARE_STREAM_ENABLED", "true").
 
 # ------------------------------------------------------------
 # Cloudflare R2 — default object storage (S3-compatible)
-# R2 is now the recommended default.  Set CLOUDFLARE_R2_BUCKET_NAME
-# in your .env to enable.  Falls back to local FileSystemStorage
-# when the bucket name is empty (e.g. quick local development).
+# R2 is now the recommended default. Set the full credential set in your
+# .env to enable it. Falls back to local FileSystemStorage when the R2
+# configuration is absent (e.g. quick local development).
 # ------------------------------------------------------------
 CLOUDFLARE_R2_ACCESS_KEY_ID = os.environ.get("CLOUDFLARE_R2_ACCESS_KEY_ID", "")
 CLOUDFLARE_R2_SECRET_ACCESS_KEY = os.environ.get("CLOUDFLARE_R2_SECRET_ACCESS_KEY", "")
 CLOUDFLARE_R2_BUCKET_NAME = os.environ.get("CLOUDFLARE_R2_BUCKET_NAME", "")
 CLOUDFLARE_R2_ACCOUNT_ID = os.environ.get("CLOUDFLARE_R2_ACCOUNT_ID", "")
 
-_USE_R2 = bool(CLOUDFLARE_R2_BUCKET_NAME)
+_r2_settings = {
+    "CLOUDFLARE_R2_ACCESS_KEY_ID": CLOUDFLARE_R2_ACCESS_KEY_ID,
+    "CLOUDFLARE_R2_SECRET_ACCESS_KEY": CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    "CLOUDFLARE_R2_BUCKET_NAME": CLOUDFLARE_R2_BUCKET_NAME,
+    "CLOUDFLARE_R2_ACCOUNT_ID": CLOUDFLARE_R2_ACCOUNT_ID,
+}
+_has_any_r2_setting = any(_r2_settings.values())
+_missing_r2_settings = [name for name, value in _r2_settings.items() if not value]
+
+if IS_PRODUCTION and _has_any_r2_setting and _missing_r2_settings:
+    missing_names = ", ".join(_missing_r2_settings)
+    raise RuntimeError(f"Incomplete Cloudflare R2 configuration in production: {missing_names}")
+
+_USE_R2 = not _missing_r2_settings
 if _USE_R2:
     # S3-compatible endpoint for Cloudflare R2
     AWS_ACCESS_KEY_ID = CLOUDFLARE_R2_ACCESS_KEY_ID
