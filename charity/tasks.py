@@ -80,6 +80,13 @@ def build_email_paragraphs(*, campaign, job, charity_name: str, default_body: st
     return [paragraph.strip() for paragraph in rendered_body.split("\n\n") if paragraph.strip()]
 
 
+def resolve_sender_email(*, campaign) -> str | None:
+    """Return the configured sender address for outbound email delivery."""
+    if campaign and campaign.from_email:
+        return campaign.from_email
+    return getattr(settings, "DEFAULT_FROM_EMAIL", None)
+
+
 # ---------------------------------------------------------------------------
 # Stage 1 — Validate & Prepare
 # ---------------------------------------------------------------------------
@@ -437,7 +444,7 @@ def dispatch_email_for_job(self, context):
                 job_id=str(job.id),
                 donor_name=job.donor_name,
                 donation_amount=job.donation_amount,
-                from_email=client.contact_email,
+                from_email=resolve_sender_email(campaign=campaign),
                 charity_name=client.charity_name,
                 subject=subject,
                 video_url=video_url_link,

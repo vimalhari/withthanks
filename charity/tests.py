@@ -104,6 +104,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
+            from_email="sender-a@charity.org",
             voiceover_script="Hello A {{donor_name}}",
         )
         # Provide a fake base video path (os.path.exists is mocked True in tests)
@@ -115,6 +116,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
+            from_email="sender-b@charity.org",
             voiceover_script="Hello B {{donor_name}}",
         )
         Campaign.objects.filter(pk=self.campaign_b.pk).update(base_video="test/fake_video_b.mp4")
@@ -184,7 +186,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         # Verify Job A used Script A and Sender A
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
-        self.assertEqual(mock_send.call_args[1]["from_email"], "a@charity.org")
+        self.assertEqual(mock_send.call_args[1]["from_email"], "sender-a@charity.org")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
         self.assertEqual(mock_send.call_args[1]["video_url"], "https://r2.example.com/v.mp4")
 
@@ -199,7 +201,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         # Verify Job B used Script B and Sender B
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])
-        self.assertEqual(mock_send.call_args[1]["from_email"], "b@charity.org")
+        self.assertEqual(mock_send.call_args[1]["from_email"], "sender-b@charity.org")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
         self.assertEqual(mock_send.call_args[1]["video_url"], "https://r2.example.com/v.mp4")
 
@@ -308,6 +310,53 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("Welcome to Custom Copy Campaign from", html)
         self.assertIn("We made this update for Jane.", html)
         self.assertNotIn("We are excited to share some amazing updates with you!", html)
+
+    @override_settings(DEFAULT_FROM_EMAIL="noreply@example.com")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    def test_vdm_falls_back_to_default_from_email_when_campaign_sender_missing(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        vdm_campaign = Campaign.objects.create(
+            name="Default Sender Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-006",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=7,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Fallback Sender",
+            email="fallback@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        self.assertEqual(mock_send.call_args[1]["from_email"], "noreply@example.com")
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
