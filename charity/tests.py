@@ -1053,6 +1053,49 @@ class CampaignAdminCSVUploadTests(TestCase):
         self.assertContains(response, "This field is required.")
         self.assertEqual(DonationBatch.objects.filter(campaign=self.campaign).count(), 0)
 
+    @patch(
+        "charity.admin.resolve_storage_video_url",
+        return_value=(
+            "https://pub-adfa32dd72a346b18b40fbc2bf8fb6fc.r2.dev/"
+            "charities/charity_1/campaign_overrides/admin-thumb.gif"
+        ),
+    )
+    def test_campaign_admin_form_uses_public_media_url_for_thumbnail_preview(
+        self,
+        mock_resolve_storage_url,
+    ):
+        from charity.admin import CampaignAdminForm
+
+        thumbnail = SimpleUploadedFile(
+            "admin-thumb.gif",
+            (
+                b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+                b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                b"\x00\x02\x02D\x01\x00;"
+            ),
+            content_type="image/gif",
+        )
+        self.campaign.email_thumbnail = thumbnail
+        self.campaign.save(update_fields=["email_thumbnail"])
+        self.campaign.refresh_from_db()
+
+        form = CampaignAdminForm(instance=self.campaign)
+        widget_context = form.fields["email_thumbnail"].widget.get_context(
+            "email_thumbnail",
+            self.campaign.email_thumbnail,
+            {},
+        )
+
+        self.assertEqual(
+            widget_context["widget"]["value"].url,
+            "https://pub-adfa32dd72a346b18b40fbc2bf8fb6fc.r2.dev/"
+            "charities/charity_1/campaign_overrides/admin-thumb.gif",
+        )
+        mock_resolve_storage_url.assert_called_once_with(
+            storage_path=self.campaign.email_thumbnail.name,
+            server_url="http://127.0.0.1:8000",
+        )
+
 
 @override_settings(WEBHOOK_SIGNATURE_MAX_AGE_SECONDS=300)
 class WebhookSecurityTests(TestCase):

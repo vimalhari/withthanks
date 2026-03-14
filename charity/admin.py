@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import datetime
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q, QuerySet
@@ -41,6 +43,7 @@ from .models import (
     UnsubscribedUser,
     VideoSendLog,
 )
+from .services.video_pipeline_service import resolve_storage_video_url
 from .utils.batch_uploads import create_and_enqueue_csv_batch
 
 # ---------------------------------------------------------------------------
@@ -491,6 +494,7 @@ class CampaignAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["email_thumbnail"].widget = AdminPublicMediaFileWidget()
         campaign_mode_field = self.fields["campaign_mode"]
         campaign_mode_field.widget.attrs["data-default-help-text"] = self._DEFAULT_MODE_HELP_TEXT
         for mode, help_text in self._MODE_HELP_TEXTS.items():
@@ -502,6 +506,28 @@ class CampaignAdminForm(forms.ModelForm):
             selected_mode,
             self._DEFAULT_MODE_HELP_TEXT,
         )
+
+
+@dataclass(frozen=True)
+class _AdminResolvedFileValue:
+    name: str
+    url: str
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class AdminPublicMediaFileWidget(forms.ClearableFileInput):
+    def get_context(self, name, value, attrs):
+        if value and getattr(value, "name", ""):
+            resolved_url = resolve_storage_video_url(
+                storage_path=value.name,
+                server_url=settings.SERVER_BASE_URL,
+            )
+            if resolved_url:
+                value = _AdminResolvedFileValue(name=value.name, url=resolved_url)
+
+        return super().get_context(name, value, attrs)
 
 
 @admin.register(Campaign)
