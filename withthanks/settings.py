@@ -474,7 +474,11 @@ BLACKBAUD_REDIRECT_URI = os.environ.get(
 # ------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "No Reply <no-reply@example.com>")
 
-if IS_PRODUCTION and DEFAULT_FROM_EMAIL == "No Reply <no-reply@example.com>" and not _is_build_only_command:
+if (
+    IS_PRODUCTION
+    and DEFAULT_FROM_EMAIL == "No Reply <no-reply@example.com>"
+    and not _is_build_only_command
+):
     raise RuntimeError("DEFAULT_FROM_EMAIL must be set in production.")
 
 # ------------------------------------------------------------
