@@ -4,15 +4,19 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from charity.models import (
     Campaign,
     Charity,
     CharityMember,
+    Donation,
     DonationBatch,
     DonationJob,
+    Donor,
     Invoice,
     UnsubscribedUser,
+    VideoSendLog,
 )
 
 
@@ -38,8 +42,6 @@ class MultiTenancyIsolationTest(TestCase):
         )
 
         from datetime import timedelta
-
-        from django.utils import timezone
 
         today = timezone.now().date()
         self.today = today
@@ -94,6 +96,56 @@ class MultiTenancyIsolationTest(TestCase):
             campaign_start=today,
             campaign_end=today,
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
+        )
+
+        donated_at = timezone.now()
+        self.donor_a = Donor.objects.create(
+            charity=self.charity_a,
+            email="donor_a@example.com",
+            full_name="Donor A",
+        )
+        self.donor_b = Donor.objects.create(
+            charity=self.charity_b,
+            email="donor_b@example.com",
+            full_name="Donor B",
+        )
+        self.donation_a = Donation.objects.create(
+            donor=self.donor_a,
+            charity=self.charity_a,
+            amount=Decimal("10.00"),
+            donated_at=donated_at,
+            campaign_type="THANK_YOU",
+            source="CSV",
+        )
+        self.donation_b = Donation.objects.create(
+            donor=self.donor_b,
+            charity=self.charity_b,
+            amount=Decimal("20.00"),
+            donated_at=donated_at,
+            campaign_type="THANK_YOU",
+            source="API",
+        )
+        VideoSendLog.objects.create(
+            charity=self.charity_a,
+            donor=self.donor_a,
+            donation=self.donation_a,
+            campaign=self.campaign_a,
+            campaign_type="THANK_YOU",
+            send_kind=VideoSendLog.SendKind.PERSONALIZED,
+            status=VideoSendLog.Status.SENT,
+            recipient_email=self.donor_a.email,
+            stream_playback_url="https://watch.example.com/a",
+        )
+        VideoSendLog.objects.create(
+            charity=self.charity_b,
+            donor=self.donor_b,
+            donation=self.donation_b,
+            campaign=self.campaign_b,
+            campaign_type="THANK_YOU",
+            send_kind=VideoSendLog.SendKind.PERSONALIZED,
+            status=VideoSendLog.Status.FAILED,
+            recipient_email=self.donor_b.email,
+            error_message="send failed",
         )
 
     def test_dashboard_isolation(self):
@@ -251,3 +303,40 @@ class MultiTenancyIsolationTest(TestCase):
         response = self.client.get(reverse("video_landing", kwargs={"job_id": self.job_a.id}))
 
         self.assertEqual(response.status_code, 200)
+
+    def test_donors_list_isolation(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.get(reverse("donors"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "donor_a@example.com")
+        self.assertNotContains(response, "donor_b@example.com")
+
+    def test_donor_detail_isolation(self):
+        self.client.login(username="user_a", password="password123")
+
+        allowed = self.client.get(reverse("donor_detail", kwargs={"donor_id": self.donor_a.id}))
+        blocked = self.client.get(reverse("donor_detail", kwargs={"donor_id": self.donor_b.id}))
+
+        self.assertEqual(allowed.status_code, 200)
+        self.assertContains(allowed, "GBP 10.00")
+        self.assertEqual(blocked.status_code, 404)
+
+    def test_donations_list_isolation(self):
+        self.client.login(username="user_a", password="password123")
+
+        response = self.client.get(reverse("donations"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "donor_a@example.com")
+        self.assertNotContains(response, "donor_b@example.com")
+        self.assertContains(response, "CSV")
+        self.assertNotContains(response, "send failed")
+
+    def test_donors_view_requires_active_charity_for_superuser(self):
+        self.client.login(username="admin", password="password123")
+
+        response = self.client.get(reverse("donors"))
+
+        self.assertRedirects(response, reverse("dashboard"))

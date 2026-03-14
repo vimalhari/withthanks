@@ -27,6 +27,11 @@ from .views_batch import (
     send_email_wizard,
     upload_csv_and_process,
 )
+from .views_donors import (
+    donations_view,
+    donor_detail_view,
+    donors_view,
+)
 from .views_invoice_actions import (
     invoice_mark_paid,
     invoice_send_email,
@@ -79,6 +84,10 @@ __all__ = [  # noqa: RUF022
     # views_batch
     "batch_detail_view",
     "batch_tracking_report",
+    # views_donors
+    "donations_view",
+    "donor_detail_view",
+    "donors_view",
     "export_donation_report",
     "send_email_wizard",
     "upload_csv_and_process",

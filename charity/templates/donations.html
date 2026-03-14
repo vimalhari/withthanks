@@ -1,0 +1,118 @@
+{% extends 'layouts/admin_layout.html' %}
+
+{% block title %}Donations - WithThanks{% endblock %}
+{% block breadcrumb_parent %}Audience{% endblock %}
+{% block breadcrumb_child %}Donations{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-10">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Donations</h1>
+        <p class="text-gray-400 text-base">Review normalized donation records for {{ current_charity.name }} across CSV and API sources.</p>
+    </div>
+    <a href="{% url 'donors' %}" class="btn-secondary">
+        <i data-lucide="users" class="w-4 h-4"></i> View Donors
+    </a>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="card border-t-4 border-t-brand"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Donations</p><div class="text-xl font-extrabold">{{ stats.total_donations }}</div></div></div>
+    <div class="card border-t-4 border-t-emerald-500"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Total Value</p><div class="text-xl font-extrabold text-emerald-600">GBP {{ stats.total_amount|floatformat:2 }}</div></div></div>
+    <div class="card border-t-4 border-t-blue-500"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">API Imports</p><div class="text-xl font-extrabold">{{ stats.api_imports }}</div></div></div>
+    <div class="card border-t-4 border-t-violet-500"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">CSV Imports</p><div class="text-xl font-extrabold">{{ stats.csv_imports }}</div></div></div>
+</div>
+
+<div class="card mb-6">
+    <div class="p-5">
+        <form method="get" class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_auto] gap-3">
+            <input type="search" name="q" class="form-input" value="{{ search_query }}" placeholder="Search donor name or email">
+            <select name="source" class="form-select">
+                <option value="">All Sources</option>
+                <option value="API" {% if source_filter == 'API' %}selected{% endif %}>API</option>
+                <option value="CSV" {% if source_filter == 'CSV' %}selected{% endif %}>CSV</option>
+            </select>
+            <select name="campaign_type" class="form-select">
+                <option value="">All Campaign Types</option>
+                <option value="THANK_YOU" {% if campaign_type_filter == 'THANK_YOU' %}selected{% endif %}>Thank You</option>
+                <option value="VDM" {% if campaign_type_filter == 'VDM' %}selected{% endif %}>VDM</option>
+                <option value="GRATITUDE" {% if campaign_type_filter == 'GRATITUDE' %}selected{% endif %}>Gratitude</option>
+            </select>
+            <div class="flex gap-2">
+                <button type="submit" class="btn-primary">Apply Filters</button>
+                {% if has_filters %}
+                <a href="{% url 'donations' %}" class="btn-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Donor</th>
+                    <th>Source</th>
+                    <th>Campaign Type</th>
+                    <th class="text-right">Amount</th>
+                    <th>Delivery</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for donation in donations %}
+                <tr>
+                    <td class="font-medium text-gray-900">{{ donation.donated_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'donor_detail' donation.donor.id %}" class="font-semibold text-brand hover:text-brand/80">{{ donation.donor.full_name|default:donation.donor.email }}</a>
+                        <div class="text-[11px] text-gray-400">{{ donation.donor.email }}</div>
+                    </td>
+                    <td><span class="badge badge-default">{{ donation.source }}</span></td>
+                    <td>{{ donation.get_campaign_type_display }}</td>
+                    <td class="text-right font-semibold">GBP {{ donation.amount|floatformat:2 }}</td>
+                    <td>
+                        {% if donation.latest_send %}
+                            {% if donation.latest_send.status == 'SENT' %}
+                            <span class="badge badge-success">Sent</span>
+                            {% elif donation.latest_send.status == 'FAILED' %}
+                            <span class="badge badge-danger">Failed</span>
+                            {% else %}
+                            <span class="badge badge-default">{{ donation.latest_send.get_status_display }}</span>
+                            {% endif %}
+                            <div class="text-[11px] text-gray-400 mt-1">{{ donation.send_count }} send{{ donation.send_count|pluralize }}</div>
+                        {% else %}
+                        <span class="text-gray-400">No send log</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-24">
+                        <div class="w-[72px] h-[72px] bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-brand">
+                            <i data-lucide="hand-coins" class="w-7 h-7"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">No donations found</h3>
+                        <p class="text-gray-400">Normalized donation records will appear here after API ingest or CSV sync completes.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if donations.paginator.num_pages > 1 %}
+<div class="flex items-center justify-between mt-6">
+    <p class="text-sm text-gray-400">Page {{ donations.number }} of {{ donations.paginator.num_pages }}</p>
+    <div class="flex gap-2">
+        {% if donations.has_previous %}
+        <a href="?page={{ donations.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if source_filter %}&source={{ source_filter|urlencode }}{% endif %}{% if campaign_type_filter %}&campaign_type={{ campaign_type_filter|urlencode }}{% endif %}" class="btn-secondary">Previous</a>
+        {% endif %}
+        {% if donations.has_next %}
+        <a href="?page={{ donations.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if source_filter %}&source={{ source_filter|urlencode }}{% endif %}{% if campaign_type_filter %}&campaign_type={{ campaign_type_filter|urlencode }}{% endif %}" class="btn-secondary">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

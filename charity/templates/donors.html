@@ -1,0 +1,127 @@
+{% extends 'layouts/admin_layout.html' %}
+
+{% block title %}Donors - WithThanks{% endblock %}
+{% block breadcrumb_parent %}Audience{% endblock %}
+{% block breadcrumb_child %}Donors{% endblock %}
+
+{% block page_content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-10">
+    <div>
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Donors</h1>
+        <p class="text-gray-400 text-base">Track donor history, send coverage, and repeat engagement for {{ current_charity.name }}.</p>
+    </div>
+    <a href="{% url 'donations' %}" class="btn-secondary">
+        <i data-lucide="hand-coins" class="w-4 h-4"></i> View Donations
+    </a>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="card border-t-4 border-t-brand"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Tracked Donors</p><div class="text-xl font-extrabold">{{ stats.total_donors }}</div></div></div>
+    <div class="card border-t-4 border-t-emerald-500"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Total Donations</p><div class="text-xl font-extrabold text-emerald-600">{{ stats.total_donations }}</div></div></div>
+    <div class="card border-t-4 border-t-blue-500"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Total Value</p><div class="text-xl font-extrabold">GBP {{ stats.total_revenue|floatformat:2 }}</div></div></div>
+    <div class="card border-t-4 border-t-violet-500"><div class="p-5"><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Successful Sends</p><div class="text-xl font-extrabold">{{ stats.successful_sends }}</div></div></div>
+</div>
+
+<div class="card mb-6">
+    <div class="p-5">
+        <form method="get" class="flex flex-col lg:flex-row gap-3 lg:items-center">
+            <input type="search" name="q" class="form-input flex-1" value="{{ search_query }}" placeholder="Search donor name or email">
+            <select name="source" class="form-select lg:w-48">
+                <option value="">All Sources</option>
+                <option value="API" {% if source_filter == 'API' %}selected{% endif %}>API</option>
+                <option value="CSV" {% if source_filter == 'CSV' %}selected{% endif %}>CSV</option>
+            </select>
+            <div class="flex gap-2">
+                <button type="submit" class="btn-primary">Apply Filters</button>
+                {% if has_filters %}
+                <a href="{% url 'donors' %}" class="btn-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Donor</th>
+                    <th>Contact</th>
+                    <th class="text-right">Donations</th>
+                    <th class="text-right">Total Given</th>
+                    <th>Latest Donation</th>
+                    <th>Latest Delivery</th>
+                    <th class="text-right"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for donor in donors %}
+                <tr>
+                    <td>
+                        <div class="font-semibold text-gray-900">{{ donor.full_name|default:donor.email }}</div>
+                        <div class="text-[11px] text-gray-400">Joined {{ donor.created_at|date:"M d, Y" }}</div>
+                    </td>
+                    <td>
+                        <div class="font-medium text-gray-900">{{ donor.email }}</div>
+                        <div class="text-[11px] text-gray-400">{{ donor.send_count }} sends tracked</div>
+                    </td>
+                    <td class="text-right font-semibold">{{ donor.donation_count }}</td>
+                    <td class="text-right font-semibold">GBP {{ donor.total_donated|floatformat:2 }}</td>
+                    <td>
+                        {% if donor.last_donation_at %}
+                        <div class="font-medium text-gray-900">{{ donor.last_donation_at|date:"M d, Y" }}</div>
+                        {% else %}
+                        <span class="text-gray-400">No donations yet</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if donor.latest_send %}
+                            {% if donor.latest_send.status == 'SENT' %}
+                            <span class="badge badge-success">Sent</span>
+                            {% elif donor.latest_send.status == 'FAILED' %}
+                            <span class="badge badge-danger">Failed</span>
+                            {% else %}
+                            <span class="badge badge-default">{{ donor.latest_send.get_status_display }}</span>
+                            {% endif %}
+                            <div class="text-[11px] text-gray-400 mt-1">{{ donor.last_send_at|date:"M d, Y" }}</div>
+                        {% else %}
+                        <span class="text-gray-400">Not sent yet</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">
+                        <a href="{% url 'donor_detail' donor.id %}" class="btn-secondary btn-xs">
+                            <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i> Open
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-24">
+                        <div class="w-[72px] h-[72px] bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-brand">
+                            <i data-lucide="users" class="w-7 h-7"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">No donors found</h3>
+                        <p class="text-gray-400">Donor records appear here once donation sync has created normalized data for this charity.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if donors.paginator.num_pages > 1 %}
+<div class="flex items-center justify-between mt-6">
+    <p class="text-sm text-gray-400">Page {{ donors.number }} of {{ donors.paginator.num_pages }}</p>
+    <div class="flex gap-2">
+        {% if donors.has_previous %}
+        <a href="?page={{ donors.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if source_filter %}&source={{ source_filter|urlencode }}{% endif %}" class="btn-secondary">Previous</a>
+        {% endif %}
+        {% if donors.has_next %}
+        <a href="?page={{ donors.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if source_filter %}&source={{ source_filter|urlencode }}{% endif %}" class="btn-secondary">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

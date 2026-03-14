@@ -100,6 +100,22 @@
                         </a>
                     </div>
                 </div>
+
+                <div>
+                    <p class="nav-group-label">Audience</p>
+                    <div class="mt-1 space-y-0.5">
+                        <a href="{% url 'donors' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'donors' or request.resolver_match.url_name == 'donor_detail' %}active{% endif %}">
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                            <span>Donors</span>
+                        </a>
+                        <a href="{% url 'donations' %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'donations' %}active{% endif %}">
+                            <i data-lucide="hand-coins" class="w-5 h-5"></i>
+                            <span>Donations</span>
+                        </a>
+                    </div>
+                </div>
             </nav>
 
         </aside>
