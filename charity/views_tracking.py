@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from .analytics_models import EmailEvent, VideoEvent
 from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
+from .utils.cloudflare_stream import is_stream_playback_url, resolve_stream_embed_url
 from .utils.tracking_security import resolve_tracking_token
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def track_click_view(request):
             job.save(update_fields=["real_clicks"])
             EmailEvent.objects.create(campaign=job.campaign, job=job, event_type="CLICK")
             v_url = job.video_url
-            if v_url and v_url.lower().split("?")[0].endswith((".mp4", ".mov", ".avi")):
+            if v_url and is_stream_playback_url(v_url):
                 server_url = getattr(settings, "SERVER_BASE_URL", "https://hirefella.com").rstrip(
                     "/"
                 )
@@ -151,23 +152,33 @@ def track_invoice_open(request, invoice_id):
 
 def video_landing_view(request, job_id):
     """Displays the video landing page with engagement tracking."""
-    job = get_object_or_404(DonationJob, id=job_id)
+    job = get_object_or_404(
+        DonationJob.objects.select_related("campaign", "charity"),
+        id=job_id,
+    )
     video_url = job.video_url
     if not video_url:
         return redirect("/")
+    stream_embed_url = resolve_stream_embed_url(video_url)
+    if not stream_embed_url:
+        return redirect(video_url)
     # Resolve the EmailTracking record so the JS player can send watch events
     tracking = EmailTracking.objects.filter(job=job).first()
     tracking_id = str(tracking.id) if tracking else ""
     # Resolve post-video CTA from the campaign (if configured)
     campaign = job.campaign
-    cta_url = (campaign.cta_url or "") if campaign else ""
-    cta_label = (campaign.cta_label or "Donate Again") if campaign else "Donate Again"
+    cta_url = ""
+    cta_label = "Donate Again"
+    if campaign and campaign.cta_url:
+        cta_url = campaign.cta_url
+        cta_label = campaign.cta_label or "Donate Again"
     return render(
         request,
         "video_landing.html",
         {
             "job": job,
             "video_url": video_url,
+            "stream_embed_url": stream_embed_url,
             "tracking_id": tracking_id,
             "cta_url": cta_url,
             "cta_label": cta_label,

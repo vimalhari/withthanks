@@ -245,7 +245,7 @@ class MultiTenancyIsolationTest(TestCase):
         self.assertEqual(invoice.additional_billing_emails, "finance@a.test,ops@a.test")
 
     def test_video_landing_route_uses_integer_job_ids(self):
-        self.job_a.video_path = "https://cdn.example.com/video.mp4"
+        self.job_a.video_path = "https://customer-example.cloudflarestream.com/video-a-123/watch"
         self.job_a.save(update_fields=["video_path"])
 
         response = self.client.get(reverse("video_landing", kwargs={"job_id": self.job_a.id}))

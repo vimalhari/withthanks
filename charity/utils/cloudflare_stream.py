@@ -22,14 +22,17 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 _CF_BASE = "https://api.cloudflare.com/client/v4/accounts"
+_STREAM_EMBED_SRC_RE = re.compile(r'src="([^"]+)"')
 
 
 @dataclass(frozen=True)
@@ -37,6 +40,56 @@ class StreamUploadResult:
     video_id: str
     playback_url: str
     thumbnail_url: str
+
+
+def extract_stream_video_id(playback_url: str | None) -> str:
+    """Extract a Cloudflare Stream video UID from a playback URL."""
+    if not playback_url:
+        return ""
+
+    parsed = urlparse(playback_url)
+    host = (parsed.netloc or "").lower()
+    if "cloudflarestream.com" not in host and "videodelivery.net" not in host:
+        return ""
+
+    parts = [part for part in parsed.path.split("/") if part]
+    return parts[0] if parts else ""
+
+
+def is_stream_playback_url(playback_url: str | None) -> bool:
+    """Return True when the URL points at a Cloudflare Stream-hosted asset."""
+    return bool(extract_stream_video_id(playback_url))
+
+
+def resolve_stream_embed_url(playback_url: str | None) -> str:
+    """Resolve a Cloudflare Stream playback URL to an iframe embed URL."""
+    video_id = extract_stream_video_id(playback_url)
+    if not video_id:
+        return ""
+
+    parsed = urlparse(playback_url or "")
+    host = (parsed.netloc or "").lower()
+    if host.endswith("cloudflarestream.com") and host != "watch.cloudflarestream.com":
+        return f"{parsed.scheme or 'https'}://{parsed.netloc}/{video_id}/iframe"
+
+    try:
+        account_id, api_token = _credentials()
+    except RuntimeError:
+        return ""
+
+    try:
+        response = httpx.get(
+            f"{_CF_BASE}/{account_id}/stream/{video_id}/embed",
+            headers={"Authorization": f"Bearer {api_token}"},
+            timeout=30.0,
+        )
+        response.raise_for_status()
+    except Exception as exc:
+        logger.warning("Unable to resolve Stream embed URL for %s: %s", video_id, exc)
+        return ""
+
+    match = _STREAM_EMBED_SRC_RE.search(response.text)
+    return match.group(1) if match else ""
 
 
 def _credentials() -> tuple[str, str]:

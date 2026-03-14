@@ -27,6 +27,7 @@ from charity.models import (
     EmailTracking,
 )
 from charity.services.video_pipeline_service import StreamDelivery
+from charity.utils.cloudflare_stream import extract_stream_video_id
 from charity.utils.tracking_security import build_tracking_token
 
 
@@ -955,14 +956,78 @@ class TrackingSecurityTests(TestCase):
         response = self.client.get(reverse("track_click"), {"t": token})
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response["Location"],
-            f"http://127.0.0.1:8000{reverse('video_landing', args=[self.job.id])}",
-        )
+        self.assertEqual(response["Location"], "https://cdn.example.com/video.mp4")
         self.tracking.refresh_from_db()
         self.job.refresh_from_db()
         self.assertTrue(self.tracking.clicked)
         self.assertEqual(self.job.real_clicks, 1)
+
+    def test_track_click_redirects_stream_jobs_to_landing_page(self):
+        self.job.video_path = "https://watch.cloudflarestream.com/stream-video-123"
+        self.job.save(update_fields=["video_path"])
+        token = build_tracking_token(tracking_id=self.tracking.id)
+
+        response = self.client.get(reverse("track_click"), {"t": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f"http://127.0.0.1:8000{reverse('video_landing', args=[self.job.id])}",
+        )
+
+    def test_video_landing_renders_post_video_cta_for_campaign_linked_job(self):
+        self.job.video_path = "https://customer-example.cloudflarestream.com/stream-video-123/watch"
+        self.job.save(update_fields=["video_path"])
+        self.campaign.cta_url = "https://example.com/donate-again"
+        self.campaign.cta_label = "Donate Again"
+        self.campaign.save(update_fields=["cta_url", "cta_label"])
+
+        response = self.client.get(reverse("video_landing", args=[self.job.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'src="https://customer-example.cloudflarestream.com/stream-video-123/iframe"',
+            html=False,
+        )
+        self.assertContains(response, 'id="ctaOverlay"', html=False)
+        self.assertContains(response, "Donate Again")
+        self.assertContains(response, "embed.cloudflarestream.com/embed/sdk.latest.js")
+        self.assertNotContains(response, '<video id="mainVideo"', html=False)
+
+    def test_video_landing_omits_post_video_cta_without_job_campaign_link(self):
+        self.campaign.cta_url = "https://example.com/donate-again"
+        self.campaign.cta_label = "Donate Again"
+        self.campaign.save(update_fields=["cta_url", "cta_label"])
+        job_without_campaign = DonationJob.objects.create(
+            charity=self.charity,
+            donation_batch=self.batch,
+            donor_name="No Campaign Donor",
+            email="nocampaign@example.com",
+            donation_amount=Decimal("10.00"),
+            status="success",
+            video_path="https://customer-example.cloudflarestream.com/orphan-stream-123/watch",
+        )
+
+        response = self.client.get(reverse("video_landing", args=[job_without_campaign.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="ctaOverlay"', html=False)
+        self.assertNotContains(response, 'id="ctaBtn"', html=False)
+
+    def test_video_landing_redirects_non_stream_video_urls(self):
+        response = self.client.get(reverse("video_landing", args=[self.job.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "https://cdn.example.com/video.mp4")
+
+
+class CloudflareStreamUrlTests(TestCase):
+    def test_extract_stream_video_id_reads_watch_url(self):
+        self.assertEqual(
+            extract_stream_video_id("https://watch.cloudflarestream.com/stream-video-123"),
+            "stream-video-123",
+        )
 
 
 @override_settings(
