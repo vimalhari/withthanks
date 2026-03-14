@@ -11,6 +11,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.10.7 /uv /uvx /usr/local/bin/
 # Compile bytecode for faster startup; copy mode avoids hard-link issues
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Install system build deps (ffmpeg + libpq needed at build time)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -29,11 +30,12 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 RUN uv sync --frozen --no-dev
 
-# Build Tailwind CSS assets before collecting static files
-RUN uv run python manage.py tailwind build
+# Build Tailwind CSS assets before collecting static files without re-syncing
+# the environment or pulling dev dependencies during the image build.
+RUN python manage.py tailwind build
 
 # Collect static files
-RUN uv run python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 
 
 # -------------------------------------------------------
