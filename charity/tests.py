@@ -26,7 +26,16 @@ from charity.models import (
     DonationJob,
     EmailTracking,
 )
+from charity.services.video_pipeline_service import StreamDelivery
 from charity.utils.tracking_security import build_tracking_token
+
+
+def build_stream_delivery(video_id: str = "stream-123") -> StreamDelivery:
+    return StreamDelivery(
+        video_id=video_id,
+        playback_url=f"https://watch.cloudflarestream.com/{video_id}",
+        thumbnail_url=f"https://videodelivery.net/{video_id}/thumbnails/thumbnail.jpg?time=2s&height=320",
+    )
 
 
 class MultiTenantIsolationTests(TestCase):
@@ -154,7 +163,7 @@ class VideoProcessingIsolationTests(TestCase):
     @patch("charity.services.video_build_service.concat_intro_to_base")
     @patch("charity.services.video_build_service.generate_intro_clip")
     @patch("charity.tasks.send_video_email")
-    @patch("charity.tasks.stream_safe_upload", return_value=None)
+    @patch("charity.tasks.stream_safe_upload")
     @patch("os.path.exists")
     def test_processing_isolation(
         self,
@@ -174,6 +183,7 @@ class VideoProcessingIsolationTests(TestCase):
         )
 
         mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-a")
         mock_tts.return_value = "/tmp/tts.mp3"
         mock_generate_intro.return_value = "/tmp/intro.mp4"
         mock_concat.return_value = "/tmp/final.mp4"
@@ -188,11 +198,17 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
         self.assertEqual(mock_send.call_args[1]["from_email"], "sender-a@charity.org")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
-        self.assertEqual(mock_send.call_args[1]["video_url"], "https://r2.example.com/v.mp4")
+        self.assertEqual(
+            mock_send.call_args[1]["video_url"],
+            "https://watch.cloudflarestream.com/stream-a",
+        )
+        self.job_a.refresh_from_db()
+        self.assertEqual(self.job_a.video_path, "https://watch.cloudflarestream.com/stream-a")
 
         # Reset mocks
         mock_tts.reset_mock()
         mock_send.reset_mock()
+        mock_stream.return_value = build_stream_delivery("stream-b")
 
         # Process Job B through all 3 stages
         ctx = validate_and_prep_job.run(self.job_b.id)  # type: ignore[attr-defined]
@@ -203,16 +219,21 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])
         self.assertEqual(mock_send.call_args[1]["from_email"], "sender-b@charity.org")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
-        self.assertEqual(mock_send.call_args[1]["video_url"], "https://r2.example.com/v.mp4")
+        self.assertEqual(
+            mock_send.call_args[1]["video_url"],
+            "https://watch.cloudflarestream.com/stream-b",
+        )
+        self.job_b.refresh_from_db()
+        self.assertEqual(self.job_b.video_path, "https://watch.cloudflarestream.com/stream-b")
 
     @patch("charity.tasks.send_video_email")
-    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
-    def test_vdm_falls_back_to_public_storage_url_when_stream_unavailable(
+    @patch("charity.tasks.get_or_upload_campaign_stream", return_value=StreamDelivery())
+    def test_vdm_fails_when_stream_unavailable(
         self,
-        mock_stream,
+        mock_stream_delivery,
         mock_send,
     ):
-        """VDM should send a public media URL, not the worker's /tmp path."""
+        """VDM should fail instead of sending a local-storage fallback URL."""
         from charity.tasks import (
             dispatch_email_for_job,
             generate_video_for_job,
@@ -248,18 +269,16 @@ class VideoProcessingIsolationTests(TestCase):
 
         ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
         ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
-        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+        result = dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
-        self.assertEqual(
-            mock_send.call_args[1]["video_url"],
-            "http://127.0.0.1:8000/media/test/fake_video_a.mp4",
-        )
-        self.assertIn("Dear VDM Donor,", mock_send.call_args[1]["html"])
+        self.assertEqual(result["status"], "failed")
+        mock_send.assert_not_called()
         vdm_job.refresh_from_db()
-        self.assertEqual(vdm_job.video_path, "http://127.0.0.1:8000/media/test/fake_video_a.mp4")
+        self.assertEqual(vdm_job.status, "failed")
+        self.assertIn("Cloudflare Stream upload required", vdm_job.error_message)
 
     @patch("charity.tasks.send_video_email")
-    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_uses_campaign_configured_email_body(
         self,
         mock_stream,
@@ -300,6 +319,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=vdm_campaign,
         )
 
+        mock_stream.return_value = build_stream_delivery("stream-copy")
         mock_send.return_value = {"id": "test-resend-id"}
 
         ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
@@ -313,7 +333,7 @@ class VideoProcessingIsolationTests(TestCase):
 
     @override_settings(DEFAULT_FROM_EMAIL="noreply@example.com")
     @patch("charity.tasks.send_video_email")
-    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_falls_back_to_default_from_email_when_campaign_sender_missing(
         self,
         mock_stream,
@@ -350,6 +370,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=vdm_campaign,
         )
 
+        mock_stream.return_value = build_stream_delivery("stream-sender")
         mock_send.return_value = {"id": "test-resend-id"}
 
         ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
@@ -359,8 +380,8 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertEqual(mock_send.call_args[1]["from_email"], "noreply@example.com")
 
     @patch("charity.tasks.send_video_email")
-    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
-    def test_vdm_uses_campaign_email_thumbnail_as_clickable_image(
+    @patch("charity.tasks.get_or_upload_campaign_stream")
+    def test_vdm_uses_stream_thumbnail_when_campaign_thumbnail_is_local_only(
         self,
         mock_stream,
         mock_send,
@@ -406,6 +427,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=vdm_campaign,
         )
 
+        mock_stream.return_value = build_stream_delivery("stream-thumb")
         mock_send.return_value = {"id": "test-resend-id"}
 
         ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
@@ -413,12 +435,12 @@ class VideoProcessingIsolationTests(TestCase):
         dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
         html = mock_send.call_args[1]["html"]
-        self.assertIn('src="http://127.0.0.1:8000/media/', html)
-        self.assertIn("vdm-thumb", html)
+        self.assertIn('src="https://videodelivery.net/stream-thumb/thumbnails/thumbnail.jpg', html)
+        self.assertNotIn('src="http://127.0.0.1:8000/media/', html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
 
     @patch("charity.tasks.send_video_email")
-    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_omits_dear_for_title_surname_greeting(
         self,
         mock_stream,
@@ -455,6 +477,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=vdm_campaign,
         )
 
+        mock_stream.return_value = build_stream_delivery("stream-formal")
         mock_send.return_value = {"id": "test-resend-id"}
 
         ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
@@ -472,7 +495,7 @@ class VideoProcessingIsolationTests(TestCase):
     @patch("charity.services.video_build_service.concat_intro_to_base")
     @patch("charity.services.video_build_service.generate_intro_clip")
     @patch("charity.tasks.send_video_email")
-    @patch("charity.tasks.stream_safe_upload", return_value=None)
+    @patch("charity.tasks.stream_safe_upload")
     @patch("os.path.exists")
     def test_withthanks_omits_dear_for_title_surname_greeting(
         self,
@@ -491,6 +514,7 @@ class VideoProcessingIsolationTests(TestCase):
         )
 
         mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-greeting")
         mock_tts.return_value = "/tmp/tts.mp3"
         mock_generate_intro.return_value = "/tmp/intro.mp4"
         mock_concat.return_value = "/tmp/final.mp4"
@@ -508,7 +532,7 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertNotIn("Dear Ms Smith,", html)
 
     @patch("charity.tasks.send_video_email")
-    @patch("charity.services.video_pipeline_service.stream_safe_upload", return_value=None)
+    @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_footer_uses_website_url_when_present(
         self,
         mock_stream,
@@ -548,6 +572,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=vdm_campaign,
         )
 
+        mock_stream.return_value = build_stream_delivery("stream-footer")
         mock_send.return_value = {"id": "test-resend-id"}
 
         ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]

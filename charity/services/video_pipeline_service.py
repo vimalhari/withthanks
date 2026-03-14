@@ -21,6 +21,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _storage_uses_local_filesystem() -> bool:
+    """Return True when Django is serving uploads from local disk."""
+    from django.core.files.storage import default_storage
+
+    return default_storage.__class__.__module__ == "django.core.files.storage.filesystem"
+
+
 def _as_absolute_url(url_or_path: str, server_url: str) -> str:
     """Return an absolute URL for a storage-backed asset or hosted URL."""
     if not url_or_path:
@@ -31,7 +38,7 @@ def _as_absolute_url(url_or_path: str, server_url: str) -> str:
 
 
 def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> str:
-    """Resolve a storage key or relative media URL to a public absolute URL."""
+    """Resolve a storage key to a public absolute URL when the backend is externally reachable."""
     if not storage_path:
         return ""
 
@@ -44,6 +51,14 @@ def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> s
         storage_url = default_storage.url(storage_path)
     except Exception as exc:
         logger.warning("Failed to resolve storage URL for %r: %s", storage_path, exc)
+        return ""
+
+    if _storage_uses_local_filesystem():
+        logger.warning(
+            "Resolved storage path %r to local filesystem URL %r; treating as non-public.",
+            storage_path,
+            storage_url,
+        )
         return ""
 
     return _as_absolute_url(storage_url, server_url)
@@ -64,7 +79,14 @@ class StreamDelivery:
 
     @property
     def is_uploaded(self) -> bool:
-        return bool(self.video_id)
+        return bool(self.playback_url)
+
+
+def _build_stream_thumbnail_url(video_id: str) -> str:
+    """Build the default Cloudflare Stream thumbnail URL for a known video id."""
+    if not video_id:
+        return ""
+    return f"https://videodelivery.net/{video_id}/thumbnails/thumbnail.jpg?time=2s&height=320"
 
 
 @dataclass
@@ -89,8 +111,8 @@ def stream_safe_upload(video_path: str, *, meta_name: str = "") -> StreamUploadR
     - ``CLOUDFLARE_STREAM_ENABLED`` is ``False`` / unset
     - The upload fails for any reason
 
-    This keeps both pipelines non-fatal on Stream errors while still
-    falling back to attachment / local-URL delivery.
+    This keeps upload errors non-fatal at the helper level; the caller can
+    decide whether a failed upload should abort donor delivery.
     """
     from charity.utils.cloudflare_stream import upload_video_to_stream
 
@@ -137,6 +159,7 @@ def get_or_upload_campaign_stream(campaign: Campaign, video_path: str) -> Stream
         return StreamDelivery(
             video_id=campaign.cf_stream_video_id or "",
             playback_url=campaign.cf_stream_video_url,
+            thumbnail_url=_build_stream_thumbnail_url(campaign.cf_stream_video_id or ""),
         )
 
     # First job for this campaign — upload and cache.
@@ -223,16 +246,13 @@ def resolve_public_video_url(
     Return the public-facing URL to embed in the outbound email.
 
     Prefers the Cloudflare Stream CDN URL when available. When Stream is
-    unavailable, falls back to a persisted/public storage URL and never leaks
-    a worker-local temp path such as ``/tmp/...`` into donor emails.
+    unavailable, only returns an externally reachable storage URL and never
+    leaks a worker-local or local-media filesystem path into donor emails.
     """
     if stream_delivery.is_uploaded:
         return stream_delivery.playback_url
 
     if final_video_path and final_video_path.startswith(("http://", "https://")):
         return final_video_path
-
-    if final_video_path and final_video_path.startswith("/media/"):
-        return _as_absolute_url(final_video_path, server_url)
 
     return resolve_storage_video_url(storage_path=storage_video_path, server_url=server_url)

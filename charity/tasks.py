@@ -341,8 +341,6 @@ def dispatch_email_for_job(self, context):
         client = job.charity
         campaign = job.campaign
         full_image_url = resolve_storage_video_url(storage_path=image_url, server_url=server_url)
-        if not full_image_url and image_url:
-            full_image_url = f"{server_url}/{image_url.lstrip('/')}"
 
         # --- Cloudflare Stream upload --------------------------------------- #
         if mode == "VDM":
@@ -359,6 +357,11 @@ def dispatch_email_for_job(self, context):
                 )
                 if final_video_path
                 else StreamDelivery()
+            )
+
+        if final_video_path and not stream_delivery.playback_url:
+            raise FatalTaskError(
+                f"Cloudflare Stream upload required for donor delivery on Job {job_id}."
             )
 
         cf_stream_url = stream_delivery.playback_url or None
@@ -476,10 +479,10 @@ def dispatch_email_for_job(self, context):
         # --- Success -------------------------------------------------------- #
         generation_time = round(time.time() - start_time, 2)
         job.status = "success"
-        # Preserve R2 URL written by Stage 2; fall back to local path for
-        # non-personalised modes where no R2 upload occurred.
-        if not job.video_path:
-            job.video_path = video_url_link or final_video_path or ""
+        # Persist the hosted playback URL so tracking redirects always send
+        # donors to the same Stream URL that was embedded in the email.
+        if video_url_link:
+            job.video_path = video_url_link
         job.campaign_type = mode
         job.generation_time = generation_time
         job.completed_at = now()
