@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING
 
+from django import forms
 from django.contrib import admin, messages
 from django.db.models import Count, Q, QuerySet
 from django.urls import path, reverse
@@ -34,10 +35,8 @@ from .models import (
     InvoiceLineItem,
     InvoiceService,
     ReceivedEmail,
-    TextTemplate,
     UnsubscribedUser,
     VideoSendLog,
-    VideoTemplate,
 )
 
 # ---------------------------------------------------------------------------
@@ -402,23 +401,6 @@ class ReceivedEmailAdmin(ModelAdmin):
 
 
 # ---------------------------------------------------------------------------
-# Templates & Package Codes
-# ---------------------------------------------------------------------------
-
-
-@admin.register(TextTemplate)
-class TextTemplateAdmin(ModelAdmin):
-    list_display = ("name", "voice_id", "created_at")
-    search_fields = ("name",)
-
-
-@admin.register(VideoTemplate)
-class VideoTemplateAdmin(ModelAdmin):
-    list_display = ("name", "video_file", "created_at")
-    search_fields = ("name",)
-
-
-# ---------------------------------------------------------------------------
 # Campaigns
 # ---------------------------------------------------------------------------
 
@@ -480,8 +462,57 @@ class DonationBatchCampaignInline(TabularInline):
         )
 
 
+class CampaignAdminForm(forms.ModelForm):
+    _DEFAULT_MODE_HELP_TEXT = (
+        "No mode selected yet. Choose a mode, then save to load the matching fields below."
+    )
+    _MODE_HELP_TEXTS = {
+        Campaign.CampaignMode.THANK_YOU_PERSONALIZED: (
+            "PERSONALIZED: each donor gets a generated TTS voiceover stitched onto the "
+            "base video. After save, you should see Base Video, Voiceover Script, and "
+            "Voice ID fields."
+        ),
+        Campaign.CampaignMode.THANK_YOU_STANDARD: (
+            "STANDARD: one pre-rendered Thank You video is sent directly to donors, while "
+            "the email stays personalized. After save, you should see Base Video and "
+            "Gratitude Video fields."
+        ),
+        Campaign.CampaignMode.VDM: (
+            "VDM: one shared campaign video is sent to every donor in the batch. After "
+            "save, you should see VDM Video and Cloudflare Stream cache fields."
+        ),
+    }
+
+    class Meta:
+        model = Campaign
+        fields = "__all__"
+
+    @staticmethod
+    def _help_text_attr_name(mode: str) -> str:
+        return f"data-help-text-{mode.lower().replace('_', '-')}"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        campaign_mode_field = self.fields["campaign_mode"]
+        campaign_mode_field.widget.attrs["data-default-help-text"] = self._DEFAULT_MODE_HELP_TEXT
+        for mode, help_text in self._MODE_HELP_TEXTS.items():
+            campaign_mode_field.widget.attrs[self._help_text_attr_name(mode)] = help_text
+        selected_mode = self.instance.campaign_mode if self.instance and self.instance.pk else None
+        if not selected_mode:
+            selected_mode = self.initial.get("campaign_mode") or self.data.get("campaign_mode")
+        campaign_mode_field.help_text = self._MODE_HELP_TEXTS.get(
+            selected_mode,
+            self._DEFAULT_MODE_HELP_TEXT,
+        )
+
+
 @admin.register(Campaign)
 class CampaignAdmin(ModelAdmin):
+    form = CampaignAdminForm
+
+    class Media:
+        js = ("charity/campaign_admin.js",)
+
     list_display = (
         "name",
         "charity",
@@ -492,10 +523,12 @@ class CampaignAdmin(ModelAdmin):
     )
     list_filter = ("is_paused", "campaign_mode")
     search_fields = ("name", "charity__charity_name", "campaign_code")
-    readonly_fields = ("id", "created_at")
+    readonly_fields = ("id", "created_at", "cf_stream_video_id", "cf_stream_video_url")
     warn_unsaved_tabs = True
     inlines = [CampaignFieldInline, DonationBatchCampaignInline]
-    fieldsets = (
+
+    # Base fieldsets always displayed regardless of mode
+    _BASE_FIELDSETS = [
         (
             "Campaign Identity",
             {
@@ -511,10 +544,7 @@ class CampaignAdmin(ModelAdmin):
         (
             "Type & Mode",
             {
-                "fields": (
-                    "campaign_mode",
-                    "gratitude_cooldown_days",  # Thank You campaigns only
-                )
+                "fields": ("campaign_mode",),
             },
         ),
         (
@@ -527,40 +557,122 @@ class CampaignAdmin(ModelAdmin):
                 )
             },
         ),
-        (
+    ]
+
+    _CTA_FIELDSET = (
+        "Post-Video CTA",
+        {
+            "classes": ("collapse",),
+            "description": "Optional call-to-action button shown as an overlay when the video ends on the donor landing page.",
+            "fields": ("cta_url", "cta_label"),
+        },
+    )
+
+    def get_fieldsets(self, request: HttpRequest, obj: object = None):
+        mode = obj.campaign_mode if obj else None
+        fieldsets = list(self._BASE_FIELDSETS)
+
+        email_settings = (
             "Email Settings",
             {
                 "classes": ("collapse",),
-                "fields": ("from_email", "vdm_email_body", "email_thumbnail"),
+                "fields": ("from_email", "email_body", "email_thumbnail"),
             },
-        ),
-        (
-            "Video Assets",
-            {
-                "classes": ("collapse",),
-                "fields": (
-                    "cf_stream_video_id",
-                    "cf_stream_video_url",
-                    "charity_video",
-                    "gratitude_video",
-                    "base_video",
-                    "voiceover_script",
-                    "voice_id",
+        )
+
+        if mode == Campaign.CampaignMode.VDM:
+            fieldsets += [
+                email_settings,
+                (
+                    "Video Assets",
+                    {
+                        "classes": ("collapse",),
+                        "description": "One shared video is sent to every donor in the batch.",
+                        "fields": ("vdm_video", "cf_stream_video_id", "cf_stream_video_url"),
+                    },
                 ),
-            },
-        ),
-        (
-            "Post-Video CTA",
-            {
-                "classes": ("collapse",),
-                "description": "Optional call-to-action button shown as an overlay when the video ends on the donor landing page.",
-                "fields": (
-                    "cta_url",
-                    "cta_label",
+            ]
+        elif mode == Campaign.CampaignMode.THANK_YOU_PERSONALIZED:
+            fieldsets += [
+                email_settings,
+                (
+                    "Video Assets",
+                    {
+                        "classes": ("collapse",),
+                        "description": (
+                            "A unique TTS voiceover is generated per donor and stitched onto the base video."
+                        ),
+                        "fields": ("base_video", "voiceover_script", "voice_id"),
+                    },
                 ),
-            },
-        ),
-    )
+                (
+                    "Gratitude Card",
+                    {
+                        "classes": ("collapse",),
+                        "description": (
+                            "Sent to repeat donors who give again within the cooldown window "
+                            "instead of generating a full new personalised video."
+                        ),
+                        "fields": ("gratitude_video", "gratitude_cooldown_days"),
+                    },
+                ),
+            ]
+        elif mode == Campaign.CampaignMode.THANK_YOU_STANDARD:
+            fieldsets += [
+                email_settings,
+                (
+                    "Video Assets",
+                    {
+                        "classes": ("collapse",),
+                        "description": "One pre-rendered video is sent to all donors.",
+                        "fields": ("base_video",),
+                    },
+                ),
+                (
+                    "Gratitude Card",
+                    {
+                        "classes": ("collapse",),
+                        "description": (
+                            "Sent to repeat donors who give again within the cooldown window."
+                        ),
+                        "fields": ("gratitude_video", "gratitude_cooldown_days"),
+                    },
+                ),
+            ]
+        else:
+            # No mode set (new campaign) — show all fields with explanation
+            fieldsets += [
+                (
+                    "Email Settings",
+                    {
+                        "classes": ("collapse",),
+                        "fields": ("from_email", "email_body", "email_thumbnail"),
+                    },
+                ),
+                (
+                    "Video Assets",
+                    {
+                        "classes": ("collapse",),
+                        "description": (
+                            "All video fields are shown until a campaign mode is selected. "
+                            "Save a mode above then re-open to see only the relevant fields."
+                        ),
+                        "fields": (
+                            "vdm_video",
+                            "cf_stream_video_id",
+                            "cf_stream_video_url",
+                            "base_video",
+                            "voiceover_script",
+                            "voice_id",
+                            "gratitude_video",
+                            "gratitude_cooldown_days",
+                        ),
+                    },
+                ),
+            ]
+
+        fieldsets.append(self._CTA_FIELDSET)
+        return fieldsets
 
 
 @admin.register(CampaignField)

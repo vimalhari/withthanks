@@ -522,36 +522,6 @@ class ReceivedEmail(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# Stage 3 — Template models (used by API pipeline / video_dispatch service)
-# ---------------------------------------------------------------------------
-
-
-class TextTemplate(models.Model):
-    """Voiceover script template with an optional ElevenLabs voice ID."""
-
-    name = models.CharField(max_length=255)
-    body = models.TextField(
-        blank=True,
-        help_text="Script with {{donor_name}}, {{donation_amount}}, {{charity}}, {{campaign_name}} placeholders",
-    )
-    voice_id = models.CharField(max_length=128, blank=True, help_text="ElevenLabs voice ID")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-
-class VideoTemplate(models.Model):
-    """Reusable base video asset attached to campaigns."""
-
-    name = models.CharField(max_length=255)
-    video_file = models.FileField(upload_to="video_templates/")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-
 # ---------------------------------------------------------------------------
 # Audit label choices — stored on Donation, VideoSendLog, and EmailTracking records
 CAMPAIGN_TYPE_CHOICES = [("THANK_YOU", "Thank You"), ("VDM", "Video Direct Mail")]
@@ -622,41 +592,17 @@ class Campaign(models.Model):
             "VDM: shared campaign video sent to all donors (CSV only)."
         ),
     )
-    text_template = models.ForeignKey(
-        TextTemplate,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="campaigns",
-        help_text="Voiceover script template (API pipeline)",
-    )
-    video_template = models.ForeignKey(
-        VideoTemplate,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="campaigns",
-        help_text="Base video template (API pipeline)",
-    )
-    gratitude_video_template = models.ForeignKey(
-        VideoTemplate,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="gratitude_campaigns",
-        help_text="Gratitude video template (API pipeline)",
-    )
     gratitude_cooldown_days = models.PositiveIntegerField(
         default=30,
         help_text="Thank You only — if a donor gives again within this many days, send a gratitude card instead of another full thank-you video.",
     )
 
     # NEW CAMPAIGN MEDIA ASSETS
-    charity_video = models.FileField(
+    vdm_video = models.FileField(
         upload_to=get_charity_media_path,
         blank=True,
         null=True,
-        help_text="Main Campaign Video (VDM Campaign)",
+        help_text="VDM campaign video — the same video is sent to every donor in the batch.",
     )
     gratitude_video = models.FileField(
         upload_to=get_charity_media_path,
@@ -675,7 +621,11 @@ class Campaign(models.Model):
         upload_to=get_charity_media_path,
         blank=True,
         null=True,
-        help_text="Base template video for personalised (TTS+stitch) campaigns",
+        help_text=(
+            "Thank You campaign video. "
+            "Standard mode: the finished video sent directly to donors. "
+            "Personalized mode: the base video that TTS audio is stitched onto."
+        ),
     )
     voiceover_script = models.TextField(
         blank=True,
@@ -709,12 +659,14 @@ class Campaign(models.Model):
     from_email = models.EmailField(
         blank=True, null=True, help_text="Override sender email address for this campaign"
     )
-    vdm_email_body = models.TextField(
+    email_body = models.TextField(
         blank=True,
         default="",
         help_text=(
-            "Optional VDM email copy. Supports {{ donor_name }}, {{ charity_name }}, "
-            "{{ campaign_name }}, and {{ donation_amount }} placeholders."
+            "Optional email body copy for this campaign. "
+            "Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, "
+            "and {{ donation_amount }} placeholders. "
+            "Leave blank to use the built-in default copy for this campaign mode."
         ),
     )
 
@@ -748,7 +700,7 @@ class Campaign(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    objects: CampaignManager = CampaignManager()
+    objects = CampaignManager()
 
     def __str__(self):
         return self.name

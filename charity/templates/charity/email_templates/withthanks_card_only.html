@@ -131,7 +131,13 @@
                             <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>
                             <div class="headline" style="margin-bottom: 18px;">{{ greeting_line }},</div>
                             <div class="body-copy">
+                                {% if email_body_paragraphs %}
+                                    {% for paragraph in email_body_paragraphs %}
+                                    <p style="margin: 0 0 18px;">{{ paragraph|linebreaksbr }}</p>
+                                    {% endfor %}
+                                {% else %}
                                 <p style="margin: 0;">We noticed you recently received a message from us, and we wanted to acknowledge your new donation of <strong style="color: #13202b;">{{ donation_amount }}</strong> with a separate note of thanks.</p>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -159,7 +165,9 @@
                     </tr>
                     <tr>
                         <td class="section-padding" style="padding: 0 48px 28px; text-align: center;">
+                            {% if not email_body_paragraphs %}
                             <div class="body-copy">Your support brings us one step closer to our goals, and we are grateful for it.</div>
+                            {% endif %}
                         </td>
                     </tr>
                     <tr>

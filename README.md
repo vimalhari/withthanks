@@ -342,7 +342,7 @@ uv run python manage.py test
 | `validate_and_prep_job(job_id)` | Stage 1. Resolves mode, template, base asset, and the thank-you dedup/card-only decision. Runs on the `default` queue. |
 | `generate_video_for_job(context)` | Stage 2. Builds personalised videos for `THANK_YOU` jobs or downloads the shared campaign asset for `VDM`. Runs on the `video` queue. |
 | `dispatch_email_for_job(context)` | Stage 3. Uploads to Cloudflare Stream when applicable, resolves a public video URL, sends via Resend, and persists final job status. Runs on the `default` queue. |
-| `batch_process_csv(batch_id)` | Reads CSV, bulk-creates `DonationJob` rows, and dispatches per-job validate → generate → dispatch chains under a `group + chord`. Fails fast for VDM campaigns that have no `charity_video`. |
+| `batch_process_csv(batch_id)` | Reads CSV, bulk-creates `DonationJob` rows, and dispatches per-job validate → generate → dispatch chains under a `group + chord`. Fails fast for VDM campaigns that have no `vdm_video`. |
 | `on_batch_complete(results, batch_id)` | Chord callback. Marks `DonationBatch.status` as `completed` or `completed_with_errors` and sends an admin notification email. |
 | `refresh_all_campaign_stats` | Beat: every 15 min. Refreshes `CampaignStats` for all campaigns. |
 | `mark_overdue_invoices` | Beat: daily 06:00 UTC. Transitions `Sent` invoices past due date to `Overdue`. |
@@ -472,7 +472,7 @@ bob@example.com,Bob Jones,25.00
 On submission:
 1. A `DonationBatch` record is created with `status = pending`.
 2. `batch_process_csv` runs in the background.
-3. If the selected campaign is `VDM`, the batch fails fast unless the campaign has a `charity_video` configured.
+3. If the selected campaign is `VDM`, the batch fails fast unless the campaign has a `vdm_video` configured.
 4. Valid rows are bulk-created as `DonationJob` records and fanned out via `group + chord`.
 5. Each job runs through `validate_and_prep_job` → `generate_video_for_job` → `dispatch_email_for_job`.
 6. VDM uploads the campaign video once to Cloudflare Stream and caches the playback URL on the campaign. If Stream is unavailable, donor links fall back to a public storage-backed media URL.

@@ -66,8 +66,6 @@ class MultiTenantIsolationTests(TestCase):
         """Charity A should only see Charity A (Self), not Charity B"""
         self.client.login(username="charity_a", password="password")
         # Dashboards are usually restricted to members
-        from charity.models import CharityMember
-
         CharityMember.objects.create(charity=self.charity_a, user=self.user_a, role="Admin")
 
         response = self.client.get(reverse("dashboard"))
@@ -227,7 +225,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.VDM,
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
 
         vdm_batch = DonationBatch.objects.create(
@@ -278,12 +276,12 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_start=date.today(),
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.VDM,
-            vdm_email_body=(
+            email_body=(
                 "Welcome to {{ campaign_name }} from {{ charity_name }}.\n\n"
                 "We made this update for {{ donor_name }}."
             ),
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
 
         vdm_batch = DonationBatch.objects.create(
@@ -342,7 +340,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_mode=Campaign.CampaignMode.VDM,
             email_thumbnail=thumbnail,
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
 
         vdm_batch = DonationBatch.objects.create(
@@ -391,7 +389,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.VDM,
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
 
         vdm_batch = DonationBatch.objects.create(
@@ -484,7 +482,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.VDM,
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
         vdm_campaign.refresh_from_db()
 
         vdm_batch = DonationBatch.objects.create(
@@ -555,7 +553,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.VDM,
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
 
         csv_key = default_storage.save(
             "uploads/test/vdm-dispatch.csv",
@@ -574,7 +572,8 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertEqual(batch.status, DonationBatch.BatchStatus.PROCESSING)
         jobs = DonationJob.objects.filter(donation_batch=batch)
         self.assertEqual(jobs.count(), 1)
-        self.assertEqual(jobs.first().campaign, vdm_campaign)
+        queued_job = jobs.get()
+        self.assertEqual(queued_job.campaign, vdm_campaign)
         self.assertEqual(mock_chord.call_count, 1)
         chord_runner.assert_called_once()
 
@@ -593,7 +592,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign_end=date.today(),
             campaign_mode=Campaign.CampaignMode.VDM,
         )
-        Campaign.objects.filter(pk=vdm_campaign.pk).update(charity_video="test/fake_video_a.mp4")
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
 
         csv_key = default_storage.save(
             "uploads/test/vdm-greetings.csv",

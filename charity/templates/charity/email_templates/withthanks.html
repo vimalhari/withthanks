@@ -131,8 +131,14 @@
                             <div class="eyebrow" style="margin-bottom: 12px;">Thank you</div>
                             <div class="headline" style="margin-bottom: 20px;">{{ greeting_line }},</div>
                             <div class="body-copy">
+                                {% if email_body_paragraphs %}
+                                    {% for paragraph in email_body_paragraphs %}
+                                    <p style="margin: 0 0 18px;">{{ paragraph|linebreaksbr }}</p>
+                                    {% endfor %}
+                                {% else %}
                                 <p style="margin: 0 0 18px;">On behalf of <strong style="color: #13202b;">{{ charity_name }}</strong>, thank you for your generous donation of <strong style="color: #13202b;">{{ donation_amount }}</strong>.</p>
                                 <p style="margin: 0;">Your support helps sustain our work, and we have prepared a personal video message to express our appreciation.</p>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

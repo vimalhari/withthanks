@@ -42,6 +42,11 @@ DEFAULT_VDM_EMAIL_BODY = (
     "Your support makes everything possible. Let's make a difference together!"
 )
 
+DEFAULT_THANK_YOU_EMAIL_BODY = (
+    "On behalf of {{ charity_name }}, thank you for your generous donation of {{ donation_amount }}.\n\n"
+    "Your support helps sustain our work, and we have prepared a personal video message to express our appreciation."
+)
+
 
 def _resolve_campaign_email_image(*, campaign, mode: str, fallback_image: str) -> str:
     """Return the storage path to the campaign email thumbnail or the mode fallback."""
@@ -60,11 +65,9 @@ def cleanup_intermediate(files, final_file):
                 logger.warning(f"Failed to delete file {f}: {err}")
 
 
-def build_vdm_email_paragraphs(*, campaign, job, charity_name: str) -> list[str]:
-    """Render the configurable VDM body into paragraph-sized chunks."""
-    raw_body = (
-        campaign.vdm_email_body if campaign and campaign.vdm_email_body else DEFAULT_VDM_EMAIL_BODY
-    )
+def build_email_paragraphs(*, campaign, job, charity_name: str, default_body: str) -> list[str]:
+    """Render the campaign email_body into paragraph-sized chunks, falling back to default_body."""
+    raw_body = campaign.email_body if campaign and campaign.email_body else default_body
     rendered_body = render_script(
         raw_body,
         {
@@ -108,8 +111,8 @@ def validate_and_prep_job(self, job_id):
     # Resolve base video R2 storage key (use .name not .path — no local filesystem).
     base_video_path = None
     if campaign:
-        if mode == "VDM" and campaign.charity_video:
-            base_video_path = campaign.charity_video.name
+        if mode == "VDM" and campaign.vdm_video:
+            base_video_path = campaign.vdm_video.name
         elif campaign.base_video:
             base_video_path = campaign.base_video.name
 
@@ -403,10 +406,18 @@ def dispatch_email_for_job(self, context):
             "tracking_click_url": tracking.click_url,
         }
         if mode == "VDM":
-            email_context["vdm_body_paragraphs"] = build_vdm_email_paragraphs(
+            email_context["email_body_paragraphs"] = build_email_paragraphs(
                 campaign=campaign,
                 job=job,
                 charity_name=client.charity_name,
+                default_body=DEFAULT_VDM_EMAIL_BODY,
+            )
+        else:
+            email_context["email_body_paragraphs"] = build_email_paragraphs(
+                campaign=campaign,
+                job=job,
+                charity_name=client.charity_name,
+                default_body=DEFAULT_THANK_YOU_EMAIL_BODY,
             )
         full_template_path = f"charity/email_templates/{template_name}"
         email_html = render_to_string(full_template_path, email_context)
@@ -590,9 +601,9 @@ def batch_process_csv(self, batch_id):
         client = batch.charity
         campaign = batch.campaign
 
-        if campaign and campaign.is_vdm and not campaign.charity_video:
+        if campaign and campaign.is_vdm and not campaign.vdm_video:
             logger.error(
-                "Batch %s: VDM campaign %s is missing charity_video; failing preflight.",
+                "Batch %s: VDM campaign %s is missing vdm_video; failing preflight.",
                 batch_id,
                 campaign.id,
             )
@@ -794,8 +805,6 @@ def sync_charity_blackbaud(self, charity_id: int):
     """
     from decimal import Decimal
 
-    from django.utils.timezone import now as dj_now
-
     from .models import Campaign, Charity, DonationBatch, DonationJob
     from .utils.crm_adapters.base import CRMError
     from .utils.crm_adapters.blackbaud import BlackbaudAdapter
@@ -813,7 +822,7 @@ def sync_charity_blackbaud(self, charity_id: int):
         return
 
     # Determine sync window start
-    since = charity.blackbaud_last_synced_at or (dj_now() - timedelta(hours=24))
+    since = charity.blackbaud_last_synced_at or (now() - timedelta(hours=24))
 
     logger.info(
         "sync_charity_blackbaud: starting sync for charity %s since %s",
@@ -830,7 +839,7 @@ def sync_charity_blackbaud(self, charity_id: int):
 
     if not donations:
         logger.info("sync_charity_blackbaud: no new donations for charity %s", charity_id)
-        charity.blackbaud_last_synced_at = dj_now()
+        charity.blackbaud_last_synced_at = now()
         charity.save(update_fields=["blackbaud_last_synced_at"])
         return {"charity_id": charity_id, "created": 0}
 
@@ -848,7 +857,7 @@ def sync_charity_blackbaud(self, charity_id: int):
         charity=charity,
         campaign=campaign,
         batch_number=DonationBatch.get_next_batch_number(charity),
-        campaign_name=f"Blackbaud Sync \u2014 {dj_now().strftime('%Y-%m-%d %H:%M')}",
+        campaign_name=f"Blackbaud Sync \u2014 {now().strftime('%Y-%m-%d %H:%M')}",
         status=DonationBatch.BatchStatus.PROCESSING,
     )
 
@@ -878,7 +887,7 @@ def sync_charity_blackbaud(self, charity_id: int):
         created_count += 1
 
     # Advance the sync cursor
-    charity.blackbaud_last_synced_at = dj_now()
+    charity.blackbaud_last_synced_at = now()
     charity.save(update_fields=["blackbaud_last_synced_at"])
 
     logger.info(
