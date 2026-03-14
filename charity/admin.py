@@ -23,7 +23,6 @@ from .analytics_models import (
 )
 from .models import (
     Campaign,
-    CampaignField,
     Charity,
     CharityMember,
     Donation,
@@ -405,12 +404,6 @@ class ReceivedEmailAdmin(ModelAdmin):
 # ---------------------------------------------------------------------------
 
 
-class CampaignFieldInline(TabularInline):
-    model = CampaignField
-    extra = 0
-    fields = ("label", "field_type", "required", "order")
-
-
 class DonationBatchCampaignInline(TabularInline):
     """Read-only inline to show batch summary on a Campaign — replaces campaign_detail view."""
 
@@ -525,7 +518,7 @@ class CampaignAdmin(ModelAdmin):
     search_fields = ("name", "charity__charity_name", "campaign_code")
     readonly_fields = ("id", "created_at", "cf_stream_video_id", "cf_stream_video_url")
     warn_unsaved_tabs = True
-    inlines = [CampaignFieldInline, DonationBatchCampaignInline]
+    inlines = [DonationBatchCampaignInline]
 
     # Base fieldsets always displayed regardless of mode
     _BASE_FIELDSETS = [
@@ -673,14 +666,6 @@ class CampaignAdmin(ModelAdmin):
 
         fieldsets.append(self._CTA_FIELDSET)
         return fieldsets
-
-
-@admin.register(CampaignField)
-class CampaignFieldAdmin(ModelAdmin):
-    list_display = ("label", "campaign", "field_type", "required", "order")
-    list_filter = ("field_type", "required")
-    search_fields = ("label", "campaign__name")
-    compressed_fields = True
 
 
 # ---------------------------------------------------------------------------

@@ -723,35 +723,6 @@ class Campaign(models.Model):
         return not self.is_paused and self.campaign_start <= today <= self.campaign_end
 
 
-class CampaignField(models.Model):
-    FIELD_TYPES = [
-        ("text", "Text"),
-        ("email", "Email"),
-        ("phone", "Phone"),
-        ("number", "Number"),
-        ("date", "Date"),
-        ("dropdown", "Dropdown"),
-        ("radio", "Radio"),
-        ("checkbox", "Checkbox"),
-        ("textarea", "Textarea"),
-    ]
-
-    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name="fields")
-    label = models.CharField(max_length=100)
-    field_type = models.CharField(max_length=20, choices=FIELD_TYPES, default="text")
-    required = models.BooleanField(default=False)
-    options = models.JSONField(
-        default=list, blank=True, help_text="Comma-separated options for dropdown/radio/checkbox"
-    )
-    order = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ["order"]
-
-    def __str__(self):
-        return f"{self.label} ({self.field_type}) - {self.campaign.name}"
-
-
 # ---------------------------------------------------------------------------
 # Stage 3 — Donor / Donation / VideoSendLog (used by API pipeline)
 # ---------------------------------------------------------------------------

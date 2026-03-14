@@ -133,11 +133,6 @@ UNFOLD = {
                         "link": "/admin/charity/campaign/",
                     },
                     {
-                        "title": "Campaign Fields",
-                        "icon": "list",
-                        "link": "/admin/charity/campaignfield/",
-                    },
-                    {
                         "title": "Donation Batches",
                         "icon": "folder",
                         "link": "/admin/charity/donationbatch/",
