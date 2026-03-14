@@ -1,4 +1,4 @@
-.PHONY: dev test lint format typecheck migrate shell export-reqs worker beat
+.PHONY: dev test lint format typecheck verify-prod-config migrate shell export-reqs worker beat
 
 # ── Development ─────────────────────────────────────────────────────────────
 dev:
@@ -28,6 +28,9 @@ format-check:
 
 typecheck:
 	uv run pyright
+
+verify-prod-config:
+	uv run python scripts/check_production_guards.py
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 test:

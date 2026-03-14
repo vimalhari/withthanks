@@ -9,6 +9,23 @@ is_true() {
   esac
 }
 
+require_env() {
+  local var_name="$1"
+  if [ -z "${!var_name:-}" ]; then
+    echo "$var_name must be set in production." >&2
+    exit 1
+  fi
+}
+
+if [ "${DJANGO_ENV:-development}" = "production" ]; then
+  require_env DJANGO_SECRET_KEY
+  require_env DJANGO_SUPERUSER_PASSWORD
+  require_env ALLOWED_HOSTS
+  require_env CSRF_TRUSTED_ORIGINS
+  require_env DEFAULT_FROM_EMAIL
+  require_env SERVER_BASE_URL
+fi
+
 echo "Applying database migrations..."
 python manage.py migrate --noinput
 
@@ -39,18 +56,10 @@ if is_true "${SEED_ANALYTICS_ON_START:-false}"; then
 fi
 
 echo "Ensuring superuser exists..."
-if [ "${DJANGO_ENV:-development}" = "production" ] && [ -z "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
-  echo "DJANGO_SUPERUSER_PASSWORD must be set in production." >&2
-  exit 1
-fi
-
 python manage.py ensure_superuser \
   --username "${DJANGO_SUPERUSER_USERNAME:-admin}" \
   --email "${DJANGO_SUPERUSER_EMAIL:-admin@withthanks.example.com}" \
-  --password "${DJANGO_SUPERUSER_PASSWORD:-admin123!}"
-
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
+  --password "${DJANGO_SUPERUSER_PASSWORD:-}"
 
 echo "Starting Gunicorn..."
 exec gunicorn withthanks.wsgi:application \

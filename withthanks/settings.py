@@ -15,6 +15,9 @@ load_dotenv(BASE_DIR / ".env")
 # ------------------------------------------------------------
 # Core settings
 # ------------------------------------------------------------
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").strip().lower()
+IS_PRODUCTION = DJANGO_ENV == "production"
+
 _secret_key = os.environ.get("DJANGO_SECRET_KEY")
 _local_commands = {
     "runserver",
@@ -32,10 +35,14 @@ _local_commands = {
 }
 _is_local_command = any(cmd in sys.argv for cmd in _local_commands)
 _debug_env = os.environ.get("DJANGO_DEBUG")
-DEBUG = _debug_env.lower() == "true" if _debug_env is not None else _is_local_command
+DEBUG = (
+    _debug_env.lower() == "true"
+    if _debug_env is not None
+    else _is_local_command and not IS_PRODUCTION
+)
 
 if not _secret_key:
-    if _is_local_command:
+    if _is_local_command and not IS_PRODUCTION:
         _secret_key = "django-insecure-local-dev-secret-key-change-me"
     else:
         raise RuntimeError(
@@ -44,6 +51,9 @@ if not _secret_key:
         )
 SECRET_KEY = _secret_key
 
+if IS_PRODUCTION and DEBUG:
+    raise RuntimeError("DJANGO_DEBUG must be false in production.")
+
 # Accept a comma-separated list of extra hosts from the environment.
 _extra_hosts = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
 ALLOWED_HOSTS = [
@@ -51,6 +61,9 @@ ALLOWED_HOSTS = [
     *(["localhost", "127.0.0.1"] if DEBUG else []),
     *_extra_hosts,
 ]
+
+if IS_PRODUCTION and not _extra_hosts:
+    raise RuntimeError("ALLOWED_HOSTS must be set in production.")
 
 # ------------------------------------------------------------
 # Installed apps
@@ -459,6 +472,9 @@ BLACKBAUD_REDIRECT_URI = os.environ.get(
 # ------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "No Reply <no-reply@example.com>")
 
+if IS_PRODUCTION and DEFAULT_FROM_EMAIL == "No Reply <no-reply@example.com>":
+    raise RuntimeError("DEFAULT_FROM_EMAIL must be set in production.")
+
 # ------------------------------------------------------------
 # Celery
 # ------------------------------------------------------------
@@ -552,10 +568,17 @@ _csrf_origins = [
     o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
 ]
 CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
+    *(["http://127.0.0.1:8000", "http://localhost:8000"] if DEBUG else []),
     *_csrf_origins,
 ]
+
+if IS_PRODUCTION and not _csrf_origins:
+    raise RuntimeError("CSRF_TRUSTED_ORIGINS must be set in production.")
+
+if IS_PRODUCTION:
+    invalid_csrf_origins = [origin for origin in _csrf_origins if not origin.startswith("https://")]
+    if invalid_csrf_origins:
+        raise RuntimeError("CSRF_TRUSTED_ORIGINS must use https in production.")
 
 # ------------------------------------------------------------
 # HTTPS / security hardening (production only)
@@ -585,6 +608,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
 # Server base URL (used for tracking links in emails)
 # ------------------------------------------------------------
 SERVER_BASE_URL = os.environ.get("SERVER_BASE_URL", "http://127.0.0.1:8000")
+
+if IS_PRODUCTION:
+    if SERVER_BASE_URL == "http://127.0.0.1:8000":
+        raise RuntimeError("SERVER_BASE_URL must be set in production.")
+    parsed_server_base_url = urlparse(SERVER_BASE_URL)
+    if parsed_server_base_url.scheme != "https" or not parsed_server_base_url.netloc:
+        raise RuntimeError("SERVER_BASE_URL must be a valid https URL in production.")
 
 # ------------------------------------------------------------
 # ElevenLabs voice settings

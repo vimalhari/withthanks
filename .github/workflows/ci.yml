@@ -42,6 +42,9 @@ jobs:
       - name: Pyright – type check
         run: uv run pyright
 
+      - name: Production guards
+        run: make verify-prod-config
+
   # ------------------------------------------------------------------ #
   # Tests                                                                #
   # ------------------------------------------------------------------ #
