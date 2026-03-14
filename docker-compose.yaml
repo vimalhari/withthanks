@@ -1,6 +1,7 @@
-# docker-compose.yaml  –  Coolify / production deployment
+# docker-compose.yaml  –  Coolify deployment
 # This file is named .yaml (not .yml) so Coolify finds it automatically.
-# It is the production counterpart of docker-compose.prod.yml.
+# It defaults to production, but individual Coolify apps can override
+# DJANGO_ENV (for example, dev uses development while portal uses production).
 #
 # Key differences from docker-compose.yml (local dev):
 #   - Uses the final slim runtime stage (no `target: build`)
@@ -49,7 +50,7 @@ services:
       DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DJANGO_ENV: production
+      DJANGO_ENV: ${DJANGO_ENV:-production}
       MEDIA_ROOT: /app/media
     volumes:
       - media_data:/app/media
@@ -86,7 +87,7 @@ services:
       DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DJANGO_ENV: production
+      DJANGO_ENV: ${DJANGO_ENV:-production}
       MEDIA_ROOT: /app/media
     volumes:
       - media_data:/app/media
@@ -115,7 +116,7 @@ services:
       DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DJANGO_ENV: production
+      DJANGO_ENV: ${DJANGO_ENV:-production}
     depends_on:
       db:
         condition: service_healthy
@@ -134,7 +135,7 @@ services:
       DATABASE_URL: postgresql://withthanks:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/withthanks
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DJANGO_ENV: production
+      DJANGO_ENV: ${DJANGO_ENV:-production}
     depends_on:
       db:
         condition: service_healthy
