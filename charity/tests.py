@@ -440,6 +440,7 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertNotIn('src="http://127.0.0.1:8000/media/', html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
 
+    @override_settings(PUBLIC_MEDIA_BASE_URL="")
     @patch(
         "charity.services.video_pipeline_service._storage_uses_local_filesystem", return_value=False
     )
@@ -452,6 +453,7 @@ class VideoProcessingIsolationTests(TestCase):
         from charity.services.video_pipeline_service import resolve_storage_video_url
 
         storage_path = "charities/charity_2/campaign_overrides/thumb.jpg"
+        mock_storage.exists.return_value = True
         mock_storage.url.return_value = (
             "https://example-account.r2.cloudflarestorage.com/withthanks/"
             "charities/charity_2/campaign_overrides/thumb.jpg"
@@ -477,6 +479,7 @@ class VideoProcessingIsolationTests(TestCase):
         from charity.services.video_pipeline_service import resolve_storage_video_url
 
         storage_path = "charities/charity_2/campaign_overrides/thumb.jpg"
+        mock_storage.exists.return_value = True
         mock_storage.url.return_value = (
             "https://example-account.r2.cloudflarestorage.com/withthanks/"
             "charities/charity_2/campaign_overrides/thumb.jpg"
@@ -491,6 +494,28 @@ class VideoProcessingIsolationTests(TestCase):
             resolved_url,
             "https://assets.example.com/charities/charity_2/campaign_overrides/thumb.jpg",
         )
+
+    @patch(
+        "charity.services.video_pipeline_service._storage_uses_local_filesystem", return_value=False
+    )
+    @patch("django.core.files.storage.default_storage", new_callable=Mock)
+    def test_resolve_storage_video_url_returns_empty_when_storage_object_is_missing(
+        self,
+        mock_storage,
+        _mock_local_storage,
+    ):
+        from charity.services.video_pipeline_service import resolve_storage_video_url
+
+        storage_path = "charities/charity_2/campaign_overrides/missing-thumb.jpg"
+        mock_storage.exists.return_value = False
+
+        resolved_url = resolve_storage_video_url(
+            storage_path=storage_path,
+            server_url="http://127.0.0.1:8000",
+        )
+
+        self.assertEqual(resolved_url, "")
+        mock_storage.url.assert_not_called()
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
@@ -1156,6 +1181,48 @@ class CampaignAdminCSVUploadTests(TestCase):
             "https://pub-adfa32dd72a346b18b40fbc2bf8fb6fc.r2.dev/"
             "charities/charity_1/campaign_overrides/admin-thumb.gif",
         )
+        self.assertEqual(
+            widget_context["widget"]["public_url"],
+            "https://pub-adfa32dd72a346b18b40fbc2bf8fb6fc.r2.dev/"
+            "charities/charity_1/campaign_overrides/admin-thumb.gif",
+        )
+        self.assertTrue(widget_context["widget"]["is_image_preview"])
+        self.assertFalse(widget_context["widget"]["missing_file"])
+        mock_resolve_storage_url.assert_called_once_with(
+            storage_path=self.campaign.email_thumbnail.name,
+            server_url="http://127.0.0.1:8000",
+        )
+
+    @patch("charity.admin.resolve_storage_video_url", return_value="")
+    def test_campaign_admin_form_marks_missing_thumbnail_files(
+        self,
+        mock_resolve_storage_url,
+    ):
+        from charity.admin import CampaignAdminForm
+
+        thumbnail = SimpleUploadedFile(
+            "admin-thumb.jpg",
+            b"fake-image-bytes",
+            content_type="image/jpeg",
+        )
+        self.campaign.email_thumbnail = thumbnail
+        self.campaign.save(update_fields=["email_thumbnail"])
+        self.campaign.refresh_from_db()
+
+        form = CampaignAdminForm(instance=self.campaign)
+        widget_context = form.fields["email_thumbnail"].widget.get_context(
+            "email_thumbnail",
+            self.campaign.email_thumbnail,
+            {},
+        )
+
+        self.assertEqual(
+            widget_context["widget"]["display_name"],
+            self.campaign.email_thumbnail.name,
+        )
+        self.assertEqual(widget_context["widget"]["public_url"], "")
+        self.assertTrue(widget_context["widget"]["is_image_preview"])
+        self.assertTrue(widget_context["widget"]["missing_file"])
         mock_resolve_storage_url.assert_called_once_with(
             storage_path=self.campaign.email_thumbnail.name,
             server_url="http://127.0.0.1:8000",

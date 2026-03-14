@@ -53,6 +53,14 @@ def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> s
     from django.core.files.storage import default_storage
 
     try:
+        if not default_storage.exists(storage_path):
+            logger.warning("Storage path %r does not exist; treating as non-public.", storage_path)
+            return ""
+    except Exception as exc:
+        logger.warning("Failed to verify storage path %r existence: %s", storage_path, exc)
+        return ""
+
+    try:
         storage_url = default_storage.url(storage_path)
     except Exception as exc:
         logger.warning("Failed to resolve storage URL for %r: %s", storage_path, exc)

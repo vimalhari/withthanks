@@ -518,7 +518,13 @@ class _AdminResolvedFileValue:
 
 
 class AdminPublicMediaFileWidget(forms.ClearableFileInput):
+    template_name = "admin/widgets/public_media_file_input.html"
+    _IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+
     def get_context(self, name, value, attrs):
+        display_name = getattr(value, "name", "") if value else ""
+        resolved_url = ""
+
         if value and getattr(value, "name", ""):
             resolved_url = resolve_storage_video_url(
                 storage_path=value.name,
@@ -527,7 +533,13 @@ class AdminPublicMediaFileWidget(forms.ClearableFileInput):
             if resolved_url:
                 value = _AdminResolvedFileValue(name=value.name, url=resolved_url)
 
-        return super().get_context(name, value, attrs)
+        context = super().get_context(name, value, attrs)
+        widget = context["widget"]
+        widget["display_name"] = display_name
+        widget["public_url"] = resolved_url
+        widget["is_image_preview"] = display_name.lower().endswith(self._IMAGE_SUFFIXES)
+        widget["missing_file"] = bool(display_name and not resolved_url)
+        return context
 
 
 @admin.register(Campaign)

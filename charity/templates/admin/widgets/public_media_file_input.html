@@ -1,0 +1,35 @@
+{% if widget.is_initial %}
+<div style="margin-bottom: 10px;">
+    <div>
+        {{ widget.initial_text }}:
+        {% if widget.public_url %}
+        <a href="{{ widget.public_url }}" target="_blank" rel="noopener">{{ widget.display_name }}</a>
+        {% else %}
+        <span>{{ widget.display_name }}</span>
+        <span style="margin-left: 8px; color: #b42318; font-weight: 600;">File missing from storage</span>
+        {% endif %}
+    </div>
+    {% if widget.public_url and widget.is_image_preview %}
+    <div style="margin-top: 10px;">
+        <a href="{{ widget.public_url }}" target="_blank" rel="noopener">
+            <img
+                src="{{ widget.public_url }}"
+                alt="Current file preview"
+                style="display: block; max-width: 420px; max-height: 180px; border: 1px solid #d5d7da; border-radius: 6px; background: #fff; object-fit: contain;"
+            >
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div>
+    {{ widget.input_text }}:
+    <input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>
+    {% if widget.is_initial and not widget.required %}
+    <span style="margin-left: 8px;">
+        <input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}">
+        <label for="{{ widget.checkbox_id }}">{{ widget.clear_checkbox_label }}</label>
+    </span>
+    {% endif %}
+</div>
