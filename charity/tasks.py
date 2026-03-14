@@ -14,7 +14,7 @@ from django.utils.timezone import now
 
 from .analytics_models import EmailEvent, VideoEvent
 from .exceptions import FatalTaskError
-from .models import DonationBatch, DonationJob, EmailTracking
+from .models import DonationBatch, DonationJob, EmailTracking, UnsubscribedUser
 from .services.video_build_service import VideoSpec, build_personalized_video, render_script
 from .services.video_pipeline_service import (
     StreamDelivery,
@@ -340,6 +340,35 @@ def dispatch_email_for_job(self, context):
         )
         client = job.charity
         campaign = job.campaign
+
+        if mode == "VDM" and client and UnsubscribedUser.is_unsubscribed(job.email, client):
+            generation_time = round(time.time() - start_time, 2)
+            job.status = "skipped"
+            job.error_message = (
+                f"Suppressed VDM email to unsubscribed recipient {job.email} for "
+                f"{client.charity_name}."
+            )
+            job.campaign_type = mode
+            job.generation_time = generation_time
+            job.completed_at = now()
+            job.save(
+                update_fields=[
+                    "status",
+                    "error_message",
+                    "campaign_type",
+                    "generation_time",
+                    "completed_at",
+                ]
+            )
+
+            all_tmp = list(intermediate_files)
+            if final_video_path and final_video_path not in all_tmp:
+                all_tmp.append(final_video_path)
+            cleanup_intermediate(all_tmp, None)
+
+            logger.info("Job %s skipped due to prior VDM unsubscribe for %s", job_id, job.email)
+            return {"status": "skipped", "job_id": job_id}
+
         full_image_url = resolve_storage_video_url(storage_path=image_url, server_url=server_url)
 
         # --- Cloudflare Stream upload --------------------------------------- #

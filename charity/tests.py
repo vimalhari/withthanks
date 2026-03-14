@@ -9,15 +9,19 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from django.conf import settings
+from django.contrib import admin
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from charity.admin import UnsubscribedUserAdmin
+from charity.analytics_models import EmailEvent
 from charity.models import (
     Campaign,
     Charity,
@@ -25,6 +29,7 @@ from charity.models import (
     DonationBatch,
     DonationJob,
     EmailTracking,
+    UnsubscribedUser,
 )
 from charity.services.video_pipeline_service import StreamDelivery
 from charity.utils.cloudflare_stream import extract_stream_video_id
@@ -83,6 +88,65 @@ class MultiTenantIsolationTests(TestCase):
         # Context badge renders charity name in uppercase
         self.assertContains(response, "CHARITY A")
         self.assertNotContains(response, "CHARITY B")
+
+
+class UnsubscribeAdminActionTests(TestCase):
+    def setUp(self):
+        self.superuser = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="password123",
+        )
+        self.staff_user = User.objects.create_user(
+            username="staff",
+            email="staff@example.com",
+            password="password123",
+            is_staff=True,
+        )
+        self.charity = Charity.objects.create(
+            charity_name="Action Charity",
+            contact_email="ops@action.org",
+        )
+        self.selected_unsub = UnsubscribedUser.objects.create(
+            charity=self.charity,
+            email="selected@example.com",
+            reason="Clicked unsubscribe link",
+        )
+        self.other_unsub = UnsubscribedUser.objects.create(
+            charity=self.charity,
+            email="other@example.com",
+            reason="Clicked unsubscribe link",
+        )
+        self.client = Client()
+        self.factory = RequestFactory()
+
+    def test_admin_action_resubscribes_only_selected_unsubscribes(self):
+        self.client.login(username="admin", password="password123")
+
+        response = self.client.post(
+            reverse("admin:charity_unsubscribeduser_changelist"),
+            {
+                "action": "resubscribe_selected_donors",
+                "_selected_action": [str(self.selected_unsub.pk)],
+                "index": 0,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(UnsubscribedUser.objects.filter(pk=self.selected_unsub.pk).exists())
+        self.assertTrue(UnsubscribedUser.objects.filter(pk=self.other_unsub.pk).exists())
+
+    def test_admin_action_requires_superuser(self):
+        request = self.factory.post(reverse("admin:charity_unsubscribeduser_changelist"))
+        request.user = self.staff_user
+        model_admin = UnsubscribedUserAdmin(UnsubscribedUser, admin.site)
+
+        with self.assertRaises(PermissionDenied):
+            model_admin.actions[0](
+                model_admin,
+                request,
+                UnsubscribedUser.objects.filter(pk=self.selected_unsub.pk),
+            )
 
 
 @override_settings(
@@ -439,6 +503,107 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn('src="https://videodelivery.net/stream-thumb/thumbnails/thumbnail.jpg', html)
         self.assertNotIn('src="http://127.0.0.1:8000/media/', html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.get_or_upload_campaign_stream")
+    def test_dispatch_skips_unsubscribed_vdm_before_delivery_side_effects(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import dispatch_email_for_job, validate_and_prep_job
+
+        vdm_campaign = Campaign.objects.create(
+            name="Suppressed VDM Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-009",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=10,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Suppressed Donor",
+            email="suppressed@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+        UnsubscribedUser.objects.create(
+            charity=self.charity_a,
+            email=vdm_job.email,
+            reason="Requested no more VDM",
+        )
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        result = dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        self.assertEqual(result["status"], "skipped")
+        mock_stream.assert_not_called()
+        mock_send.assert_not_called()
+
+        vdm_job.refresh_from_db()
+        self.assertEqual(vdm_job.status, "skipped")
+        self.assertEqual(vdm_job.campaign_type, "VDM")
+        self.assertIsNotNone(vdm_job.completed_at)
+        self.assertIn("Suppressed VDM email", vdm_job.error_message)
+        self.assertFalse(EmailTracking.objects.filter(job=vdm_job).exists())
+        self.assertFalse(EmailEvent.objects.filter(job=vdm_job, event_type="SENT").exists())
+
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload")
+    @patch("os.path.exists")
+    def test_withthanks_does_not_apply_vdm_unsubscribe_suppression(
+        self,
+        mock_exists,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        mock_upload,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-no-suppress")
+        mock_tts.return_value = "/tmp/tts.mp3"
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        UnsubscribedUser.objects.create(
+            charity=self.charity_a,
+            email=self.job_a.email,
+            reason="Legacy unsubscribe record",
+        )
+
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        result = dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        self.assertEqual(result["status"], "success")
+        mock_send.assert_called_once()
+
+        self.job_a.refresh_from_db()
+        self.assertEqual(self.job_a.status, "success")
+        self.assertTrue(EmailTracking.objects.filter(job=self.job_a, sent=True).exists())
+        self.assertTrue(EmailEvent.objects.filter(job=self.job_a, event_type="SENT").exists())
 
     @override_settings(PUBLIC_MEDIA_BASE_URL="")
     @patch(

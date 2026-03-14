@@ -89,6 +89,34 @@ def create_default_campaign(
         messages.info(request, f"Skipped {skipped} charities that already have campaigns.")
 
 
+@admin.action(
+    description="Re-subscribe selected donors",
+    permissions=["change"],
+)
+def resubscribe_selected_donors(
+    modeladmin: admin.ModelAdmin,
+    request: HttpRequest,
+    queryset: QuerySet,
+) -> None:
+    """Remove selected charity-scoped unsubscribe records after admin confirmation."""
+    if not request.user.is_superuser:
+        raise PermissionDenied("Only superusers can re-subscribe donors.")
+
+    selected_ids = list(queryset.values_list("id", flat=True))
+    if not selected_ids:
+        messages.info(request, "No unsubscribe records were selected.")
+        return
+
+    deleted_count, _ = UnsubscribedUser.objects.filter(id__in=selected_ids).delete()
+    messages.success(
+        request,
+        (
+            f"Re-subscribed {deleted_count} donor(s). Future VDM sends are allowed again "
+            "for those charity/email pairs."
+        ),
+    )
+
+
 @admin.register(Charity)
 class CharityAdmin(ModelAdmin):
     list_display = ("charity_name", "contact_email", "created_at")
@@ -379,6 +407,7 @@ class UnsubscribedUserAdmin(ModelAdmin):
     list_display = ("email", "charity", "reason", "ip_address", "created_at")
     list_filter = ("created_at",)
     search_fields = ("email", "reason")
+    actions = [resubscribe_selected_donors]
     readonly_fields = (
         "email",
         "charity",
