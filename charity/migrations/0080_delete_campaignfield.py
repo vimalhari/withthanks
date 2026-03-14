@@ -4,13 +4,12 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0079_remove_campaign_text_template_and_more'),
+        ("charity", "0079_remove_campaign_text_template_and_more"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='CampaignField',
+            name="CampaignField",
         ),
     ]

@@ -4,29 +4,35 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0071_charity_website_url'),
+        ("charity", "0071_charity_website_url"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='charity',
-            old_name='client_name',
-            new_name='charity_name',
+            model_name="charity",
+            old_name="client_name",
+            new_name="charity_name",
         ),
         migrations.RemoveField(
-            model_name='charity',
-            name='organization_name',
+            model_name="charity",
+            name="organization_name",
         ),
         migrations.AlterField(
-            model_name='campaign',
-            name='vdm_email_body',
-            field=models.TextField(blank=True, default='', help_text='Optional VDM email copy. Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, and {{ donation_amount }} placeholders.'),
+            model_name="campaign",
+            name="vdm_email_body",
+            field=models.TextField(
+                blank=True,
+                default="",
+                help_text="Optional VDM email copy. Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, and {{ donation_amount }} placeholders.",
+            ),
         ),
         migrations.AlterField(
-            model_name='charity',
-            name='default_voiceover_script',
-            field=models.TextField(blank=True, help_text='Default script with placeholders {{donor_name}}, {{donation_amount}}, {{charity_name}}'),
+            model_name="charity",
+            name="default_voiceover_script",
+            field=models.TextField(
+                blank=True,
+                help_text="Default script with placeholders {{donor_name}}, {{donation_amount}}, {{charity_name}}",
+            ),
         ),
     ]

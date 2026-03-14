@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0070_campaign_email_thumbnail'),
+        ("charity", "0070_campaign_email_thumbnail"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='charity',
-            name='website_url',
-            field=models.URLField(blank=True, help_text='Optional public website URL shown in donor email footers', null=True),
+            model_name="charity",
+            name="website_url",
+            field=models.URLField(
+                blank=True,
+                help_text="Optional public website URL shown in donor email footers",
+                null=True,
+            ),
         ),
     ]

@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('charity', '0068_blackbaud_oauth_fields'),
+        ("charity", "0068_blackbaud_oauth_fields"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='campaign',
-            name='vdm_email_body',
-            field=models.TextField(blank=True, default='', help_text='Optional VDM email copy. Supports {{ donor_name }}, {{ organization_name }}, {{ campaign_name }}, and {{ donation_amount }} placeholders.'),
+            model_name="campaign",
+            name="vdm_email_body",
+            field=models.TextField(
+                blank=True,
+                default="",
+                help_text="Optional VDM email copy. Supports {{ donor_name }}, {{ organization_name }}, {{ campaign_name }}, and {{ donation_amount }} placeholders.",
+            ),
         ),
     ]
