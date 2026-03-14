@@ -37,6 +37,11 @@ def _as_absolute_url(url_or_path: str, server_url: str) -> str:
     return f"{server_url.rstrip('/')}/{url_or_path.lstrip('/')}"
 
 
+def _is_private_r2_api_url(url: str) -> bool:
+    """Return True when the URL points at the Cloudflare R2 S3 API endpoint."""
+    return ".r2.cloudflarestorage.com" in url
+
+
 def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> str:
     """Resolve a storage key to a public absolute URL when the backend is externally reachable."""
     if not storage_path:
@@ -60,6 +65,18 @@ def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> s
             storage_url,
         )
         return ""
+
+    if _is_private_r2_api_url(storage_url):
+        public_media_base_url = getattr(settings, "PUBLIC_MEDIA_BASE_URL", "")
+        if not public_media_base_url:
+            logger.warning(
+                "Resolved storage path %r to private R2 API URL %r without PUBLIC_MEDIA_BASE_URL; treating as non-public.",
+                storage_path,
+                storage_url,
+            )
+            return ""
+
+        return f"{public_media_base_url}/{storage_path.lstrip('/')}"
 
     return _as_absolute_url(storage_url, server_url)
 

@@ -439,6 +439,58 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertNotIn('src="http://127.0.0.1:8000/media/', html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
 
+    @patch(
+        "charity.services.video_pipeline_service._storage_uses_local_filesystem", return_value=False
+    )
+    @patch("django.core.files.storage.default_storage", new_callable=Mock)
+    def test_resolve_storage_video_url_treats_r2_api_endpoint_as_non_public(
+        self,
+        mock_storage,
+        _mock_local_storage,
+    ):
+        from charity.services.video_pipeline_service import resolve_storage_video_url
+
+        storage_path = "charities/charity_2/campaign_overrides/thumb.jpg"
+        mock_storage.url.return_value = (
+            "https://example-account.r2.cloudflarestorage.com/withthanks/"
+            "charities/charity_2/campaign_overrides/thumb.jpg"
+        )
+
+        resolved_url = resolve_storage_video_url(
+            storage_path=storage_path,
+            server_url="http://127.0.0.1:8000",
+        )
+
+        self.assertEqual(resolved_url, "")
+
+    @override_settings(PUBLIC_MEDIA_BASE_URL="https://assets.example.com")
+    @patch(
+        "charity.services.video_pipeline_service._storage_uses_local_filesystem", return_value=False
+    )
+    @patch("django.core.files.storage.default_storage", new_callable=Mock)
+    def test_resolve_storage_video_url_uses_public_media_base_url_for_r2_assets(
+        self,
+        mock_storage,
+        _mock_local_storage,
+    ):
+        from charity.services.video_pipeline_service import resolve_storage_video_url
+
+        storage_path = "charities/charity_2/campaign_overrides/thumb.jpg"
+        mock_storage.url.return_value = (
+            "https://example-account.r2.cloudflarestorage.com/withthanks/"
+            "charities/charity_2/campaign_overrides/thumb.jpg"
+        )
+
+        resolved_url = resolve_storage_video_url(
+            storage_path=storage_path,
+            server_url="http://127.0.0.1:8000",
+        )
+
+        self.assertEqual(
+            resolved_url,
+            "https://assets.example.com/charities/charity_2/campaign_overrides/thumb.jpg",
+        )
+
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_omits_dear_for_title_surname_greeting(
