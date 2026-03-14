@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path, re_path
+from django.views.generic import RedirectView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
@@ -71,6 +72,14 @@ urlpatterns = [
     # Health check (used by Coolify / container orchestrators)
     path("health/", health_check, name="health_check"),
     path("meta.json", health_check),  # Prevent /meta.json 404
+    path(
+        "admin/charity/texttemplate/",
+        RedirectView.as_view(pattern_name="admin:charity_campaign_changelist", permanent=False),
+    ),
+    path(
+        "admin/charity/videotemplate/",
+        RedirectView.as_view(pattern_name="admin:charity_campaign_changelist", permanent=False),
+    ),
     # Admin
     path("admin/", admin.site.urls),
     # JWT auth

@@ -524,11 +524,9 @@ Runs the full CI suite first, then triggers the Coolify **prod** application web
 | Model | Description |
 |---|---|
 | `Charity` | A registered charity organisation linked to a Django `User` account. |
-| `Campaign` | Links a charity to an appeal type (`THANK_YOU` or `VDM`), campaign media, template selection, and delivery settings. |
+| `Campaign` | Links a charity to an appeal type (`THANK_YOU` or `VDM`), campaign media, and delivery settings. |
 | `DonationBatch` | Groups a set of `DonationJob` records. Tracks `status` (`pending → processing → completed / completed_with_errors / failed`) and is the target of the Celery chord callback. |
 | `DonationJob` | A single donor send job — tracks `status`, `video_path`, `generation_time`, `completed_at`, and `error_message`. The single source of truth for both API and CSV pipeline jobs. |
-| `VideoTemplate` | An uploaded base video used as the canvas for FFmpeg stitching. |
-| `TextTemplate` | A named voiceover script with ElevenLabs voice ID. Supports `{{donor_name}}`, `{{donation_amount}}`, `{{charity}}`, `{{campaign_name}}` placeholders. |
 | `Donor` | Normalised donor record scoped to a charity (`unique_together: charity + email`). |
 | `Donation` | A financial donation record linking `Donor`, `Charity`, amount, and campaign type. |
 | `VideoSendLog` | Audit log of every video send attempt, including Cloudflare Stream metadata, Resend message ID, send kind, and error details. |

@@ -12,7 +12,7 @@ def get_charity_media_path(instance, filename):
 
     Handles:
     - Charity (logo, thank_you_card)
-    - Campaign (video_template_override)
+    - Campaign media assets
     """
     charity_id = "unknown"
     category = "misc"

@@ -177,23 +177,6 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "Templates & Assets",
-                "items": [
-                    {
-                        "title": "Text Templates",
-                        "icon": "text_fields",
-                        "link": "/admin/charity/texttemplate/",
-                        "permission": lambda request: request.user.is_superuser,
-                    },
-                    {
-                        "title": "Video Templates",
-                        "icon": "video_library",
-                        "link": "/admin/charity/videotemplate/",
-                        "permission": lambda request: request.user.is_superuser,
-                    },
-                ],
-            },
-            {
                 "title": "Analytics & Logs",
                 "items": [
                     {
