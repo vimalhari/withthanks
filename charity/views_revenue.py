@@ -1,11 +1,9 @@
 from datetime import timedelta
 
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Avg, F, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.utils import timezone
 from django.views import View
 
@@ -168,11 +166,3 @@ class RevenueIntelligenceAPI(LoginRequiredMixin, AnalyticsPermissionMixin, View)
                 "clients": clients_list[:10],
             }
         )
-
-
-@login_required(login_url="charity_login")
-def revenue_dashboard_view(request):
-    """
-    Renders the Revenue Intelligence Dashboard template.
-    """
-    return render(request, "revenue_dashboard.html")

@@ -95,8 +95,10 @@ class MultiTenantIsolationTests(TestCase):
         # Dashboards are usually restricted to members
         CharityMember.objects.create(charity=self.charity_a, user=self.user_a, role="Admin")
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertRedirects(response, reverse("analytics_home"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Analytics & Reports")
         # Context badge renders charity name in uppercase
         self.assertContains(response, "CHARITY A")
         self.assertNotContains(response, "CHARITY B")

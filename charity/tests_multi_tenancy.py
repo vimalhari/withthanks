@@ -10,13 +10,11 @@ from charity.models import (
     Campaign,
     Charity,
     CharityMember,
-    Donation,
     DonationBatch,
     DonationJob,
-    Donor,
+    EmailTracking,
     Invoice,
     UnsubscribedUser,
-    VideoSendLog,
 )
 
 
@@ -97,62 +95,30 @@ class MultiTenancyIsolationTest(TestCase):
             campaign_end=today,
             campaign_mode=Campaign.CampaignMode.THANK_YOU_PERSONALIZED,
         )
-
-        donated_at = timezone.now()
-        self.donor_a = Donor.objects.create(
-            charity=self.charity_a,
-            email="donor_a@example.com",
-            full_name="Donor A",
-        )
-        self.donor_b = Donor.objects.create(
-            charity=self.charity_b,
-            email="donor_b@example.com",
-            full_name="Donor B",
-        )
-        self.donation_a = Donation.objects.create(
-            donor=self.donor_a,
-            charity=self.charity_a,
-            amount=Decimal("10.00"),
-            donated_at=donated_at,
-            campaign_type="THANK_YOU",
-            source="CSV",
-        )
-        self.donation_b = Donation.objects.create(
-            donor=self.donor_b,
-            charity=self.charity_b,
-            amount=Decimal("20.00"),
-            donated_at=donated_at,
-            campaign_type="THANK_YOU",
-            source="API",
-        )
-        VideoSendLog.objects.create(
-            charity=self.charity_a,
-            donor=self.donor_a,
-            donation=self.donation_a,
+        EmailTracking.objects.create(
             campaign=self.campaign_a,
+            batch=self.batch_a,
+            job=self.job_a,
+            user_id=self.job_a.id,
             campaign_type="THANK_YOU",
-            send_kind=VideoSendLog.SendKind.PERSONALIZED,
-            status=VideoSendLog.Status.SENT,
-            recipient_email=self.donor_a.email,
-            stream_playback_url="https://watch.example.com/a",
+            opened=True,
         )
-        VideoSendLog.objects.create(
-            charity=self.charity_b,
-            donor=self.donor_b,
-            donation=self.donation_b,
+        EmailTracking.objects.create(
             campaign=self.campaign_b,
+            batch=self.batch_b,
+            job=self.job_b,
+            user_id=self.job_b.id,
             campaign_type="THANK_YOU",
-            send_kind=VideoSendLog.SendKind.PERSONALIZED,
-            status=VideoSendLog.Status.FAILED,
-            recipient_email=self.donor_b.email,
-            error_message="send failed",
+            clicked=True,
         )
 
     def test_dashboard_isolation(self):
-        """Verify User A cannot see Charity B's data on dashboard."""
+        """Verify legacy dashboard URLs land on analytics without cross-charity leakage."""
         self.client.login(username="user_a", password="password123")
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertRedirects(response, reverse("analytics_home"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Analytics & Reports")
         # Should see Charity A
         content = response.content.decode()
         # The header context badge renders charity name in uppercase
@@ -181,20 +147,24 @@ class MultiTenancyIsolationTest(TestCase):
         self.client.login(username="admin", password="password123")
 
         # Initial: Global View (no charity context)
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertRedirects(response, reverse("analytics_home"))
         content = response.content.decode()
+        self.assertIn("Analytics & Reports", content)
         self.assertIn("GLOBAL VIEW", content)
 
         # Switch to Charity A
         self.client.get(reverse("switch_charity", kwargs={"charity_id": self.charity_a.id}))
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertRedirects(response, reverse("analytics_home"))
         content = response.content.decode()
         self.assertIn("CHARITY A", content)
         self.assertNotIn("CHARITY B", content)
 
         # Clear context
         self.client.get(reverse("clear_charity_context"))
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("dashboard"), follow=True)
+        self.assertRedirects(response, reverse("analytics_home"))
         content = response.content.decode()
         self.assertIn("GLOBAL VIEW", content)
 
@@ -207,21 +177,6 @@ class MultiTenancyIsolationTest(TestCase):
         self.assertTrue(UnsubscribedUser.is_unsubscribed("donor_a@example.com", self.charity_a))
         # Check in Charity B context (should NOT be unsubscribed)
         self.assertFalse(UnsubscribedUser.is_unsubscribed("donor_a@example.com", self.charity_b))
-
-    def test_logs_isolation(self):
-        """Verify User A only sees logs for Charity A."""
-        self.client.login(username="user_a", password="password123")
-        response = self.client.get(reverse("logs"))
-        self.assertEqual(response.status_code, 200)
-
-        # Logs view shows a table of jobs.
-        # Since Charity A has 1 job, pagination shows "1 results".
-        self.assertIn("of <strong>1</strong> results", response.content.decode())
-
-        # User B should see their own 1 job
-        self.client.login(username="user_b", password="password123")
-        response = self.client.get(reverse("logs"))
-        self.assertIn("of <strong>1</strong> results", response.content.decode())
 
     def test_api_ingest_rejects_cross_charity_access(self):
         self.client.login(username="user_a", password="password123")
@@ -260,15 +215,20 @@ class MultiTenancyIsolationTest(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_send_wizard_rejects_other_campaign(self):
+    def test_batch_tracking_report_isolation(self):
         self.client.login(username="user_a", password="password123")
 
-        response = self.client.get(
-            reverse("send_email_wizard"),
-            {"campaign_id": str(self.campaign_b.id)},
+        allowed = self.client.get(
+            reverse("batch_tracking_report", kwargs={"batch_id": self.batch_a.id})
+        )
+        blocked = self.client.get(
+            reverse("batch_tracking_report", kwargs={"batch_id": self.batch_b.id})
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.json()["total_sent"], 1)
+        self.assertEqual(allowed.json()["opened_count"], 1)
+        self.assertEqual(blocked.status_code, 404)
 
     def test_billing_create_rejects_other_charity(self):
         self.client.login(username="user_a", password="password123")
@@ -303,40 +263,3 @@ class MultiTenancyIsolationTest(TestCase):
         response = self.client.get(reverse("video_landing", kwargs={"job_id": self.job_a.id}))
 
         self.assertEqual(response.status_code, 200)
-
-    def test_donors_list_isolation(self):
-        self.client.login(username="user_a", password="password123")
-
-        response = self.client.get(reverse("donors"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "donor_a@example.com")
-        self.assertNotContains(response, "donor_b@example.com")
-
-    def test_donor_detail_isolation(self):
-        self.client.login(username="user_a", password="password123")
-
-        allowed = self.client.get(reverse("donor_detail", kwargs={"donor_id": self.donor_a.id}))
-        blocked = self.client.get(reverse("donor_detail", kwargs={"donor_id": self.donor_b.id}))
-
-        self.assertEqual(allowed.status_code, 200)
-        self.assertContains(allowed, "GBP 10.00")
-        self.assertEqual(blocked.status_code, 404)
-
-    def test_donations_list_isolation(self):
-        self.client.login(username="user_a", password="password123")
-
-        response = self.client.get(reverse("donations"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "donor_a@example.com")
-        self.assertNotContains(response, "donor_b@example.com")
-        self.assertContains(response, "CSV")
-        self.assertNotContains(response, "send failed")
-
-    def test_donors_view_requires_active_charity_for_superuser(self):
-        self.client.login(username="admin", password="password123")
-
-        response = self.client.get(reverse("donors"))
-
-        self.assertRedirects(response, reverse("dashboard"))

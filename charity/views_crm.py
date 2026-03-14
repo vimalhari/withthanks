@@ -1,10 +1,8 @@
 """
 CRM integration views — Blackbaud Raiser's Edge NXT OAuth 2.0 flow.
 
-    /crm/blackbaud/connect/              → charity portal: connect using active charity
     /admin-crm/blackbaud/<id>/connect/   → superuser admin: connect a specific charity by id
     /crm/blackbaud/callback/             → handle authorization code, exchange for tokens
-    /crm/blackbaud/disconnect/           → revoke stored tokens (portal)
     /admin-crm/blackbaud/<id>/disconnect/ → revoke stored tokens (admin)
 
 Superuser-initiated flows store the target charity_id in the session so the callback
@@ -33,21 +31,6 @@ _BLACKBAUD_TOKEN_URL = "https://oauth2.sky.blackbaud.com/token"
 _STATE_SESSION_KEY = "blackbaud_oauth_state"
 _CHARITY_ID_SESSION_KEY = "blackbaud_oauth_charity_id"
 _ADMIN_ORIGIN_SESSION_KEY = "blackbaud_oauth_admin_origin"
-
-
-@login_required(login_url="charity_login")
-def blackbaud_connect(request):
-    """
-    Step 1 (portal) — redirect to Blackbaud authorization using the active charity.
-
-    A cryptographically-random state token is stored in the session to
-    protect against CSRF on the OAuth callback.
-    """
-    charity = get_active_charity(request)
-    if not charity:
-        messages.error(request, "No active charity selected.")
-        return redirect("profile")
-    return _initiate_blackbaud_oauth(request, charity, admin_origin=False)
 
 
 @login_required(login_url="charity_login")
@@ -97,8 +80,8 @@ def blackbaud_callback(request):
     """
     Step 2 — Blackbaud redirects here with ?code=…&state=…
 
-    Works for both portal-initiated and admin-initiated flows.
-    Admin flows redirect back to the Charity change page after connecting.
+    Admin-initiated flows redirect back to the Charity change page after connecting.
+    If a charity was not stashed in the session, fall back to the active charity.
     """
     # Retrieve which charity this OAuth flow is for (set by _initiate_blackbaud_oauth)
     charity_id = request.session.pop(_CHARITY_ID_SESSION_KEY, None)
@@ -109,13 +92,15 @@ def blackbaud_callback(request):
             charity = Charity.objects.get(id=charity_id)
         except Charity.DoesNotExist:
             messages.error(request, "Charity not found.")
-            return redirect("admin:charity_charity_changelist" if admin_origin else "profile")
+            return redirect(
+                "admin:charity_charity_changelist" if admin_origin else "analytics_home"
+            )
     else:
-        # Fallback: portal flow without explicit charity_id in session
+        # Fallback for any callback that arrives without a stored charity.
         charity = get_active_charity(request)
         if not charity:
             messages.error(request, "No active charity selected.")
-            return redirect("profile")
+            return redirect("analytics_home")
 
     # CSRF state check
     expected_state = request.session.pop(_STATE_SESSION_KEY, None)
@@ -185,25 +170,6 @@ def blackbaud_callback(request):
 
 
 @login_required(login_url="charity_login")
-def blackbaud_disconnect(request):
-    """
-    Remove stored Blackbaud tokens and disable the integration (portal flow).
-    Only accepts POST to prevent accidental disconnection via navigating to the URL.
-    """
-    if request.method != "POST":
-        return redirect("profile")
-
-    charity = get_active_charity(request)
-    if not charity:
-        messages.error(request, "No active charity selected.")
-        return redirect("profile")
-
-    _clear_blackbaud_tokens(charity)
-    messages.success(request, "Raiser's Edge NXT has been disconnected.")
-    return redirect("profile")
-
-
-@login_required(login_url="charity_login")
 def blackbaud_admin_disconnect(request, charity_id: int):
     """
     Remove stored Blackbaud tokens for a specific charity (admin flow).
@@ -252,4 +218,4 @@ def _post_connect_redirect(request, charity, admin_origin: bool):
     """Redirect to the right place after connect/disconnect/error."""
     if admin_origin:
         return redirect("admin:charity_charity_change", charity.id)
-    return redirect("profile")
+    return redirect("analytics_home")

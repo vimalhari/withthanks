@@ -24,8 +24,6 @@
                 <div x-show="exportOpen" x-transition class="dropdown-menu right-0 mt-2 min-w-[180px]">
                     <a class="dropdown-item" href="?export=csv"><i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2 text-emerald-600 inline"></i>Export CSV</a>
                     <a class="dropdown-item" href="?export=excel"><i data-lucide="file-text" class="w-4 h-4 mr-2 text-brand inline"></i>Export Excel</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-gray-400 text-[11px]" href="{% url 'dashboard' %}?batch_id={{ batch.id }}"><i data-lucide="list" class="w-3 h-3 mr-2 inline"></i>View Raw Jobs</a>
                 </div>
             </div>
         </div>

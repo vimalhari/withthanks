@@ -1,12 +1,6 @@
-import logging
-
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Count, Q
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 
-from .models import Campaign, Charity, DonationJob
-from .utils.access_control import get_active_charity
 from .views_admin import (
     api_campaigns,
     api_charities,
@@ -14,24 +8,10 @@ from .views_admin import (
     switch_charity,
 )
 from .views_auth import (
-    change_password,
     login_view,
     logout_view,
-    profile_view,
-    register_view,
 )
-from .views_batch import (
-    batch_detail_view,
-    batch_tracking_report,
-    export_donation_report,
-    send_email_wizard,
-    upload_csv_and_process,
-)
-from .views_donors import (
-    donations_view,
-    donor_detail_view,
-    donors_view,
-)
+from .views_batch import batch_detail_view, batch_tracking_report
 from .views_invoice_actions import (
     invoice_mark_paid,
     invoice_send_email,
@@ -67,11 +47,8 @@ __all__ = [  # noqa: RUF022
     "clear_charity_context",
     "switch_charity",
     # views_auth
-    "change_password",
     "login_view",
     "logout_view",
-    "profile_view",
-    "register_view",
     # views_tracking
     "favicon_view",
     "robots_view",
@@ -84,13 +61,6 @@ __all__ = [  # noqa: RUF022
     # views_batch
     "batch_detail_view",
     "batch_tracking_report",
-    # views_donors
-    "donations_view",
-    "donor_detail_view",
-    "donors_view",
-    "export_donation_report",
-    "send_email_wizard",
-    "upload_csv_and_process",
     # views_invoices
     "create_invoice_view",
     "invoice_detail_view",
@@ -104,77 +74,10 @@ __all__ = [  # noqa: RUF022
     "invoices_view",
     # local
     "dashboard_view",
-    "logs_view",
 ]
-
-logger = logging.getLogger(__name__)
 
 
 @login_required(login_url="charity_login")
 def dashboard_view(request):
-    """Core dashboard with performance optimizations."""
-    current_charity = get_active_charity(request)
-    if not current_charity and not request.user.is_superuser:
-        return redirect("dashboard")
-
-    view_mode = request.GET.get("view", "campaigns")
-    # Base query optimized with select_related
-    jobs = DonationJob.objects.all().select_related("donation_batch", "donation_batch__charity")
-    if current_charity:
-        jobs = jobs.filter(donation_batch__charity=current_charity)
-
-    # Simple stats for summary
-    stats = jobs.aggregate(
-        total=Count("id"),
-        success=Count("id", filter=Q(status="success")),
-        failed=Count("id", filter=Q(status="failed")),
-        pending=Count("id", filter=Q(status="pending")),
-    )
-
-    # List population based on view mode
-    if view_mode == "campaigns":
-        clients = (
-            Campaign.objects.filter(charity=current_charity)
-            if current_charity
-            else Campaign.objects.all()
-        )
-        # Optimization: annotate with stats if needed by template
-        clients = clients.annotate(
-            total_batches=Count("batches", distinct=True),
-            total_videos=Count("batches__jobs", distinct=True),
-        ).select_related("charity")
-    elif request.user.is_superuser and view_mode == "clients":
-        clients = (
-            Charity.objects.all()
-            .annotate(
-                total_campaigns=Count("campaigns", distinct=True),
-                total_batches=Count("batches", distinct=True),
-                total_videos=Count("batches__jobs", distinct=True),
-            )
-            .order_by("charity_name")
-        )
-    else:
-        clients = [current_charity] if current_charity else []
-
-    return render(
-        request,
-        "dashboard.html",
-        {
-            "stats": stats,
-            "clients": clients,
-            "view_mode": view_mode,
-            "current_charity": current_charity,
-        },
-    )
-
-
-@login_required(login_url="charity_login")
-def logs_view(request):
-    """Paginated logs view."""
-    current_charity = get_active_charity(request)
-    jobs_list = DonationJob.objects.filter(donation_batch__charity=current_charity).order_by(
-        "-created_at"
-    )
-    paginator = Paginator(jobs_list, 25)
-    logs = paginator.get_page(request.GET.get("page"))
-    return render(request, "logs.html", {"logs": logs, "current_charity": current_charity})
+    """Keep legacy dashboard URLs alive while landing users on reports."""
+    return redirect("analytics_home")

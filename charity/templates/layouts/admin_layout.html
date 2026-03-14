@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}WithThanks Dashboard{% endblock %}</title>
+    <title>{% block title %}WithThanks Portal{% endblock %}</title>
 
     <!-- Tailwind CSS (built by django-tailwind-cli) -->
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
@@ -52,7 +52,7 @@
 
             <!-- Logo -->
             <div class="px-5 py-6 border-b border-gray-100">
-                <a href="{% url 'dashboard' %}" class="block">
+                <a href="{% url 'analytics_home' %}" class="block">
                     <img src="{% static 'charity/img/with_thanks_logo_header.png' %}"
                          alt="WithThanks" class="h-8 w-auto">
                 </a>
@@ -60,36 +60,11 @@
 
             <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-                <!-- Main -->
                 <div>
-                    <p class="nav-group-label">Main</p>
-                    <div class="mt-1 space-y-0.5">
-                        <a href="{% url 'dashboard' %}"
-                           class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'charity_home' %}active{% endif %}">
-                            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                            <span>Dashboard</span>
-                        </a>
-                        {% if request.user.is_superuser %}
-                        <a href="/admin/charity/charity/"
-                           class="nav-link {% if '/admin/charity/charity/' in request.path %}active{% endif %}">
-                            <i data-lucide="users" class="w-5 h-5"></i>
-                            <span>Charities</span>
-                        </a>
-                        {% endif %}
-                        <a href="/admin/charity/campaign/"
-                           class="nav-link {% if '/admin/charity/campaign/' in request.path %}active{% endif %}">
-                            <i data-lucide="megaphone" class="w-5 h-5"></i>
-                            <span>Campaigns</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Management -->
-                <div>
-                    <p class="nav-group-label">Management</p>
+                    <p class="nav-group-label">Workspace</p>
                     <div class="mt-1 space-y-0.5">
                         <a href="{% url 'analytics_home' %}"
-                           class="nav-link {% if '/analytics/' in request.path %}active{% endif %}">
+                           class="nav-link {% if request.resolver_match.url_name == 'analytics_home' or '/analytics/' in request.path %}active{% endif %}">
                             <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                             <span>Reports</span>
                         </a>
@@ -102,17 +77,24 @@
                 </div>
 
                 <div>
-                    <p class="nav-group-label">Audience</p>
+                    <p class="nav-group-label">Admin Shortcuts</p>
                     <div class="mt-1 space-y-0.5">
-                        <a href="{% url 'donors' %}"
-                           class="nav-link {% if request.resolver_match.url_name == 'donors' or request.resolver_match.url_name == 'donor_detail' %}active{% endif %}">
+                        {% if request.user.is_superuser %}
+                        <a href="/admin/charity/charity/"
+                           class="nav-link {% if '/admin/charity/charity/' in request.path %}active{% endif %}">
                             <i data-lucide="users" class="w-5 h-5"></i>
-                            <span>Donors</span>
+                            <span>Charities</span>
                         </a>
-                        <a href="{% url 'donations' %}"
-                           class="nav-link {% if request.resolver_match.url_name == 'donations' %}active{% endif %}">
-                            <i data-lucide="hand-coins" class="w-5 h-5"></i>
-                            <span>Donations</span>
+                        {% endif %}
+                        <a href="/admin/charity/campaign/"
+                           class="nav-link {% if '/admin/charity/campaign/' in request.path %}active{% endif %}">
+                            <i data-lucide="megaphone" class="w-5 h-5"></i>
+                            <span>Campaigns</span>
+                        </a>
+                        <a href="/admin/"
+                           class="nav-link {% if request.path|slice:':7' == '/admin/' %}active{% endif %}">
+                            <i data-lucide="shield" class="w-5 h-5"></i>
+                            <span>Django Admin</span>
                         </a>
                     </div>
                 </div>
@@ -136,9 +118,9 @@
                     </button>
 
                     <div class="breadcrumb hidden sm:flex">
-                        <a href="{% url 'dashboard' %}">WithThanks</a>
+                        <a href="{% url 'analytics_home' %}">WithThanks</a>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                        <span>{% block breadcrumb_parent %}Dashboard{% endblock %}</span>
+                        <span>{% block breadcrumb_parent %}Reports{% endblock %}</span>
                         <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
                         <span class="current">{% block breadcrumb_child %}Overview{% endblock %}</span>
                     </div>
@@ -204,10 +186,6 @@
                              x-transition:leave-end="opacity-0 scale-95"
                              class="dropdown-menu"
                              x-cloak>
-                            <a href="{% url 'profile' %}" class="dropdown-item flex items-center gap-2">
-                                <i data-lucide="user" class="w-4 h-4"></i> Profile
-                            </a>
-                            <div class="dropdown-divider"></div>
                             <a href="{% url 'logout' %}" class="dropdown-item flex items-center gap-2 text-red-600">
                                 <i data-lucide="log-out" class="w-4 h-4"></i> Logout
                             </a>
