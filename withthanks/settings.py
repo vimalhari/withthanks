@@ -53,7 +53,7 @@ if not _secret_key:
         )
 SECRET_KEY = _secret_key
 
-if IS_PRODUCTION and DEBUG:
+if IS_PRODUCTION and DEBUG and not _is_build_only_command:
     raise RuntimeError("DJANGO_DEBUG must be false in production.")
 
 # Accept a comma-separated list of extra hosts from the environment.
@@ -425,7 +425,7 @@ _r2_settings = {
 _has_any_r2_setting = any(_r2_settings.values())
 _missing_r2_settings = [name for name, value in _r2_settings.items() if not value]
 
-if IS_PRODUCTION and _has_any_r2_setting and _missing_r2_settings:
+if IS_PRODUCTION and _has_any_r2_setting and _missing_r2_settings and not _is_build_only_command:
     missing_names = ", ".join(_missing_r2_settings)
     raise RuntimeError(f"Incomplete Cloudflare R2 configuration in production: {missing_names}")
 
