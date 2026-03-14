@@ -17,6 +17,26 @@ require_env() {
   fi
 }
 
+should_run_web_bootstrap() {
+  if [ "$#" -eq 0 ]; then
+    return 0
+  fi
+
+  case "$1" in
+    gunicorn)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if ! should_run_web_bootstrap "$@"; then
+  echo "Skipping web bootstrap for command: $*"
+  exec "$@"
+fi
+
 if [ "${DJANGO_ENV:-development}" = "production" ]; then
   require_env DJANGO_SECRET_KEY
   require_env ALLOWED_HOSTS
@@ -62,6 +82,11 @@ if [ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
     --password "${DJANGO_SUPERUSER_PASSWORD:-}"
 else
   echo "Skipping superuser bootstrap; DJANGO_SUPERUSER_PASSWORD is not set."
+fi
+
+if [ "$#" -gt 0 ]; then
+  echo "Starting command: $*"
+  exec "$@"
 fi
 
 echo "Starting Gunicorn..."
