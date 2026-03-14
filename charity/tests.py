@@ -839,6 +839,95 @@ class TrackingSecurityTests(TestCase):
         self.assertEqual(self.job.real_clicks, 1)
 
 
+@override_settings(
+    MEDIA_ROOT=tempfile.mkdtemp(),
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    },
+)
+class CampaignAdminCSVUploadTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.superuser = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="password123",
+        )
+        self.client.force_login(self.superuser)
+
+        today = date.today()
+        self.charity = Charity.objects.create(
+            charity_name="Admin Charity",
+            contact_email="admin-charity@example.com",
+        )
+        self.other_charity = Charity.objects.create(
+            charity_name="Other Charity",
+            contact_email="other-charity@example.com",
+        )
+        self.campaign = Campaign.objects.create(
+            name="Admin Upload Campaign",
+            charity=self.charity,
+            campaign_code="ADM-001",
+            campaign_start=today,
+            campaign_end=today,
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+        self.other_campaign = Campaign.objects.create(
+            name="Other Campaign",
+            charity=self.other_charity,
+            campaign_code="OTH-001",
+            campaign_start=today,
+            campaign_end=today,
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+
+    def test_campaign_change_page_shows_upload_link(self):
+        response = self.client.get(
+            reverse("admin:charity_campaign_change", args=[self.campaign.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("admin:charity_campaign_upload_csv", args=[self.campaign.pk]),
+        )
+
+    @patch("charity.utils.batch_uploads.batch_process_csv.apply_async")
+    def test_admin_upload_creates_campaign_batch_and_enqueues_processing(self, mock_apply_async):
+        upload = SimpleUploadedFile(
+            "supporters.csv",
+            b"Name,Amount,Email\nJane Doe,25,jane@example.com\n",
+            content_type="text/csv",
+        )
+
+        response = self.client.post(
+            reverse("admin:charity_campaign_upload_csv", args=[self.campaign.pk]),
+            {"csv_file": upload},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "accepted for campaign")
+
+        batch = DonationBatch.objects.get(campaign=self.campaign)
+        self.assertEqual(batch.charity, self.charity)
+        self.assertEqual(batch.campaign_name, self.campaign.name)
+        self.assertTrue(batch.csv_filename.startswith("uploads/csv/"))
+        self.assertEqual(DonationBatch.objects.filter(campaign=self.other_campaign).count(), 0)
+        mock_apply_async.assert_called_once_with(args=(batch.id,))
+
+    def test_admin_upload_requires_file(self):
+        response = self.client.post(
+            reverse("admin:charity_campaign_upload_csv", args=[self.campaign.pk]),
+            {},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+        self.assertEqual(DonationBatch.objects.filter(campaign=self.campaign).count(), 0)
+
+
 @override_settings(WEBHOOK_SIGNATURE_MAX_AGE_SECONDS=300)
 class WebhookSecurityTests(TestCase):
     def _build_resend_signature(self, body: bytes, timestamp: int, secret: str) -> str:

@@ -1,7 +1,6 @@
 import csv
 import json
 import logging
-import uuid
 
 import defusedcsv
 from celery import chain, chord, group
@@ -15,7 +14,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .analytics_models import EmailEvent, VideoEvent
 from .models import Campaign, DonationBatch, DonationJob
 from .tasks import (
-    batch_process_csv,
     dispatch_email_for_job,
     generate_video_for_job,
     on_batch_complete,
@@ -28,6 +26,7 @@ from .utils.access_control import (
     get_authorized_campaign,
     get_authorized_charity,
 )
+from .utils.batch_uploads import create_and_enqueue_csv_batch
 from .utils.csv_rows import build_csv_recipient_name, build_vdm_recipient_name, get_csv_row_value
 
 logger = logging.getLogger(__name__)
@@ -104,26 +103,17 @@ def upload_csv_and_process(request):
         # MODE 2: CSV UPLOAD
         if request.FILES.get("csv_file"):
             csv_file = request.FILES["csv_file"]
-            from django.core.files.base import ContentFile
-            from django.core.files.storage import default_storage
-
-            new_batch_number = DonationBatch.get_next_batch_number(current_charity)
-            donation_batch = DonationBatch.objects.create(
-                charity=current_charity, batch_number=new_batch_number, csv_filename=csv_file.name
-            )
 
             campaign_id = request.POST.get("campaign_id")
+            campaign = None
             if campaign_id:
-                donation_batch.campaign = Campaign.objects.filter(
-                    id=campaign_id, charity=current_charity
-                ).first()
+                campaign = Campaign.objects.filter(id=campaign_id, charity=current_charity).first()
 
-            file_name = f"uploads/csv/{uuid.uuid4()}_{csv_file.name}"
-            saved_path = default_storage.save(file_name, ContentFile(csv_file.read()))
-            donation_batch.csv_filename = saved_path
-            donation_batch.save()
-
-            batch_process_csv.apply_async(args=(donation_batch.id,))
+            create_and_enqueue_csv_batch(
+                charity=current_charity,
+                csv_file=csv_file,
+                campaign=campaign,
+            )
             messages.success(request, f"CSV '{csv_file.name}' accepted for background processing.")
             return redirect("dashboard")
 

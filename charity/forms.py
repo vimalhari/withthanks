@@ -8,6 +8,14 @@ class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(label="Upload CSV")
 
 
+class AdminCampaignCSVUploadForm(forms.Form):
+    csv_file = forms.FileField(
+        label="Campaign CSV file",
+        help_text="Upload a donor CSV for this campaign.",
+        widget=forms.FileInput(attrs={"accept": ".csv"}),
+    )
+
+
 class CharityMemberForm(forms.ModelForm):
     class Meta:
         model = CharityMember

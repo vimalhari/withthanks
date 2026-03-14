@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING
 
 from django import forms
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q, QuerySet
+from django.http import Http404, HttpResponseRedirect
+from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -21,6 +24,7 @@ from .analytics_models import (
     VideoEvent,
     WatchSession,
 )
+from .forms import AdminCampaignCSVUploadForm
 from .models import (
     Campaign,
     Charity,
@@ -37,6 +41,7 @@ from .models import (
     UnsubscribedUser,
     VideoSendLog,
 )
+from .utils.batch_uploads import create_and_enqueue_csv_batch
 
 # ---------------------------------------------------------------------------
 # Charity & Members
@@ -516,7 +521,13 @@ class CampaignAdmin(ModelAdmin):
     )
     list_filter = ("is_paused", "campaign_mode")
     search_fields = ("name", "charity__charity_name", "campaign_code")
-    readonly_fields = ("id", "created_at", "cf_stream_video_id", "cf_stream_video_url")
+    readonly_fields = (
+        "id",
+        "created_at",
+        "cf_stream_video_id",
+        "cf_stream_video_url",
+        "upload_csv_action",
+    )
     warn_unsaved_tabs = True
     inlines = [DonationBatchCampaignInline]
 
@@ -561,9 +572,86 @@ class CampaignAdmin(ModelAdmin):
         },
     )
 
+    def get_urls(self):
+        custom = [
+            path(
+                "<path:object_id>/upload-csv/",
+                self.admin_site.admin_view(self.upload_csv_view),
+                name="charity_campaign_upload_csv",
+            ),
+        ]
+        return custom + super().get_urls()
+
+    def upload_csv_view(self, request: HttpRequest, object_id: str):
+        campaign = self.get_object(request, object_id)
+        if campaign is None:
+            raise Http404("Campaign not found.")
+        if not self.has_change_permission(request, campaign):
+            raise PermissionDenied
+
+        if request.method == "POST":
+            form = AdminCampaignCSVUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                csv_file = form.cleaned_data["csv_file"]
+                batch = create_and_enqueue_csv_batch(
+                    charity=campaign.charity,
+                    csv_file=csv_file,
+                    campaign=campaign,
+                )
+                messages.success(
+                    request,
+                    (
+                        f"CSV '{csv_file.name}' accepted for campaign '{campaign.name}' "
+                        f"as batch #{batch.batch_number}."
+                    ),
+                )
+                return HttpResponseRedirect(
+                    reverse("admin:charity_campaign_change", args=[campaign.pk])
+                )
+        else:
+            form = AdminCampaignCSVUploadForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "original": campaign,
+            "title": f"Upload CSV for {campaign.name}",
+            "form": form,
+            "change_url": reverse("admin:charity_campaign_change", args=[campaign.pk]),
+            "media": self.media + form.media,
+        }
+        return TemplateResponse(request, "admin/charity/campaign/upload_csv.html", context)
+
+    @admin.display(description="Campaign CSV Upload")
+    def upload_csv_action(self, obj: Campaign | None):
+        if not obj or not obj.pk:
+            return "Save the campaign before uploading a CSV batch."
+
+        upload_url = reverse("admin:charity_campaign_upload_csv", args=[obj.pk])
+        return format_html(
+            '<a href="{}" style="display:inline-block;padding:8px 14px;border-radius:6px;'
+            'background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">'
+            "Upload CSV Batch"
+            "</a>",
+            upload_url,
+        )
+
     def get_fieldsets(self, request: HttpRequest, obj: object = None):
         mode = obj.campaign_mode if obj else None
         fieldsets = list(self._BASE_FIELDSETS)
+
+        if obj and obj.pk:
+            fieldsets.append(
+                (
+                    "CSV Upload",
+                    {
+                        "description": (
+                            "Upload a donor CSV directly into this campaign from Django admin."
+                        ),
+                        "fields": ("upload_csv_action",),
+                    },
+                )
+            )
 
         email_settings = (
             "Email Settings",
