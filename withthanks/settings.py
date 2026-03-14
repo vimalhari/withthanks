@@ -33,6 +33,8 @@ _local_commands = {
     "seed_analytics",
     "tailwind",
 }
+_build_only_commands = {"collectstatic", "tailwind"}
+_is_build_only_command = any(cmd in sys.argv for cmd in _build_only_commands)
 _is_local_command = any(cmd in sys.argv for cmd in _local_commands)
 _debug_env = os.environ.get("DJANGO_DEBUG")
 DEBUG = (
@@ -42,7 +44,7 @@ DEBUG = (
 )
 
 if not _secret_key:
-    if _is_local_command and not IS_PRODUCTION:
+    if _is_build_only_command or (_is_local_command and not IS_PRODUCTION):
         _secret_key = "django-insecure-local-dev-secret-key-change-me"
     else:
         raise RuntimeError(
@@ -62,7 +64,7 @@ ALLOWED_HOSTS = [
     *_extra_hosts,
 ]
 
-if IS_PRODUCTION and not _extra_hosts:
+if IS_PRODUCTION and not _extra_hosts and not _is_build_only_command:
     raise RuntimeError("ALLOWED_HOSTS must be set in production.")
 
 # ------------------------------------------------------------
@@ -472,7 +474,7 @@ BLACKBAUD_REDIRECT_URI = os.environ.get(
 # ------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "No Reply <no-reply@example.com>")
 
-if IS_PRODUCTION and DEFAULT_FROM_EMAIL == "No Reply <no-reply@example.com>":
+if IS_PRODUCTION and DEFAULT_FROM_EMAIL == "No Reply <no-reply@example.com>" and not _is_build_only_command:
     raise RuntimeError("DEFAULT_FROM_EMAIL must be set in production.")
 
 # ------------------------------------------------------------
@@ -572,10 +574,10 @@ CSRF_TRUSTED_ORIGINS = [
     *_csrf_origins,
 ]
 
-if IS_PRODUCTION and not _csrf_origins:
+if IS_PRODUCTION and not _csrf_origins and not _is_build_only_command:
     raise RuntimeError("CSRF_TRUSTED_ORIGINS must be set in production.")
 
-if IS_PRODUCTION:
+if IS_PRODUCTION and not _is_build_only_command:
     invalid_csrf_origins = [origin for origin in _csrf_origins if not origin.startswith("https://")]
     if invalid_csrf_origins:
         raise RuntimeError("CSRF_TRUSTED_ORIGINS must use https in production.")
@@ -609,7 +611,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
 # ------------------------------------------------------------
 SERVER_BASE_URL = os.environ.get("SERVER_BASE_URL", "http://127.0.0.1:8000")
 
-if IS_PRODUCTION:
+if IS_PRODUCTION and not _is_build_only_command:
     if SERVER_BASE_URL == "http://127.0.0.1:8000":
         raise RuntimeError("SERVER_BASE_URL must be set in production.")
     parsed_server_base_url = urlparse(SERVER_BASE_URL)
