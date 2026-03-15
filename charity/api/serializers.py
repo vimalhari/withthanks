@@ -5,12 +5,16 @@ from rest_framework import serializers
 
 from charity.models import Charity
 from charity.utils.access_control import get_authorized_charity
+from charity.utils.csv_rows import compose_recipient_name
 
 
 class DonationIngestSerializer(serializers.Serializer):
     charity_id = serializers.IntegerField()
     donor_email = serializers.EmailField()
-    donor_name = serializers.CharField(max_length=255)
+    donor_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    donor_title = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    donor_first_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    donor_last_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     donated_at = serializers.DateTimeField(required=False)
     campaign_type = serializers.ChoiceField(
@@ -42,6 +46,19 @@ class DonationIngestSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        donor_name = compose_recipient_name(
+            title=attrs.get("donor_title", ""),
+            first_name=attrs.get("donor_first_name", ""),
+            last_name=attrs.get("donor_last_name", ""),
+            fallback_name=attrs.get("donor_name", ""),
+            default="",
+        )
+        if not donor_name:
+            raise serializers.ValidationError(
+                {"donor_name": "Provide donor_name or structured donor name fields."}
+            )
+
+        attrs["donor_name"] = donor_name
         attrs.setdefault("donated_at", timezone.now())
         return attrs
 

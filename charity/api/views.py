@@ -69,6 +69,9 @@ class DonationIngestAPIView(APIView):
 
         job = DonationJob.objects.create(
             donor_name=payload["donor_name"],
+            donor_title=payload.get("donor_title", ""),
+            donor_first_name=payload.get("donor_first_name", ""),
+            donor_last_name=payload.get("donor_last_name", ""),
             email=payload["donor_email"],
             donation_amount=payload["amount"],
             status="pending",
@@ -136,6 +139,9 @@ class BulkDonationIngestAPIView(APIView):
         jobs_to_create = [
             DonationJob(
                 donor_name=d["donor_name"],
+                donor_title=d.get("donor_title", ""),
+                donor_first_name=d.get("donor_first_name", ""),
+                donor_last_name=d.get("donor_last_name", ""),
                 email=d["donor_email"],
                 donation_amount=d["amount"],
                 status="pending",

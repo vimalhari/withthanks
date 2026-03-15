@@ -30,6 +30,7 @@ from .utils.csv_rows import (
     build_csv_recipient_name,
     build_email_greeting_line,
     build_vdm_recipient_name,
+    extract_csv_recipient_parts,
     get_csv_row_value,
 )
 from .utils.resend_utils import send_video_email
@@ -110,7 +111,7 @@ def build_email_paragraphs(*, campaign, job, charity_name: str, default_body: st
 def build_campaign_email_context(*, campaign, job, charity_name: str) -> dict[str, object]:
     """Return placeholder values used by campaign-configurable email content."""
     return {
-        "donor_name": job.donor_name,
+        "donor_name": job.display_donor_name,
         "charity_name": charity_name,
         "campaign_name": campaign.name if campaign else "WithThanks Campaign",
         "donation_amount": job.donation_amount,
@@ -332,7 +333,7 @@ def generate_video_for_job(self, context):
                     intermediate_files.append(local_base)
 
                     spec = VideoSpec(
-                        donor_name=str(job.donor_name),
+                        donor_name=str(job.display_donor_name),
                         donation_amount=str(job.donation_amount),
                         charity_name=client.charity_name,
                         campaign_name=campaign.name if campaign else "",
@@ -542,7 +543,7 @@ def dispatch_email_for_job(self, context):
 
         # --- Render template ------------------------------------------------ #
         email_context = {
-            "greeting_line": build_email_greeting_line(job.donor_name),
+            "greeting_line": build_email_greeting_line(job.display_donor_name),
             "donation_amount": job.donation_amount,
             "charity_name": client.charity_name,
             "charity_website_url": client.website_url,
@@ -588,7 +589,7 @@ def dispatch_email_for_job(self, context):
                 to_email=job.email,
                 file_path=None,
                 job_id=str(job.id),
-                donor_name=job.donor_name,
+                donor_name=job.display_donor_name,
                 donation_amount=job.donation_amount,
                 from_email=resolve_sender_email(
                     campaign=campaign,
@@ -793,6 +794,7 @@ def batch_process_csv(self, batch_id):
 
             jobs_to_create = []
             for row in reader:
+                recipient_parts = extract_csv_recipient_parts(row, default="Donor")
                 name = (
                     build_vdm_recipient_name(row, default="Donor")
                     if campaign and campaign.is_vdm
@@ -821,6 +823,9 @@ def batch_process_csv(self, batch_id):
                 jobs_to_create.append(
                     DonationJob(
                         donor_name=name,
+                        donor_title=recipient_parts["donor_title"],
+                        donor_first_name=recipient_parts["donor_first_name"],
+                        donor_last_name=recipient_parts["donor_last_name"],
                         donation_amount=amount,
                         email=email.strip(),
                         status="pending",

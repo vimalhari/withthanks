@@ -60,7 +60,7 @@ class Command(BaseCommand):
                 writer.writerow(
                     [
                         j.id,
-                        j.donor_name,
+                        j.display_donor_name,
                         j.email,
                         j.donation_amount,
                         j.status,

@@ -6,6 +6,7 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.db import models
 
+from charity.utils.csv_rows import compose_recipient_name
 from charity.utils.media_utils import get_charity_media_path
 
 
@@ -373,6 +374,24 @@ class DonationBatch(models.Model):
 class DonationJob(models.Model):
     # CORE FIELDS
     donor_name = models.CharField(max_length=255)
+    donor_title = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="Optional donor title captured from structured import data.",
+    )
+    donor_first_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Optional donor first name captured from structured import data.",
+    )
+    donor_last_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Optional donor last name captured from structured import data.",
+    )
     email = models.EmailField()
     donation_amount = models.DecimalField(
         max_digits=10,
@@ -432,6 +451,15 @@ class DonationJob(models.Model):
         return self.real_views
 
     @property
+    def display_donor_name(self) -> str:
+        return compose_recipient_name(
+            title=self.donor_title,
+            first_name=self.donor_first_name,
+            last_name=self.donor_last_name,
+            fallback_name=self.donor_name,
+        )
+
+    @property
     def video_url(self):
         """Return the cloud URL for this job's video (R2 or Cloudflare Stream)."""
         if not self.video_path:
@@ -470,7 +498,7 @@ class DonationJob(models.Model):
         }.get(self.status, "secondary")
 
     def __str__(self):
-        return f"Job {self.id} - {self.donor_name} ({self.status})"
+        return f"Job {self.id} - {self.display_donor_name} ({self.status})"
 
 
 class UnsubscribedUser(models.Model):

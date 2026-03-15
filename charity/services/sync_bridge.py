@@ -39,7 +39,7 @@ def sync_job_to_normalized_models(job) -> dict | None:
         if not email:
             return None
 
-        donor_name = str(job.donor_name or "").strip() or email
+        donor_name = str(job.display_donor_name or "").strip() or email
 
         # ── Donor ──────────────────────────────────────────────────────
         donor, _ = Donor.objects.get_or_create(

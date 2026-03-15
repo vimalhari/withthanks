@@ -435,9 +435,19 @@ class DonationJobInline(TabularInline):
 
     model = DonationJob
     extra = 0
-    fields = ("donor_name", "email", "donation_amount", "status", "completed_at")
-    readonly_fields = ("donor_name", "email", "donation_amount", "status", "completed_at")
+    fields = ("donor_display_name", "email", "donation_amount", "status", "completed_at")
+    readonly_fields = (
+        "donor_display_name",
+        "email",
+        "donation_amount",
+        "status",
+        "completed_at",
+    )
     show_change_link = True
+
+    @admin.display(description="Donor")
+    def donor_display_name(self, obj: DonationJob) -> str:
+        return obj.display_donor_name
 
     def has_add_permission(self, request: HttpRequest, obj: object = None) -> bool:
         return False
@@ -474,7 +484,7 @@ class DonationBatchAdmin(ModelAdmin):
 @admin.register(DonationJob)
 class DonationJobAdmin(ModelAdmin):
     list_display = (
-        "donor_name",
+        "donor_display_name",
         "email",
         "donation_amount",
         "status",
@@ -495,6 +505,10 @@ class DonationJobAdmin(ModelAdmin):
         "video_path",
         "error_message",
     )
+
+    @admin.display(description="Donor")
+    def donor_display_name(self, obj: DonationJob) -> str:
+        return obj.display_donor_name
 
 
 # ---------------------------------------------------------------------------

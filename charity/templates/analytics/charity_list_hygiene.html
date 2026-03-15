@@ -63,7 +63,7 @@
                 {% for ev in bounces %}
                 <tr>
                     <td>{% if ev.job %}{{ ev.job.email }}{% else %}—{% endif %}</td>
-                    <td>{% if ev.job %}{{ ev.job.donor_name }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.job %}{{ ev.job.display_donor_name }}{% else %}—{% endif %}</td>
                     <td>{% if ev.campaign %}{{ ev.campaign.name }}{% else %}—{% endif %}</td>
                     <td class="text-gray-400 text-xs">{{ ev.timestamp|date:"d M Y H:i" }}</td>
                 </tr>
@@ -80,7 +80,7 @@
                 {% for ev in failures %}
                 <tr>
                     <td>{% if ev.job %}{{ ev.job.email }}{% else %}—{% endif %}</td>
-                    <td>{% if ev.job %}{{ ev.job.donor_name }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.job %}{{ ev.job.display_donor_name }}{% else %}—{% endif %}</td>
                     <td>{% if ev.campaign %}{{ ev.campaign.name }}{% else %}—{% endif %}</td>
                     <td><span class="badge badge-error text-[10px]">{{ ev.event_type }}</span></td>
                     <td class="text-gray-400 text-xs">{{ ev.timestamp|date:"d M Y H:i" }}</td>
@@ -98,7 +98,7 @@
                 {% for ev in complaints %}
                 <tr>
                     <td>{% if ev.job %}{{ ev.job.email }}{% else %}—{% endif %}</td>
-                    <td>{% if ev.job %}{{ ev.job.donor_name }}{% else %}—{% endif %}</td>
+                    <td>{% if ev.job %}{{ ev.job.display_donor_name }}{% else %}—{% endif %}</td>
                     <td>{% if ev.campaign %}{{ ev.campaign.name }}{% else %}—{% endif %}</td>
                     <td class="text-gray-400 text-xs">{{ ev.timestamp|date:"d M Y H:i" }}</td>
                 </tr>

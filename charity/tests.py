@@ -1382,7 +1382,7 @@ class VideoProcessingIsolationTests(TestCase):
         chord_runner.assert_called_once()
 
     @patch("charity.tasks.chord")
-    def test_batch_process_csv_uses_first_name_then_title_surname_for_vdm(self, mock_chord):
+    def test_batch_process_csv_stores_structured_names_for_vdm(self, mock_chord):
         from charity.tasks import batch_process_csv
 
         chord_runner = Mock()
@@ -1418,9 +1418,29 @@ class VideoProcessingIsolationTests(TestCase):
         jobs = DonationJob.objects.filter(donation_batch=batch).order_by("email")
         self.assertEqual(jobs.count(), 2)
         self.assertEqual(jobs[0].email, "jane@example.com")
-        self.assertEqual(jobs[0].donor_name, "Jane")
+        self.assertEqual(jobs[0].donor_name, "Dr Jane Doe")
+        self.assertEqual(jobs[0].donor_title, "Dr")
+        self.assertEqual(jobs[0].donor_first_name, "Jane")
+        self.assertEqual(jobs[0].donor_last_name, "Doe")
+        self.assertEqual(jobs[0].display_donor_name, "Dr Jane Doe")
         self.assertEqual(jobs[1].email, "smith@example.com")
         self.assertEqual(jobs[1].donor_name, "Ms Smith")
+        self.assertEqual(jobs[1].donor_title, "Ms")
+        self.assertEqual(jobs[1].donor_first_name, "")
+        self.assertEqual(jobs[1].donor_last_name, "Smith")
+        self.assertEqual(jobs[1].display_donor_name, "Ms Smith")
+
+    def test_display_donor_name_falls_back_to_legacy_donor_name(self):
+        job = DonationJob.objects.create(
+            donation_batch=self.batch_a,
+            donor_name="Legacy Donor",
+            email="legacy@example.com",
+            donation_amount=Decimal("5"),
+            charity=self.charity_a,
+            campaign=self.campaign_a,
+        )
+
+        self.assertEqual(job.display_donor_name, "Legacy Donor")
 
     def test_validate_and_prep_job_ignores_gratitude_video_for_standard_withthanks(self):
         from charity.tasks import validate_and_prep_job
@@ -1584,6 +1604,53 @@ class DonationIngestAPITests(TestCase):
         )
         self.assertEqual(DonationBatch.objects.count(), 0)
         self.assertEqual(DonationJob.objects.count(), 0)
+
+    @patch("charity.api.views.chain")
+    def test_single_ingest_accepts_structured_donor_name_fields(self, mock_chain):
+        mock_result = Mock(id="task-123")
+        mock_signature = Mock()
+        mock_signature.apply_async.return_value = mock_result
+        mock_chain.return_value = mock_signature
+
+        response = self.api_client.post(
+            reverse("donation-ingest"),
+            {
+                "charity_id": self.charity.id,
+                "donor_email": "structured@example.com",
+                "donor_title": "Dr",
+                "donor_first_name": "Jane",
+                "donor_last_name": "Doe",
+                "amount": "12.50",
+                "campaign_type": "THANK_YOU",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 202)
+        job = DonationJob.objects.get(email="structured@example.com")
+        self.assertEqual(job.donor_name, "Dr Jane Doe")
+        self.assertEqual(job.display_donor_name, "Dr Jane Doe")
+        self.assertEqual(job.donor_title, "Dr")
+        self.assertEqual(job.donor_first_name, "Jane")
+        self.assertEqual(job.donor_last_name, "Doe")
+
+    def test_single_ingest_requires_any_donor_name_source(self):
+        response = self.api_client.post(
+            reverse("donation-ingest"),
+            {
+                "charity_id": self.charity.id,
+                "donor_email": "missing@example.com",
+                "amount": "12.50",
+                "campaign_type": "THANK_YOU",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["donor_name"],
+            ["Provide donor_name or structured donor name fields."],
+        )
 
 
 @override_settings(RESEND_API_KEY="test-resend-key", DEFAULT_FROM_EMAIL="noreply@example.com")

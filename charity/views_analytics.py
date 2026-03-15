@@ -26,6 +26,7 @@ from .utils.access_control import (
     get_authorized_campaign,
     get_authorized_charity,
 )
+from .utils.csv_rows import compose_recipient_name
 from .utils.exports import export_analytics_csv, export_analytics_excel
 
 _DATE_FMT = "%Y-%m-%d"
@@ -924,7 +925,7 @@ class CharityDonorHeatmapView(CharityReportBaseView):
             DonationJob.objects.filter(
                 charity=charity, status="success", created_at__date__range=(date_from, date_to)
             )
-            .values("email", "donor_name")
+            .values("email", "donor_name", "donor_title", "donor_first_name", "donor_last_name")
             .annotate(
                 total_views=Sum("real_views"),
                 total_clicks=Sum("real_clicks"),
@@ -941,7 +942,18 @@ class CharityDonorHeatmapView(CharityReportBaseView):
             score = (
                 (d["total_clicks"] or 0) * 3 + (d["total_views"] or 0) + (d["campaigns"] or 0) * 2
             )
-            rows.append({**d, "engagement_score": score})
+            rows.append(
+                {
+                    **d,
+                    "donor_name": compose_recipient_name(
+                        title=d.get("donor_title", ""),
+                        first_name=d.get("donor_first_name", ""),
+                        last_name=d.get("donor_last_name", ""),
+                        fallback_name=d.get("donor_name", ""),
+                    ),
+                    "engagement_score": score,
+                }
+            )
         rows.sort(key=lambda x: x["engagement_score"], reverse=True)
         context["donors"] = rows
         return context
@@ -956,7 +968,7 @@ class CharityDonorHeatmapView(CharityReportBaseView):
             DonationJob.objects.filter(
                 charity=charity, status="success", created_at__date__range=(date_from, date_to)
             )
-            .values("email", "donor_name")
+            .values("email", "donor_name", "donor_title", "donor_first_name", "donor_last_name")
             .annotate(
                 total_views=Sum("real_views"),
                 total_clicks=Sum("real_clicks"),
@@ -977,7 +989,12 @@ class CharityDonorHeatmapView(CharityReportBaseView):
             writer.writerow(
                 [
                     d["email"],
-                    d["donor_name"],
+                    compose_recipient_name(
+                        title=d.get("donor_title", ""),
+                        first_name=d.get("donor_first_name", ""),
+                        last_name=d.get("donor_last_name", ""),
+                        fallback_name=d.get("donor_name", ""),
+                    ),
                     d["campaigns"],
                     d["total_views"],
                     d["total_clicks"],
@@ -1080,7 +1097,7 @@ class CharityListHygieneView(CharityReportBaseView):
         writer.writerow(["Email", "Donor Name", "Campaign", "Timestamp"])
         for ev in qs:
             email = ev.job.email if ev.job else ""
-            name = ev.job.donor_name if ev.job else ""
+            name = ev.job.display_donor_name if ev.job else ""
             camp = ev.campaign.name if ev.campaign else ""
             writer.writerow([email, name, camp, ev.timestamp.strftime("%Y-%m-%d %H:%M")])
         return response

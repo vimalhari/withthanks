@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TypedDict
+
 FORMAL_TITLE_TOKENS = {
     "mr",
     "mrs",
@@ -20,6 +22,13 @@ FORMAL_TITLE_TOKENS = {
 }
 
 
+class RecipientNameParts(TypedDict):
+    donor_name: str
+    donor_title: str
+    donor_first_name: str
+    donor_last_name: str
+
+
 def get_csv_row_value(row: dict[str, str], *candidate_headers: str) -> str:
     """Return the first non-empty value matching any candidate header."""
     for candidate in candidate_headers:
@@ -32,40 +41,41 @@ def get_csv_row_value(row: dict[str, str], *candidate_headers: str) -> str:
     return ""
 
 
-def build_csv_recipient_name(row: dict[str, str], *, default: str = "Donor") -> str:
-    """Build the donor display name from flexible CSV columns."""
-    first_name = get_csv_row_value(row, "first name", "firstname", "first_name", "given name")
-    if first_name:
-        return first_name
+def compose_recipient_name(
+    *,
+    title: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    fallback_name: str = "",
+    default: str = "Donor",
+) -> str:
+    """Build a canonical donor name from structured parts with a legacy fallback."""
+    structured_name = " ".join(
+        part.strip() for part in [title, first_name, last_name] if part and part.strip()
+    ).strip()
+    if structured_name:
+        return structured_name
 
-    title = get_csv_row_value(row, "title", "salutation")
-    surname = get_csv_row_value(
-        row,
-        "surname",
-        "last name",
-        "lastname",
-        "last_name",
-        "family name",
-    )
-    fallback_name = " ".join(part for part in [title, surname] if part).strip()
-    if fallback_name:
-        return fallback_name
-
-    explicit_name = get_csv_row_value(row, "donor_name", "donor name", "name", "full name")
-    if explicit_name:
-        return explicit_name
+    cleaned_fallback = (fallback_name or "").strip()
+    if cleaned_fallback:
+        return cleaned_fallback
 
     return default
 
 
-def build_vdm_recipient_name(row: dict[str, str], *, default: str = "Donor") -> str:
-    """Build the VDM recipient name from the structured CSV columns only."""
-    first_name = get_csv_row_value(row, "first name", "firstname", "first_name", "given name")
-    if first_name:
-        return first_name
-
-    title = get_csv_row_value(row, "title", "salutation")
-    surname = get_csv_row_value(
+def extract_csv_recipient_parts(
+    row: dict[str, str], *, default: str = "Donor"
+) -> RecipientNameParts:
+    """Extract structured donor name parts and a canonical display name from a CSV row."""
+    donor_title = get_csv_row_value(row, "title", "salutation")
+    donor_first_name = get_csv_row_value(
+        row,
+        "first name",
+        "firstname",
+        "first_name",
+        "given name",
+    )
+    donor_last_name = get_csv_row_value(
         row,
         "surname",
         "last name",
@@ -73,8 +83,30 @@ def build_vdm_recipient_name(row: dict[str, str], *, default: str = "Donor") -> 
         "last_name",
         "family name",
     )
-    fallback_name = " ".join(part for part in [title, surname] if part).strip()
-    return fallback_name or default
+    explicit_name = get_csv_row_value(row, "donor_name", "donor name", "name", "full name")
+
+    return {
+        "donor_name": compose_recipient_name(
+            title=donor_title,
+            first_name=donor_first_name,
+            last_name=donor_last_name,
+            fallback_name=explicit_name,
+            default=default,
+        ),
+        "donor_title": donor_title,
+        "donor_first_name": donor_first_name,
+        "donor_last_name": donor_last_name,
+    }
+
+
+def build_csv_recipient_name(row: dict[str, str], *, default: str = "Donor") -> str:
+    """Build the donor display name from flexible CSV columns."""
+    return extract_csv_recipient_parts(row, default=default)["donor_name"]
+
+
+def build_vdm_recipient_name(row: dict[str, str], *, default: str = "Donor") -> str:
+    """Build the VDM recipient name from the structured CSV columns only."""
+    return extract_csv_recipient_parts(row, default=default)["donor_name"]
 
 
 def build_email_greeting_line(name: str, *, default: str = "Supporter") -> str:
