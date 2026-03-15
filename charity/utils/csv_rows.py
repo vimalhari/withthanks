@@ -112,18 +112,20 @@ def build_email_greeting_line(
 
     Greeting rules:
     - If a first name is present, use "Dear <first name>"
-    - Otherwise, use "<title> <last name>" without "Dear"
+    - Otherwise, use "Dear <title> <last name>" when a surname is present
+    - Otherwise, ignore title-only data and use the default recipient greeting
     - Otherwise, use the default recipient greeting
     """
     cleaned_first_name = (first_name or "").strip()
     if cleaned_first_name:
         return f"Dear {cleaned_first_name}"
 
-    formal_name = " ".join(
-        part.strip() for part in [title, last_name] if part and part.strip()
-    ).strip()
-    if formal_name:
-        return formal_name
+    cleaned_last_name = (last_name or "").strip()
+    if cleaned_last_name:
+        formal_name = " ".join(
+            part.strip() for part in [title, cleaned_last_name] if part and part.strip()
+        ).strip()
+        return f"Dear {formal_name}"
 
     return f"Dear {default}"
 

@@ -1179,7 +1179,7 @@ class VideoProcessingIsolationTests(TestCase):
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
-    def test_vdm_omits_dear_for_title_surname_greeting(
+    def test_vdm_includes_dear_for_title_surname_greeting(
         self,
         mock_stream,
         mock_send,
@@ -1225,8 +1225,7 @@ class VideoProcessingIsolationTests(TestCase):
         dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
         html = mock_send.call_args[1]["html"]
-        self.assertIn("Ms Smith,", html)
-        self.assertNotIn("Dear Ms Smith,", html)
+        self.assertIn("Dear Ms Smith,", html)
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
@@ -1281,6 +1280,14 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertNotIn("Dr Jane Doe,", html)
         self.assertNotIn("Dear Dr Jane Doe,", html)
 
+    def test_build_email_greeting_line_falls_back_to_supporter_for_title_only(self):
+        from charity.utils.csv_rows import build_email_greeting_line
+
+        self.assertEqual(
+            build_email_greeting_line(title="Ms", first_name="", last_name=""),
+            "Dear Supporter",
+        )
+
     @patch(
         "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
     )
@@ -1290,7 +1297,7 @@ class VideoProcessingIsolationTests(TestCase):
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.stream_safe_upload")
     @patch("os.path.exists")
-    def test_withthanks_omits_dear_for_title_surname_greeting(
+    def test_withthanks_includes_dear_for_title_surname_greeting(
         self,
         mock_exists,
         mock_stream,
@@ -1326,8 +1333,7 @@ class VideoProcessingIsolationTests(TestCase):
         dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
         html = mock_send.call_args[1]["html"]
-        self.assertIn("Ms Smith,", html)
-        self.assertNotIn("Dear Ms Smith,", html)
+        self.assertIn("Dear Ms Smith,", html)
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
