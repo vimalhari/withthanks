@@ -741,6 +741,27 @@ class Campaign(models.Model):
         default="Donate Again",
         help_text='Label text for the post-video CTA button (default: "Donate Again")',
     )
+    cta_title = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text=(
+            "Optional headline shown in the post-video CTA overlay. "
+            "Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, "
+            "and {{ donation_amount }} placeholders. "
+            "Leave blank to use the built-in default headline."
+        ),
+    )
+    cta_message = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Optional body copy shown in the post-video CTA overlay. "
+            "Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, "
+            "and {{ donation_amount }} placeholders. "
+            "Leave blank to use the built-in default message."
+        ),
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

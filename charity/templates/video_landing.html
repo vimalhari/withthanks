@@ -42,8 +42,8 @@
             {% if cta_url %}
             <div class="cta-overlay" id="ctaOverlay" aria-hidden="true">
                 <div class="cta-card">
-                    <h2>Thank you, {{ job.display_donor_name }}!</h2>
-                    <p>Your generosity makes a real difference to {{ job.charity.charity_name }}.</p>
+                    <h2>{{ cta_title }}</h2>
+                    <p>{{ cta_message }}</p>
                     <button class="cta-btn" id="ctaBtn">{{ cta_label }}</button>
                 </div>
             </div>

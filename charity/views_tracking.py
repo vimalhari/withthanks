@@ -9,10 +9,14 @@ from django.utils import timezone
 
 from .analytics_models import EmailEvent, VideoEvent
 from .models import DonationJob, EmailTracking, Invoice, UnsubscribedUser
+from .services.video_build_service import render_script
 from .utils.cloudflare_stream import is_stream_playback_url, resolve_stream_embed_url
 from .utils.tracking_security import resolve_tracking_token
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_CTA_TITLE = "Thank you, {{ donor_name }}!"
+DEFAULT_CTA_MESSAGE = "Your generosity makes a real difference to {{ charity_name }}."
 
 
 def _resolve_tracking(job_id=None, token=None):
@@ -153,7 +157,7 @@ def track_invoice_open(request, invoice_id):
 def video_landing_view(request, job_id):
     """Displays the video landing page with engagement tracking."""
     job = get_object_or_404(
-        DonationJob.objects.select_related("campaign", "charity"),
+        DonationJob.objects.select_related("campaign", "campaign__charity", "charity"),
         id=job_id,
     )
     video_url = job.video_url
@@ -169,9 +173,24 @@ def video_landing_view(request, job_id):
     campaign = job.campaign
     cta_url = ""
     cta_label = "Donate Again"
+    cta_title = ""
+    cta_message = ""
     if campaign and campaign.cta_url:
+        charity_name = ""
+        if job.charity_id and job.charity:
+            charity_name = job.charity.charity_name
+        elif campaign.charity_id and campaign.charity:
+            charity_name = campaign.charity.charity_name
+        cta_context = {
+            "donor_name": job.display_donor_name,
+            "charity_name": charity_name,
+            "campaign_name": campaign.name,
+            "donation_amount": job.donation_amount,
+        }
         cta_url = campaign.cta_url
         cta_label = campaign.cta_label or "Donate Again"
+        cta_title = render_script(campaign.cta_title or DEFAULT_CTA_TITLE, cta_context)
+        cta_message = render_script(campaign.cta_message or DEFAULT_CTA_MESSAGE, cta_context)
     return render(
         request,
         "video_landing.html",
@@ -182,6 +201,8 @@ def video_landing_view(request, job_id):
             "tracking_id": tracking_id,
             "cta_url": cta_url,
             "cta_label": cta_label,
+            "cta_title": cta_title,
+            "cta_message": cta_message,
         },
     )
 

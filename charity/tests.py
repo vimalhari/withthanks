@@ -1852,7 +1852,7 @@ class TrackingSecurityTests(TestCase):
         self.job.save(update_fields=["video_path"])
         self.campaign.cta_url = "https://example.com/donate-again"
         self.campaign.cta_label = "Donate Again"
-        self.campaign.save(update_fields=["cta_url", "cta_label"])
+        self.campaign.save(update_fields=["cta_url", "cta_label", "cta_title", "cta_message"])
 
         response = self.client.get(reverse("video_landing", args=[self.job.id]))
 
@@ -1864,8 +1864,32 @@ class TrackingSecurityTests(TestCase):
         )
         self.assertContains(response, 'id="ctaOverlay"', html=False)
         self.assertContains(response, "Donate Again")
+        self.assertContains(response, f"Thank you, {self.job.display_donor_name}!")
+        self.assertContains(
+            response,
+            f"Your generosity makes a real difference to {self.charity.charity_name}.",
+        )
         self.assertContains(response, "embed.cloudflarestream.com/embed/sdk.latest.js")
         self.assertNotContains(response, '<video id="mainVideo"', html=False)
+
+    def test_video_landing_renders_custom_post_video_cta_copy(self):
+        self.job.video_path = "https://customer-example.cloudflarestream.com/stream-video-123/watch"
+        self.job.save(update_fields=["video_path"])
+        self.campaign.cta_url = "https://example.com/donate-again"
+        self.campaign.cta_label = "Support Again"
+        self.campaign.cta_title = "Keep changing lives, {{ donor_name }}"
+        self.campaign.cta_message = "Your support keeps {{ charity_name }} moving forward."
+        self.campaign.save(update_fields=["cta_url", "cta_label", "cta_title", "cta_message"])
+
+        response = self.client.get(reverse("video_landing", args=[self.job.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Support Again")
+        self.assertContains(response, f"Keep changing lives, {self.job.display_donor_name}")
+        self.assertContains(
+            response,
+            f"Your support keeps {self.charity.charity_name} moving forward.",
+        )
 
     def test_video_landing_omits_post_video_cta_without_job_campaign_link(self):
         self.campaign.cta_url = "https://example.com/donate-again"
@@ -2159,6 +2183,24 @@ class CharityAdminLogoTests(TestCase):
 
         self.assertIsNotNone(email_settings_fields)
         self.assertIn("email_subject", email_settings_fields)
+
+    def test_campaign_admin_post_video_cta_fieldset_includes_editable_copy_fields(self):
+        from charity.admin import CampaignAdmin
+
+        model_admin = CampaignAdmin(Campaign, admin.site)
+        request = self.client.request().wsgi_request
+        request.user = self.superuser
+
+        fieldsets = model_admin.get_fieldsets(request, self.campaign)
+        cta_fields = None
+        for title, options in fieldsets:
+            if title == "Post-Video CTA":
+                cta_fields = options["fields"]
+                break
+
+        self.assertIsNotNone(cta_fields)
+        self.assertIn("cta_title", cta_fields)
+        self.assertIn("cta_message", cta_fields)
 
 
 @override_settings(WEBHOOK_SIGNATURE_MAX_AGE_SECONDS=300)
