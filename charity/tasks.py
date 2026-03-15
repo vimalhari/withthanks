@@ -22,6 +22,7 @@ from .services.video_pipeline_service import (
     build_tracking_urls,
     get_or_upload_campaign_stream,
     resolve_public_video_url,
+    resolve_static_asset_url,
     resolve_storage_video_url,
     stream_safe_upload,
 )
@@ -59,6 +60,31 @@ def _resolve_campaign_email_image(*, campaign, mode: str, fallback_image: str) -
     if campaign and campaign.email_thumbnail:
         return campaign.email_thumbnail.name
     return fallback_image
+
+
+def _resolve_email_thumbnail_url(
+    *,
+    mode: str,
+    image_path: str | None,
+    server_url: str,
+    stream_delivery: StreamDelivery,
+) -> str | None:
+    """Resolve the donor-facing thumbnail URL for an outbound campaign email."""
+    full_image_url = resolve_storage_video_url(storage_path=image_path, server_url=server_url)
+    if full_image_url:
+        return full_image_url
+
+    if mode == "VDM":
+        if stream_delivery.is_cached and stream_delivery.thumbnail_url:
+            return stream_delivery.thumbnail_url
+
+        placeholder_url = resolve_static_asset_url(
+            static_path="charity/img/video_placeholder.png",
+            server_url=server_url,
+        )
+        return placeholder_url or None
+
+    return stream_delivery.thumbnail_url or None
 
 
 def cleanup_intermediate(files, final_file):
@@ -427,7 +453,6 @@ def dispatch_email_for_job(self, context):
             logger.info("Job %s skipped due to prior VDM unsubscribe for %s", job_id, job.email)
             return {"status": "skipped", "job_id": job_id}
 
-        full_image_url = resolve_storage_video_url(storage_path=image_url, server_url=server_url)
         charity_logo_url = ""
         if client and client.logo:
             charity_logo_url = resolve_storage_video_url(
@@ -458,7 +483,12 @@ def dispatch_email_for_job(self, context):
             )
 
         cf_stream_url = stream_delivery.playback_url or None
-        thumbnail_url = full_image_url or stream_delivery.thumbnail_url or None
+        thumbnail_url = _resolve_email_thumbnail_url(
+            mode=mode,
+            image_path=image_url,
+            server_url=server_url,
+            stream_delivery=stream_delivery,
+        )
         video_url_link = resolve_public_video_url(
             final_video_path=final_video_path,
             stream_delivery=stream_delivery,

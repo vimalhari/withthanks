@@ -91,6 +91,22 @@ def resolve_storage_video_url(*, storage_path: str | None, server_url: str) -> s
     return _as_absolute_url(storage_url, server_url)
 
 
+def resolve_static_asset_url(*, static_path: str | None, server_url: str) -> str:
+    """Resolve a compiled static asset path to a public absolute URL."""
+    if not static_path:
+        return ""
+
+    from django.contrib.staticfiles.storage import staticfiles_storage
+
+    try:
+        static_url = staticfiles_storage.url(static_path)
+    except Exception as exc:
+        logger.warning("Failed to resolve static asset URL for %r: %s", static_path, exc)
+        return ""
+
+    return _as_absolute_url(static_url, server_url)
+
+
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
@@ -103,6 +119,7 @@ class StreamDelivery:
     video_id: str = field(default="")
     playback_url: str = field(default="")
     thumbnail_url: str = field(default="")
+    is_cached: bool = field(default=False)
 
     @property
     def is_uploaded(self) -> bool:
@@ -195,6 +212,7 @@ def get_or_upload_campaign_stream(campaign: Campaign, video_path: str) -> Stream
             video_id=video_id,
             playback_url=campaign.cf_stream_video_url,
             thumbnail_url=_build_stream_thumbnail_url(video_id),
+            is_cached=True,
         )
 
     # First job for this campaign — upload and cache.
@@ -210,6 +228,7 @@ def get_or_upload_campaign_stream(campaign: Campaign, video_path: str) -> Stream
             video_id=result.video_id,
             playback_url=result.playback_url,
             thumbnail_url=result.thumbnail_url or _build_stream_thumbnail_url(result.video_id),
+            is_cached=False,
         )
 
     return StreamDelivery()

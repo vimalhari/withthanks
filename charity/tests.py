@@ -36,11 +36,14 @@ from charity.utils.cloudflare_stream import extract_stream_video_id
 from charity.utils.tracking_security import build_tracking_token
 
 
-def build_stream_delivery(video_id: str = "stream-123") -> StreamDelivery:
+def build_stream_delivery(
+    video_id: str = "stream-123", *, is_cached: bool = False
+) -> StreamDelivery:
     return StreamDelivery(
         video_id=video_id,
         playback_url=f"https://watch.cloudflarestream.com/{video_id}",
         thumbnail_url=f"https://videodelivery.net/{video_id}/thumbnails/thumbnail.jpg?time=2s&height=320",
+        is_cached=is_cached,
     )
 
 
@@ -517,8 +520,13 @@ class VideoProcessingIsolationTests(TestCase):
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
-    def test_vdm_uses_stream_thumbnail_when_campaign_thumbnail_is_local_only(
+    @patch(
+        "charity.tasks.resolve_static_asset_url",
+        return_value="https://static.example.com/charity/img/video_placeholder.png",
+    )
+    def test_vdm_uses_static_placeholder_when_stream_thumbnail_is_fresh(
         self,
+        _mock_static_url,
         mock_stream,
         mock_send,
     ):
@@ -571,9 +579,79 @@ class VideoProcessingIsolationTests(TestCase):
         dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
         html = mock_send.call_args[1]["html"]
-        self.assertIn('src="https://videodelivery.net/stream-thumb/thumbnails/thumbnail.jpg', html)
+        self.assertIn('src="https://static.example.com/charity/img/video_placeholder.png"', html)
+        self.assertNotIn(
+            'src="https://videodelivery.net/stream-thumb/thumbnails/thumbnail.jpg', html
+        )
         self.assertNotIn('src="http://127.0.0.1:8000/media/', html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.get_or_upload_campaign_stream")
+    @patch(
+        "charity.tasks.resolve_static_asset_url",
+        return_value="https://static.example.com/charity/img/video_placeholder.png",
+    )
+    def test_vdm_uses_cached_stream_thumbnail_when_campaign_thumbnail_is_local_only(
+        self,
+        _mock_static_url,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        thumbnail = SimpleUploadedFile(
+            "vdm-thumb.gif",
+            (
+                b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+                b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                b"\x00\x02\x02D\x01\x00;"
+            ),
+            content_type="image/gif",
+        )
+        vdm_campaign = Campaign.objects.create(
+            name="Cached Thumbnail Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-006-CACHED",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            campaign_mode=Campaign.CampaignMode.VDM,
+            email_thumbnail=thumbnail,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=8,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Cached Thumbnail Donor",
+            email="cached-thumb@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_stream.return_value = build_stream_delivery("stream-thumb-cached", is_cached=True)
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn(
+            'src="https://videodelivery.net/stream-thumb-cached/thumbnails/thumbnail.jpg',
+            html,
+        )
+        self.assertNotIn('src="https://static.example.com/charity/img/video_placeholder.png"', html)
 
     @patch(
         "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
