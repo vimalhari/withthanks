@@ -1,0 +1,10 @@
+{% if primary_cta_url %}
+<a href="{{ primary_cta_url }}" class="thumbnail-link" style="display:block; position:relative; text-decoration:none;">
+    <img src="{{ image_url }}" alt="{{ thumbnail_alt }}" width="{{ thumbnail_width|default:"620" }}" class="featured-image">
+    <span class="thumbnail-play-badge" aria-hidden="true" style="display:block; position:absolute; top:50%; left:50%; width:76px; height:76px; margin-top:-38px; margin-left:-38px; border-radius:38px; background-color:rgba(255,255,255,0.92); text-align:center; box-shadow:0 10px 22px rgba(26,61,82,0.18); mso-hide:all;">
+        <span class="thumbnail-play-icon" style="display:inline-block; margin-left:5px; font-size:32px; line-height:76px; color:#1a3d52; mso-hide:all;">&#9654;</span>
+    </span>
+</a>
+{% else %}
+<img src="{{ image_url }}" alt="{{ thumbnail_alt }}" width="{{ thumbnail_width|default:"620" }}" class="featured-image">
+{% endif %}

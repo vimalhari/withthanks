@@ -878,7 +878,8 @@ class VideoProcessingIsolationTests(TestCase):
         html = mock_send.call_args[1]["html"]
         self.assertIn(f'src="https://assets.example.com/{self.charity_a.logo.name}"', html)
         self.assertIn(f'src="https://assets.example.com/{vdm_campaign.email_thumbnail.name}"', html)
-        self.assertIn("Watch the latest update", html)
+        self.assertIn('class="thumbnail-play-badge"', html)
+        self.assertIn("Watch video", html)
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.resolve_storage_video_url")
@@ -931,6 +932,7 @@ class VideoProcessingIsolationTests(TestCase):
             f'src="https://assets.example.com/{self.campaign_a.email_thumbnail.name}"',
             html,
         )
+        self.assertIn('class="thumbnail-play-badge"', html)
         self.assertIn("A small token of thanks", html)
 
     @patch(
@@ -971,6 +973,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         html = mock_send.call_args[1]["html"]
         self.assertIn('class="header-top-rule"', html)
+        self.assertIn('class="thumbnail-play-badge"', html)
         self.assertIn("Your video message is ready", html)
         self.assertIn("View video message", html)
         self.assertIn("With thanks,", html)

@@ -18,13 +18,9 @@
             {% if image_url and is_video_card %}
             <tr>
                 <td>
-                    {% if primary_cta_url %}
-                    <a href="{{ primary_cta_url }}" style="display:block; text-decoration:none;">
-                        <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="620" class="featured-image">
-                    </a>
-                    {% else %}
-                    <img src="{{ image_url }}" alt="Thank you from {{ charity_name }}" width="620" class="featured-image">
-                    {% endif %}
+                    {% with thumbnail_alt="Thank you from "|add:charity_name %}
+                    {% include "charity/email_templates/_video_thumbnail.html" with image_url=image_url primary_cta_url=primary_cta_url thumbnail_alt=thumbnail_alt %}
+                    {% endwith %}
                 </td>
             </tr>
             {% elif video_url and not is_video_card %}
