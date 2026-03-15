@@ -457,7 +457,11 @@ class VideoProcessingIsolationTests(TestCase):
 
         html = mock_send.call_args[1]["html"]
         self.assertIn('class="header-top-rule"', html)
-        self.assertIn("Campaign update", html)
+        self.assertNotIn("Campaign update", html)
+        self.assertNotIn(
+            "We have prepared a short video update to share the latest from",
+            html,
+        )
         self.assertIn("Watch the latest update", html)
         self.assertIn('href="http://127.0.0.1:8000/charity/track/click/?t=', html)
         self.assertIn('src="http://127.0.0.1:8000/charity/track/open/?t=', html)
@@ -854,6 +858,25 @@ class VideoProcessingIsolationTests(TestCase):
 
         self.assertEqual(resolved_url, "")
         mock_storage.url.assert_not_called()
+
+    @override_settings(CLOUDFLARE_STREAM_ENABLED=True)
+    def test_get_or_upload_campaign_stream_derives_thumbnail_from_cached_playback_url(self):
+        from charity.services.video_pipeline_service import get_or_upload_campaign_stream
+
+        self.campaign_a.cf_stream_video_id = ""
+        self.campaign_a.cf_stream_video_url = "https://watch.cloudflarestream.com/stream-derived"
+        self.campaign_a.save(update_fields=["cf_stream_video_id", "cf_stream_video_url"])
+
+        delivery = get_or_upload_campaign_stream(self.campaign_a, "ignored.mp4")
+
+        self.assertEqual(delivery.video_id, "stream-derived")
+        self.assertEqual(
+            delivery.thumbnail_url,
+            "https://videodelivery.net/stream-derived/thumbnails/thumbnail.jpg?time=2s&height=320",
+        )
+
+        self.campaign_a.refresh_from_db()
+        self.assertEqual(self.campaign_a.cf_stream_video_id, "stream-derived")
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")

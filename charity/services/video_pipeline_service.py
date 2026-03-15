@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from django.urls import reverse
 
+from charity.utils.cloudflare_stream import extract_stream_video_id
+
 if TYPE_CHECKING:
     from charity.models import Campaign
     from charity.utils.cloudflare_stream import StreamUploadResult
@@ -176,15 +178,23 @@ def get_or_upload_campaign_stream(campaign: Campaign, video_path: str) -> Stream
         return StreamDelivery()
 
     if campaign.cf_stream_video_url:
+        video_id = campaign.cf_stream_video_id or extract_stream_video_id(
+            campaign.cf_stream_video_url
+        )
+
+        if video_id and campaign.cf_stream_video_id != video_id:
+            campaign.cf_stream_video_id = video_id
+            campaign.save(update_fields=["cf_stream_video_id"])
+
         logger.debug(
             "Reusing cached CF Stream URL for campaign %s: %s",
             campaign.id,
             campaign.cf_stream_video_url,
         )
         return StreamDelivery(
-            video_id=campaign.cf_stream_video_id or "",
+            video_id=video_id,
             playback_url=campaign.cf_stream_video_url,
-            thumbnail_url=_build_stream_thumbnail_url(campaign.cf_stream_video_id or ""),
+            thumbnail_url=_build_stream_thumbnail_url(video_id),
         )
 
     # First job for this campaign — upload and cache.
@@ -199,7 +209,7 @@ def get_or_upload_campaign_stream(campaign: Campaign, video_path: str) -> Stream
         return StreamDelivery(
             video_id=result.video_id,
             playback_url=result.playback_url,
-            thumbnail_url=result.thumbnail_url,
+            thumbnail_url=result.thumbnail_url or _build_stream_thumbnail_url(result.video_id),
         )
 
     return StreamDelivery()
