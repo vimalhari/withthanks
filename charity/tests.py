@@ -609,12 +609,16 @@ class VideoProcessingIsolationTests(TestCase):
         mock_concat.return_value = "/tmp/final.mp4"
         mock_send.return_value = {"id": "test-resend-id"}
 
-        self.charity_a.logo = build_test_image_upload("charity-logo.gif")
-        self.charity_a.save(update_fields=["logo"])
-        self.campaign_a.email_thumbnail = build_test_image_upload("campaign-banner.gif")
-        self.campaign_a.save(update_fields=["email_thumbnail"])
+        Charity.objects.filter(pk=self.charity_a.pk).update(
+            logo="charities/charity_1/branding/charity-logo.gif"
+        )
+        Campaign.objects.filter(pk=self.campaign_a.pk).update(
+            email_thumbnail="charities/charity_1/campaign-banner.gif"
+        )
+        DonationJob.objects.filter(pk=self.job_a.pk).update(charity=None)
         self.charity_a.refresh_from_db()
         self.campaign_a.refresh_from_db()
+        self.job_a.refresh_from_db()
 
         resolved_urls = {
             self.charity_a.logo.name: f"https://assets.example.com/{self.charity_a.logo.name}",
@@ -636,6 +640,125 @@ class VideoProcessingIsolationTests(TestCase):
             f'src="https://assets.example.com/{self.campaign_a.email_thumbnail.name}"',
             html,
         )
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.get_or_upload_campaign_stream")
+    @patch("charity.tasks.resolve_storage_video_url")
+    def test_vdm_email_includes_public_charity_logo_without_replacing_banner(
+        self,
+        mock_resolve_storage_url,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        vdm_campaign = Campaign.objects.create(
+            name="VDM Logo Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-LOGO-001",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
+        vdm_campaign.email_thumbnail = build_test_image_upload("vdm-banner.gif")
+        vdm_campaign.save(update_fields=["email_thumbnail"])
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=11,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="VDM Logo Donor",
+            email="vdm-logo@example.com",
+            donation_amount=Decimal("18"),
+            campaign=vdm_campaign,
+        )
+
+        self.charity_a.logo = build_test_image_upload("vdm-logo.gif")
+        self.charity_a.save(update_fields=["logo"])
+        self.charity_a.refresh_from_db()
+        vdm_campaign.refresh_from_db()
+
+        resolved_urls = {
+            self.charity_a.logo.name: f"https://assets.example.com/{self.charity_a.logo.name}",
+            vdm_campaign.email_thumbnail.name: (
+                f"https://assets.example.com/{vdm_campaign.email_thumbnail.name}"
+            ),
+        }
+        mock_resolve_storage_url.side_effect = lambda *, storage_path, server_url: (
+            resolved_urls.get(storage_path, "")
+        )
+        mock_stream.return_value = build_stream_delivery("stream-vdm-logo")
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn(f'src="https://assets.example.com/{self.charity_a.logo.name}"', html)
+        self.assertIn(f'src="https://assets.example.com/{vdm_campaign.email_thumbnail.name}"', html)
+        self.assertIn("Watch the latest update", html)
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.resolve_storage_video_url")
+    def test_card_only_email_includes_public_charity_logo_without_replacing_banner(
+        self,
+        mock_resolve_storage_url,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        self.charity_a.logo = build_test_image_upload("card-logo.gif")
+        self.charity_a.save(update_fields=["logo"])
+        self.campaign_a.email_thumbnail = build_test_image_upload("card-banner.gif")
+        self.campaign_a.save(update_fields=["email_thumbnail"])
+        self.charity_a.refresh_from_db()
+        self.campaign_a.refresh_from_db()
+
+        resolved_urls = {
+            self.charity_a.logo.name: f"https://assets.example.com/{self.charity_a.logo.name}",
+            self.campaign_a.email_thumbnail.name: (
+                f"https://assets.example.com/{self.campaign_a.email_thumbnail.name}"
+            ),
+        }
+        mock_resolve_storage_url.side_effect = lambda *, storage_path, server_url: (
+            resolved_urls.get(storage_path, "")
+        )
+
+        job = DonationJob.objects.create(
+            donation_batch=self.batch_a,
+            donor_name="Card Logo Donor",
+            email="card-logo@example.com",
+            donation_amount=Decimal("12"),
+            charity=self.charity_a,
+            campaign=self.campaign_a,
+            media_type_override="image",
+        )
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn(f'src="https://assets.example.com/{self.charity_a.logo.name}"', html)
+        self.assertIn(
+            f'src="https://assets.example.com/{self.campaign_a.email_thumbnail.name}"',
+            html,
+        )
+        self.assertIn("A small token of thanks", html)
 
     @patch(
         "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"

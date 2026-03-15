@@ -86,6 +86,21 @@ def build_email_paragraphs(*, campaign, job, charity_name: str, default_body: st
     return [paragraph.strip() for paragraph in rendered_body.split("\n\n") if paragraph.strip()]
 
 
+def resolve_job_charity(job):
+    """Return the charity associated with a staged donation job.
+
+    Older jobs may be missing a direct charity FK even though the campaign or batch
+    still points at the owning charity.
+    """
+    if job.charity_id:
+        return job.charity
+    if job.campaign_id and getattr(job.campaign, "charity_id", None):
+        return job.campaign.charity
+    if job.donation_batch_id and getattr(job.donation_batch, "charity_id", None):
+        return job.donation_batch.charity
+    return None
+
+
 def resolve_sender_email(*, campaign, charity_name: str | None = None) -> str | None:
     """Return the donor-facing sender header for outbound campaign email delivery."""
     sender = (
@@ -121,8 +136,14 @@ def validate_and_prep_job(self, job_id):
     Sets job status to "processing" and returns all resolved state as a plain
     JSON-serialisable dict for Stage 2 to consume.
     """
-    job = DonationJob.objects.select_related("charity", "campaign", "donation_batch").get(id=job_id)
-    client = job.charity
+    job = DonationJob.objects.select_related(
+        "charity",
+        "campaign",
+        "campaign__charity",
+        "donation_batch",
+        "donation_batch__charity",
+    ).get(id=job_id)
+    client = resolve_job_charity(job)
     campaign = job.campaign
 
     job.status = "processing"
@@ -215,8 +236,14 @@ def generate_video_for_job(self, context):
     is_card_only = context["is_card_only"]
     template_name = context["template_name"]
 
-    job = DonationJob.objects.select_related("charity", "campaign").get(id=job_id)
-    client = job.charity
+    job = DonationJob.objects.select_related(
+        "charity",
+        "campaign",
+        "campaign__charity",
+        "donation_batch",
+        "donation_batch__charity",
+    ).get(id=job_id)
+    client = resolve_job_charity(job)
     campaign = job.campaign
 
     final_video_path = None
@@ -249,6 +276,10 @@ def generate_video_for_job(self, context):
                     if not base_video_path:
                         raise FatalTaskError(
                             f"Base video template missing for stitching Job {job_id}"
+                        )
+                    if not client:
+                        raise FatalTaskError(
+                            f"Charity context missing for personalized delivery Job {job_id}"
                         )
 
                     raw_script = campaign.voiceover_script if campaign else ""
@@ -355,11 +386,18 @@ def dispatch_email_for_job(self, context):
     is_card_only = context["is_card_only"]
 
     try:
-        job = DonationJob.objects.select_related("charity", "campaign", "donation_batch").get(
-            id=job_id
-        )
-        client = job.charity
+        job = DonationJob.objects.select_related(
+            "charity",
+            "campaign",
+            "campaign__charity",
+            "donation_batch",
+            "donation_batch__charity",
+        ).get(id=job_id)
+        client = resolve_job_charity(job)
         campaign = job.campaign
+
+        if not client:
+            raise FatalTaskError(f"Charity context missing for email delivery Job {job_id}")
 
         if mode == "VDM" and client and UnsubscribedUser.is_unsubscribed(job.email, client):
             generation_time = round(time.time() - start_time, 2)
