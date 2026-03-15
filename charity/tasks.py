@@ -102,14 +102,19 @@ def build_email_paragraphs(*, campaign, job, charity_name: str, default_body: st
     raw_body = campaign.email_body if campaign and campaign.email_body else default_body
     rendered_body = render_script(
         raw_body,
-        {
-            "donor_name": job.donor_name,
-            "charity_name": charity_name,
-            "campaign_name": campaign.name if campaign else "WithThanks Campaign",
-            "donation_amount": job.donation_amount,
-        },
+        build_campaign_email_context(campaign=campaign, job=job, charity_name=charity_name),
     )
     return [paragraph.strip() for paragraph in rendered_body.split("\n\n") if paragraph.strip()]
+
+
+def build_campaign_email_context(*, campaign, job, charity_name: str) -> dict[str, object]:
+    """Return placeholder values used by campaign-configurable email content."""
+    return {
+        "donor_name": job.donor_name,
+        "charity_name": charity_name,
+        "campaign_name": campaign.name if campaign else "WithThanks Campaign",
+        "donation_amount": job.donation_amount,
+    }
 
 
 def resolve_job_charity(job):
@@ -146,6 +151,18 @@ def resolve_sender_email(*, campaign, charity_name: str | None = None) -> str | 
         return sender_address
 
     return formataddr((display_name, sender_address))
+
+
+def resolve_email_subject(*, campaign, job, charity_name: str) -> str:
+    """Return the donor-facing subject line for outbound campaign email delivery."""
+    if campaign and campaign.email_subject:
+        return render_script(
+            campaign.email_subject,
+            build_campaign_email_context(campaign=campaign, job=job, charity_name=charity_name),
+        )
+    if campaign:
+        return campaign.name
+    return "Personalized thank-you message"
 
 
 # ---------------------------------------------------------------------------
@@ -561,11 +578,9 @@ def dispatch_email_for_job(self, context):
         email_html = render_to_string(full_template_path, email_context)
 
         # --- Subject -------------------------------------------------------- #
-        subject = "Personalized thank-you message"
-        if job.donation_batch and job.donation_batch.campaign_name:
-            subject = job.donation_batch.campaign_name
-        elif campaign:
-            subject = campaign.name
+        subject = resolve_email_subject(
+            campaign=campaign, job=job, charity_name=client.charity_name
+        )
 
         # --- Send via Resend ------------------------------------------------ #
         try:

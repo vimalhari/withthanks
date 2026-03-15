@@ -665,6 +665,17 @@ class Campaign(models.Model):
     from_email = models.EmailField(
         blank=True, null=True, help_text="Override sender email address for this campaign"
     )
+    email_subject = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text=(
+            "Optional email subject for this campaign. "
+            "Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, "
+            "and {{ donation_amount }} placeholders. "
+            "Leave blank to use the campaign name."
+        ),
+    )
     email_body = models.TextField(
         blank=True,
         default="",

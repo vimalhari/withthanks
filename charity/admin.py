@@ -824,7 +824,7 @@ class CampaignAdmin(ModelAdmin):
             "Email Settings",
             {
                 "classes": ("collapse",),
-                "fields": ("from_email", "email_body", "email_thumbnail"),
+                "fields": ("from_email", "email_subject", "email_body", "email_thumbnail"),
             },
         )
 
@@ -894,7 +894,12 @@ class CampaignAdmin(ModelAdmin):
                     "Email Settings",
                     {
                         "classes": ("collapse",),
-                        "fields": ("from_email", "email_body", "email_thumbnail"),
+                        "fields": (
+                            "from_email",
+                            "email_subject",
+                            "email_body",
+                            "email_thumbnail",
+                        ),
                     },
                 ),
                 (

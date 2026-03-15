@@ -413,6 +413,96 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn("We made this update for Jane.", html)
         self.assertNotIn("We are excited to share some amazing updates with you!", html)
 
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload")
+    @patch("os.path.exists")
+    def test_campaign_email_subject_supports_placeholders(
+        self,
+        mock_exists,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        mock_upload,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        self.campaign_a.email_subject = (
+            "Thanks {{ donor_name }} for {{ donation_amount }} to {{ campaign_name }} from "
+            "{{ charity_name }}"
+        )
+        self.campaign_a.save(update_fields=["email_subject"])
+        self.batch_a.campaign_name = "Legacy Batch Name"
+        self.batch_a.save(update_fields=["campaign_name"])
+
+        mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-subject")
+        mock_tts.return_value = "/tmp/tts.mp3"
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        self.assertEqual(
+            mock_send.call_args[1]["subject"],
+            "Thanks Donor A for 10.00 to Campaign A from Charity A",
+        )
+
+    @patch(
+        "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
+    )
+    @patch("charity.services.video_build_service.generate_voiceover")
+    @patch("charity.services.video_build_service.concat_intro_to_base")
+    @patch("charity.services.video_build_service.generate_intro_clip")
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.stream_safe_upload")
+    @patch("os.path.exists")
+    def test_campaign_email_subject_falls_back_to_campaign_name(
+        self,
+        mock_exists,
+        mock_stream,
+        mock_send,
+        mock_generate_intro,
+        mock_concat,
+        mock_tts,
+        mock_upload,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        self.batch_a.campaign_name = "Legacy Batch Name"
+        self.batch_a.save(update_fields=["campaign_name"])
+
+        mock_exists.return_value = True
+        mock_stream.return_value = build_stream_delivery("stream-fallback")
+        mock_tts.return_value = "/tmp/tts.mp3"
+        mock_generate_intro.return_value = "/tmp/intro.mp4"
+        mock_concat.return_value = "/tmp/final.mp4"
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        self.assertEqual(mock_send.call_args[1]["subject"], "Campaign A")
+
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_email_uses_shared_shell_and_tracking_links(
@@ -1917,6 +2007,23 @@ class CharityAdminLogoTests(TestCase):
             storage_path=self.campaign.email_thumbnail.name,
             server_url="http://127.0.0.1:8000",
         )
+
+    def test_campaign_admin_email_settings_include_subject_field(self):
+        from charity.admin import CampaignAdmin
+
+        model_admin = CampaignAdmin(Campaign, admin.site)
+        request = self.client.request().wsgi_request
+        request.user = self.superuser
+
+        fieldsets = model_admin.get_fieldsets(request, self.campaign)
+        email_settings_fields = None
+        for title, options in fieldsets:
+            if title == "Email Settings":
+                email_settings_fields = options["fields"]
+                break
+
+        self.assertIsNotNone(email_settings_fields)
+        self.assertIn("email_subject", email_settings_fields)
 
 
 @override_settings(WEBHOOK_SIGNATURE_MAX_AGE_SECONDS=300)
