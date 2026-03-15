@@ -50,12 +50,11 @@ class DonationIngestSerializer(serializers.Serializer):
             title=attrs.get("donor_title", ""),
             first_name=attrs.get("donor_first_name", ""),
             last_name=attrs.get("donor_last_name", ""),
-            fallback_name=attrs.get("donor_name", ""),
             default="",
         )
         if not donor_name:
             raise serializers.ValidationError(
-                {"donor_name": "Provide donor_name or structured donor name fields."}
+                {"donor_name": "Provide structured donor name fields."}
             )
 
         attrs["donor_name"] = donor_name

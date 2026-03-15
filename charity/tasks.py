@@ -543,7 +543,11 @@ def dispatch_email_for_job(self, context):
 
         # --- Render template ------------------------------------------------ #
         email_context = {
-            "greeting_line": build_email_greeting_line(job.display_donor_name),
+            "greeting_line": build_email_greeting_line(
+                title=job.donor_title,
+                first_name=job.donor_first_name,
+                last_name=job.donor_last_name,
+            ),
             "donation_amount": job.donation_amount,
             "charity_name": client.charity_name,
             "charity_website_url": client.website_url,
@@ -1031,6 +1035,9 @@ def sync_charity_blackbaud(self, charity_id: int):
 
         job = DonationJob.objects.create(
             donor_name=donation.get("donor_name", ""),
+            donor_title=donation.get("donor_title", ""),
+            donor_first_name=donation.get("donor_first_name", ""),
+            donor_last_name=donation.get("donor_last_name", ""),
             email=donation.get("donor_email", ""),
             donation_amount=amount,
             status="pending",

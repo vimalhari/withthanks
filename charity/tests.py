@@ -219,6 +219,8 @@ class VideoProcessingIsolationTests(TestCase):
         self.job_a = DonationJob.objects.create(
             donation_batch=self.batch_a,
             donor_name="Donor A",
+            donor_first_name="Donor",
+            donor_last_name="A",
             email="donor@a.com",
             donation_amount=Decimal("10"),
             charity=self.charity_a,
@@ -232,6 +234,8 @@ class VideoProcessingIsolationTests(TestCase):
         self.job_b = DonationJob.objects.create(
             donation_batch=self.batch_b,
             donor_name="Donor B",
+            donor_first_name="Donor",
+            donor_last_name="B",
             email="donor@b.com",
             donation_amount=Decimal("20"),
             charity=self.charity_b,
@@ -395,6 +399,7 @@ class VideoProcessingIsolationTests(TestCase):
         vdm_job = DonationJob.objects.create(
             donation_batch=vdm_batch,
             donor_name="Jane",
+            donor_first_name="Jane",
             email="custom@example.com",
             donation_amount=Decimal("15"),
             charity=self.charity_a,
@@ -1201,6 +1206,8 @@ class VideoProcessingIsolationTests(TestCase):
         vdm_job = DonationJob.objects.create(
             donation_batch=vdm_batch,
             donor_name="Ms Smith",
+            donor_title="Ms",
+            donor_last_name="Smith",
             email="formal@example.com",
             donation_amount=Decimal("15"),
             charity=self.charity_a,
@@ -1217,6 +1224,59 @@ class VideoProcessingIsolationTests(TestCase):
         html = mock_send.call_args[1]["html"]
         self.assertIn("Ms Smith,", html)
         self.assertNotIn("Dear Ms Smith,", html)
+
+    @patch("charity.tasks.send_video_email")
+    @patch("charity.tasks.get_or_upload_campaign_stream")
+    def test_vdm_uses_dear_first_name_when_structured_first_name_exists(
+        self,
+        mock_stream,
+        mock_send,
+    ):
+        from charity.tasks import (
+            dispatch_email_for_job,
+            generate_video_for_job,
+            validate_and_prep_job,
+        )
+
+        vdm_campaign = Campaign.objects.create(
+            name="First Name Greeting Campaign",
+            charity=self.charity_a,
+            campaign_code="VDM-008",
+            campaign_start=date.today(),
+            campaign_end=date.today(),
+            campaign_mode=Campaign.CampaignMode.VDM,
+        )
+        Campaign.objects.filter(pk=vdm_campaign.pk).update(vdm_video="test/fake_video_a.mp4")
+        vdm_campaign.refresh_from_db()
+
+        vdm_batch = DonationBatch.objects.create(
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+            batch_number=9,
+        )
+        vdm_job = DonationJob.objects.create(
+            donation_batch=vdm_batch,
+            donor_name="Dr Jane Doe",
+            donor_title="Dr",
+            donor_first_name="Jane",
+            donor_last_name="Doe",
+            email="jane@example.com",
+            donation_amount=Decimal("15"),
+            charity=self.charity_a,
+            campaign=vdm_campaign,
+        )
+
+        mock_stream.return_value = build_stream_delivery("stream-first-name")
+        mock_send.return_value = {"id": "test-resend-id"}
+
+        ctx = validate_and_prep_job.run(vdm_job.id)  # type: ignore[attr-defined]
+        ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
+        dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
+
+        html = mock_send.call_args[1]["html"]
+        self.assertIn("Dear Jane,", html)
+        self.assertNotIn("Dr Jane Doe,", html)
+        self.assertNotIn("Dear Dr Jane Doe,", html)
 
     @patch(
         "charity.utils.video_utils.upload_output_to_r2", return_value="https://r2.example.com/v.mp4"
@@ -1251,7 +1311,12 @@ class VideoProcessingIsolationTests(TestCase):
         mock_send.return_value = {"id": "test-resend-id"}
 
         self.job_a.donor_name = "Ms Smith"
-        self.job_a.save(update_fields=["donor_name"])
+        self.job_a.donor_title = "Ms"
+        self.job_a.donor_first_name = ""
+        self.job_a.donor_last_name = "Smith"
+        self.job_a.save(
+            update_fields=["donor_name", "donor_title", "donor_first_name", "donor_last_name"]
+        )
 
         ctx = validate_and_prep_job.run(self.job_a.id)  # type: ignore[attr-defined]
         ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
@@ -1430,7 +1495,7 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertEqual(jobs[1].donor_last_name, "Smith")
         self.assertEqual(jobs[1].display_donor_name, "Ms Smith")
 
-    def test_display_donor_name_falls_back_to_legacy_donor_name(self):
+    def test_display_donor_name_defaults_when_structured_name_missing(self):
         job = DonationJob.objects.create(
             donation_batch=self.batch_a,
             donor_name="Legacy Donor",
@@ -1440,7 +1505,7 @@ class VideoProcessingIsolationTests(TestCase):
             campaign=self.campaign_a,
         )
 
-        self.assertEqual(job.display_donor_name, "Legacy Donor")
+        self.assertEqual(job.display_donor_name, "Donor")
 
     def test_validate_and_prep_job_ignores_gratitude_video_for_standard_withthanks(self):
         from charity.tasks import validate_and_prep_job
@@ -1649,7 +1714,7 @@ class DonationIngestAPITests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()["donor_name"],
-            ["Provide donor_name or structured donor name fields."],
+            ["Provide structured donor name fields."],
         )
 
 

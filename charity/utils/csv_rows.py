@@ -46,19 +46,14 @@ def compose_recipient_name(
     title: str = "",
     first_name: str = "",
     last_name: str = "",
-    fallback_name: str = "",
     default: str = "Donor",
 ) -> str:
-    """Build a canonical donor name from structured parts with a legacy fallback."""
+    """Build a canonical donor name from structured parts only."""
     structured_name = " ".join(
         part.strip() for part in [title, first_name, last_name] if part and part.strip()
     ).strip()
     if structured_name:
         return structured_name
-
-    cleaned_fallback = (fallback_name or "").strip()
-    if cleaned_fallback:
-        return cleaned_fallback
 
     return default
 
@@ -83,14 +78,11 @@ def extract_csv_recipient_parts(
         "last_name",
         "family name",
     )
-    explicit_name = get_csv_row_value(row, "donor_name", "donor name", "name", "full name")
-
     return {
         "donor_name": compose_recipient_name(
             title=donor_title,
             first_name=donor_first_name,
             last_name=donor_last_name,
-            fallback_name=explicit_name,
             default=default,
         ),
         "donor_title": donor_title,
@@ -109,19 +101,44 @@ def build_vdm_recipient_name(row: dict[str, str], *, default: str = "Donor") -> 
     return extract_csv_recipient_parts(row, default=default)["donor_name"]
 
 
-def build_email_greeting_line(name: str, *, default: str = "Supporter") -> str:
+def build_email_greeting_line(
+    *,
+    title: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    default: str = "Supporter",
+) -> str:
     """Return an email greeting line without punctuation.
 
-    Friendly first-name greetings keep the "Dear" prefix, while formal
-    title-based greetings render as "Ms Smith" instead of "Dear Ms Smith".
+    Greeting rules:
+    - If a first name is present, use "Dear <first name>"
+    - Otherwise, use "<title> <last name>" without "Dear"
+    - Otherwise, use the default recipient greeting
     """
-    cleaned_name = (name or "").strip() or default
-    first_token = cleaned_name.split()[0].rstrip(".").lower() if cleaned_name.split() else ""
-    if first_token in FORMAL_TITLE_TOKENS:
-        return cleaned_name
-    return f"Dear {cleaned_name}"
+    cleaned_first_name = (first_name or "").strip()
+    if cleaned_first_name:
+        return f"Dear {cleaned_first_name}"
+
+    formal_name = " ".join(
+        part.strip() for part in [title, last_name] if part and part.strip()
+    ).strip()
+    if formal_name:
+        return formal_name
+
+    return f"Dear {default}"
 
 
-def build_vdm_greeting_line(name: str, *, default: str = "Supporter") -> str:
+def build_vdm_greeting_line(
+    *,
+    title: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    default: str = "Supporter",
+) -> str:
     """Backward-compatible alias for VDM-specific call sites."""
-    return build_email_greeting_line(name, default=default)
+    return build_email_greeting_line(
+        title=title,
+        first_name=first_name,
+        last_name=last_name,
+        default=default,
+    )

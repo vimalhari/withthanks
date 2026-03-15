@@ -456,7 +456,6 @@ class DonationJob(models.Model):
             title=self.donor_title,
             first_name=self.donor_first_name,
             last_name=self.donor_last_name,
-            fallback_name=self.donor_name,
         )
 
     @property

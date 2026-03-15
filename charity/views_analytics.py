@@ -945,11 +945,10 @@ class CharityDonorHeatmapView(CharityReportBaseView):
             rows.append(
                 {
                     **d,
-                    "donor_name": compose_recipient_name(
+                    "display_donor_name": compose_recipient_name(
                         title=d.get("donor_title", ""),
                         first_name=d.get("donor_first_name", ""),
                         last_name=d.get("donor_last_name", ""),
-                        fallback_name=d.get("donor_name", ""),
                     ),
                     "engagement_score": score,
                 }
@@ -993,7 +992,6 @@ class CharityDonorHeatmapView(CharityReportBaseView):
                         title=d.get("donor_title", ""),
                         first_name=d.get("donor_first_name", ""),
                         last_name=d.get("donor_last_name", ""),
-                        fallback_name=d.get("donor_name", ""),
                     ),
                     d["campaigns"],
                     d["total_views"],

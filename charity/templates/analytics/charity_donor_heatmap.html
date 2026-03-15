@@ -55,7 +55,7 @@
                 <tr>
                     <td class="text-gray-400 font-bold text-sm">{{ forloop.counter }}</td>
                     <td>
-                        <div class="font-bold text-gray-900">{{ donor.donor_name|default:"Unknown" }}</div>
+                        <div class="font-bold text-gray-900">{{ donor.display_donor_name|default:"Unknown" }}</div>
                         <div class="text-xs text-gray-400">{{ donor.email }}</div>
                     </td>
                     <td>{{ donor.campaigns }}</td>

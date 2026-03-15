@@ -35,6 +35,9 @@ class CRMAdapter(ABC):
             - donated_at  (datetime, UTC-aware)
 
         Optional keys:
+            - donor_title       (str)
+            - donor_first_name  (str)
+            - donor_last_name   (str)
             - campaign_type  ("WithThanks" | "VDM" | "Gratitude"; defaults to "WithThanks")
             - external_id    (str, the CRM's own gift ID — for logging/dedup)
 

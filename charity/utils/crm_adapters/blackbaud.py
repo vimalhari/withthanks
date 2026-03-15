@@ -225,6 +225,9 @@ class BlackbaudAdapter(CRMAdapter):
 
         return {
             "donor_name": constituent.get("name", email),
+            "donor_title": constituent.get("title", ""),
+            "donor_first_name": constituent.get("first", "") or constituent.get("first_name", ""),
+            "donor_last_name": constituent.get("last", "") or constituent.get("last_name", ""),
             "donor_email": email,
             "amount": amount,
             "donated_at": donated_at,
@@ -261,6 +264,9 @@ class BlackbaudAdapter(CRMAdapter):
 
         return {
             "name": data.get("name", ""),
+            "title": data.get("title", ""),
+            "first": data.get("first", "") or data.get("first_name", ""),
+            "last": data.get("last", "") or data.get("last_name", ""),
             "email": email,
         }
 
