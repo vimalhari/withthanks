@@ -6,6 +6,7 @@ import os
 import time
 import traceback
 from datetime import timedelta
+from email.utils import formataddr, parseaddr
 
 from celery import chain, chord, group, shared_task
 from django.conf import settings
@@ -85,11 +86,25 @@ def build_email_paragraphs(*, campaign, job, charity_name: str, default_body: st
     return [paragraph.strip() for paragraph in rendered_body.split("\n\n") if paragraph.strip()]
 
 
-def resolve_sender_email(*, campaign) -> str | None:
-    """Return the configured sender address for outbound email delivery."""
-    if campaign and campaign.from_email:
-        return campaign.from_email
-    return getattr(settings, "DEFAULT_FROM_EMAIL", None)
+def resolve_sender_email(*, campaign, charity_name: str | None = None) -> str | None:
+    """Return the donor-facing sender header for outbound campaign email delivery."""
+    sender = (
+        campaign.from_email
+        if campaign and campaign.from_email
+        else getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    )
+    if not sender:
+        return None
+
+    _, sender_address = parseaddr(sender)
+    if not sender_address:
+        return sender
+
+    display_name = (charity_name or "").strip()
+    if not display_name:
+        return sender_address
+
+    return formataddr((display_name, sender_address))
 
 
 # ---------------------------------------------------------------------------
@@ -492,7 +507,10 @@ def dispatch_email_for_job(self, context):
                 job_id=str(job.id),
                 donor_name=job.donor_name,
                 donation_amount=job.donation_amount,
-                from_email=resolve_sender_email(campaign=campaign),
+                from_email=resolve_sender_email(
+                    campaign=campaign,
+                    charity_name=client.charity_name if client else None,
+                ),
                 charity_name=client.charity_name,
                 subject=subject,
                 video_url=video_url_link,

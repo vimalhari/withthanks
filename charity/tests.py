@@ -275,7 +275,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         # Verify Job A used Script A and Sender A
         self.assertIn("Hello A Donor A", mock_tts.call_args[1]["text"])
-        self.assertEqual(mock_send.call_args[1]["from_email"], "sender-a@charity.org")
+        self.assertEqual(mock_send.call_args[1]["from_email"], "Charity A <sender-a@charity.org>")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
         self.assertEqual(
             mock_send.call_args[1]["video_url"],
@@ -296,7 +296,7 @@ class VideoProcessingIsolationTests(TestCase):
 
         # Verify Job B used Script B and Sender B
         self.assertIn("Hello B Donor B", mock_tts.call_args[1]["text"])
-        self.assertEqual(mock_send.call_args[1]["from_email"], "sender-b@charity.org")
+        self.assertEqual(mock_send.call_args[1]["from_email"], "Charity B <sender-b@charity.org>")
         self.assertIsNone(mock_send.call_args[1]["file_path"])
         self.assertEqual(
             mock_send.call_args[1]["video_url"],
@@ -467,7 +467,7 @@ class VideoProcessingIsolationTests(TestCase):
         self.assertIn('src="http://127.0.0.1:8000/charity/track/open/?t=', html)
         self.assertIn("Unsubscribe", html)
 
-    @override_settings(DEFAULT_FROM_EMAIL="noreply@example.com")
+    @override_settings(DEFAULT_FROM_EMAIL="No Reply <noreply@example.com>")
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
     def test_vdm_falls_back_to_default_from_email_when_campaign_sender_missing(
@@ -513,7 +513,7 @@ class VideoProcessingIsolationTests(TestCase):
         ctx = generate_video_for_job.run(ctx)  # type: ignore[attr-defined]
         dispatch_email_for_job.run(ctx)  # type: ignore[attr-defined]
 
-        self.assertEqual(mock_send.call_args[1]["from_email"], "noreply@example.com")
+        self.assertEqual(mock_send.call_args[1]["from_email"], "Charity A <noreply@example.com>")
 
     @patch("charity.tasks.send_video_email")
     @patch("charity.tasks.get_or_upload_campaign_stream")
