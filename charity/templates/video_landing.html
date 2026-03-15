@@ -42,8 +42,12 @@
             {% if cta_url %}
             <div class="cta-overlay" id="ctaOverlay" aria-hidden="true">
                 <div class="cta-card">
+                    {% if cta_title %}
                     <h2>{{ cta_title }}</h2>
+                    {% endif %}
+                    {% if cta_message %}
                     <p>{{ cta_message }}</p>
+                    {% endif %}
                     <button class="cta-btn" id="ctaBtn">{{ cta_label }}</button>
                 </div>
             </div>

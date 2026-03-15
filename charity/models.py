@@ -749,7 +749,7 @@ class Campaign(models.Model):
             "Optional headline shown in the post-video CTA overlay. "
             "Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, "
             "and {{ donation_amount }} placeholders. "
-            "Leave blank to use the built-in default headline."
+            "Leave blank to hide the headline."
         ),
     )
     cta_message = models.TextField(
@@ -759,7 +759,7 @@ class Campaign(models.Model):
             "Optional body copy shown in the post-video CTA overlay. "
             "Supports {{ donor_name }}, {{ charity_name }}, {{ campaign_name }}, "
             "and {{ donation_amount }} placeholders. "
-            "Leave blank to use the built-in default message."
+            "Leave blank to hide the supporting copy."
         ),
     )
 

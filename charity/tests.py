@@ -1870,8 +1870,8 @@ class TrackingSecurityTests(TestCase):
         )
         self.assertContains(response, 'id="ctaOverlay"', html=False)
         self.assertContains(response, "Donate Again")
-        self.assertContains(response, f"Thank you, {self.job.display_donor_name}!")
-        self.assertContains(
+        self.assertNotContains(response, f"Thank you, {self.job.display_donor_name}!")
+        self.assertNotContains(
             response,
             f"Your generosity makes a real difference to {self.charity.charity_name}.",
         )

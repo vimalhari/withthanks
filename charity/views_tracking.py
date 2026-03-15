@@ -15,9 +15,6 @@ from .utils.tracking_security import resolve_tracking_token
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CTA_TITLE = "Thank you, {{ donor_name }}!"
-DEFAULT_CTA_MESSAGE = "Your generosity makes a real difference to {{ charity_name }}."
-
 
 def _resolve_tracking(job_id=None, token=None):
     tracking_id = resolve_tracking_token(token)
@@ -189,8 +186,10 @@ def video_landing_view(request, job_id):
         }
         cta_url = campaign.cta_url
         cta_label = campaign.cta_label or "Donate Again"
-        cta_title = render_script(campaign.cta_title or DEFAULT_CTA_TITLE, cta_context)
-        cta_message = render_script(campaign.cta_message or DEFAULT_CTA_MESSAGE, cta_context)
+        if campaign.cta_title and campaign.cta_title.strip():
+            cta_title = render_script(campaign.cta_title, cta_context)
+        if campaign.cta_message and campaign.cta_message.strip():
+            cta_message = render_script(campaign.cta_message, cta_context)
     return render(
         request,
         "video_landing.html",
